@@ -122,14 +122,31 @@ export async function responseCommand(argv: string[], store: ReturnType<typeof c
       if (!parsed.success) usage("Invalid body; use documented non-security fields, UUIDs, name/description limits, at most ten scope/combinations, and six queries per combination");
       body = parsed.data;
     }
-    const result = await writeFactory({ config: get("config"), profile: get("profile") }).run(operation,
-      { ...(get("id") ? { id: get("id")! } : {}), ...(body === undefined ? {} : { body }) },
-      { execute: get("execute") === "true", dryRun: get("dry-run") === "true", confirm: get("confirm") });
-    const output = preview(result.kind === "success" ? { ...result, response: project({ ...(get("id") ? { id: get("id") } : {}),
-      ...result.response as Record<string, unknown> }) } : result) as Record<string, unknown>;
-    // Confirmation is an exact contract even when long names or other text are truncated.
-    output.preview = { ...(output.preview as Record<string, unknown>), confirm: result.preview.confirm };
-    return { ...output, ...(truncated ? { help: fullHelp() } : {}) };
+    let auditId: string | undefined, status: number | undefined;
+    try {
+      const result = await writeFactory({ config: get("config"), profile: get("profile") }).run(operation,
+        { ...(get("id") ? { id: get("id")! } : {}), ...(body === undefined ? {} : { body }) },
+        { execute: get("execute") === "true", dryRun: get("dry-run") === "true", confirm: get("confirm") });
+      if (result.kind === "success") {
+        auditId = result.auditId;
+        status = result.status;
+        const row = result.response as Record<string, unknown>;
+        if (get("id") && (verb === "update" || Object.hasOwn(row, "id")) && row.id !== get("id")) {
+          throw new TransportError({ code: "RESPONSE_INVALID", message: "Mutation response returned a different target ID", operation });
+        }
+      }
+      const output = preview(result.kind === "success" ? { ...result, response: project({ ...(get("id") ? { id: get("id") } : {}),
+        ...result.response as Record<string, unknown> }) } : result) as Record<string, unknown>;
+      // Confirmation is an exact contract even when long names or other text are truncated.
+      output.preview = { ...(output.preview as Record<string, unknown>), confirm: result.preview.confirm };
+      return { ...output, ...(truncated ? { help: fullHelp() } : {}) };
+    } catch (error) {
+      if (!(error instanceof TransportError)) throw error;
+      const details = { ...error.error, auditId: error.error.auditId ?? auditId, status: error.error.status ?? status };
+      if (details.code !== "RESPONSE_INVALID" || !details.auditId || details.status === undefined || details.status < 200 || details.status >= 300) throw error;
+      throw new TransportError({ ...details, message: `${details.message}; mutation may have been applied` },
+        ["Read back the requested target and reconcile the audit journal before retrying; do not replay this mutation"]);
+    }
   }
   store.readOnly();
   const loaded = store.load(get("config"));
@@ -165,7 +182,7 @@ export async function responseCommand(argv: string[], store: ReturnType<typeof c
     row[field] === undefined ? [] : [[field, row[field]]]))));
   const resume = complete ? undefined : Buffer.from(JSON.stringify({ version: 1, scope, pending })).toString("base64url");
   if (resume && resume.length > maxCursor) throw new TransportError({ code: "RESPONSE_INVALID", message: "Continuation exceeds its byte bound; narrow selected fields", operation });
-  const help = [...fullHelp(), ...(verb === "list" ? [`Run tenable-axi ${kind} show --id <id>${get("config") ? ` --config ${quote(get("config")!)}` : ""} --profile ${quote(profile.name)}`] : [])];
+  const help = [...fullHelp(), ...(verb === "list" ? [`Run tenable-axi ${kind} show --id <id>${get("config") ? ` --config ${quote(get("config")!)}` : ""}${profile.source === "env-profile" ? "" : ` --profile ${quote(profile.name)}`}`] : [])];
   if (!complete) help.push(`Run ${command(["--cursor"])} --cursor <cursor> to resume the saved unpaged collection`);
   return { [key]: data, count: data.length, total: null, complete,
     ...(!data.length ? { message: `0 ${key} matched the selected filters` } : {}),

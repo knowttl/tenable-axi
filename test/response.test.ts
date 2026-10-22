@@ -44,6 +44,46 @@ function shellArgs(command: string): string[] {
   return execFileSync("sh", ["-c", `set -- ${command}; printf '%s\\0' "$@"`], { encoding: "utf8" }).split("\0").slice(0, -1);
 }
 
+test.each(["initiative", "combination"])("%s list show hint preserves environment-only credentials", async (kind) => {
+  const f = fixture(kind, "list");
+  f.config({});
+  const row = { id, ...(kind === "initiative" ? initiative : combination) };
+  const listed = await f.run([kind, "list", "--config", f.path], [{ body: { [`${kind}s`]: [row] } }]);
+  expect(listed.code).toBe(0);
+  const args = shellArgs((listed.data.help as string[])[0]!.slice(4).replace("<id>", id));
+  const shown = await f.run(args.slice(1), [{ body: row }]);
+  expect(shown.code).toBe(0);
+  expect(shown.data).toMatchObject({ [kind]: { id, name: row.name } });
+  expect(shown.requests).toHaveLength(1);
+  expect(shown.requests[0]!.url).toBe(`https://cloud.tenable.com/exposure-response/${kind}s/${id}`);
+});
+
+test.each(["initiative", "combination"].flatMap((kind) => [
+  { kind, verb: "update", response: { id: other, name: "Different target" }, fields: "id" },
+  { kind, verb: "delete", response: { id: other }, fields: "id" },
+  { kind, verb: "update", response: { name: "Missing ID" }, fields: "id" },
+  { kind, verb: "delete", response: { id: null }, fields: "id" },
+  { kind, verb: "update", response: { id, name: "Malformed field", owner: null }, fields: "owner" },
+]))("$kind $verb rejects malformed successful response $response with audit context", async ({ kind, verb, response, fields }) => {
+  const f = fixture(kind, verb);
+  const row = { id, ...(kind === "initiative" ? initiative : combination), name: "Old" };
+  const reads = [...(verb === "delete" ? [{ body: { [`${kind}s`]: [row] } }] : []), { body: row }];
+  const args = [...f.args, "--fields", fields];
+  const preview = await f.run(args, [...reads]);
+  expect(preview.code).toBe(0);
+  const result = await f.run([...args, "--execute", "--confirm", (preview.data.preview as { confirm: string }).confirm],
+    [...reads, ...reads, { body: response }]);
+  expect(result.code).toBe(1);
+  expect(result.data).toMatchObject({ error: { code: "RESPONSE_INVALID", operation: `${kind}s-${verb}`, status: 200,
+    auditId: expect.any(String), message: expect.stringContaining("mutation may have been applied") } });
+  expect(result.data).not.toHaveProperty("kind");
+  expect(result.data).not.toHaveProperty("response");
+  expect(result.requests.filter((request) => request.init.method !== "GET")).toHaveLength(1);
+  const journal = readFileSync(f.journal, "utf8").trim().split("\n").map((line) => JSON.parse(line) as Record<string, unknown>);
+  expect(journal).toContainEqual(expect.objectContaining({ kind: "outcome", auditId: (result.data.error as { auditId: string }).auditId,
+    operation: `${kind}s-${verb}`, result: "SUCCESS", status: 200 }));
+});
+
 test.each(["show", "list"])("%s redacts secrets before truncating nested and plain text", async (verb) => {
   const f = fixture("combination", verb);
   const secret = "sensitive-boundary-".repeat(2);
