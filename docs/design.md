@@ -234,7 +234,8 @@ All unspecified API defaults follow the pinned schema, except the CLI's explicit
 | Inventory job lists | `--status QUEUED\|PROCESSING\|FINISHED\|ERROR` and `--limit`; there is no server-side offset or continuation parameter. |
 | Attack export starts | Body fields include `file_format`, filter(s), columns, file_name, and operation-specific vector/technique IDs and sort exactly where documented. |
 
-Simple filters use `--filter '<property> <operator> <JSON-value>'`; inventory filter files preserve the [pinned spec's](../specs/exposure-management.json) flat property-filter array without inventing nested boolean expressions.
+Inventory and tag simple filters use `--filter '<property> <operator> <JSON-array-of-strings>'`; their filter files preserve the [pinned spec's](../specs/exposure-management.json) flat property-filter array without inventing nested boolean expressions.
+Attack structured files preserve the schema's nested boolean expressions without inventing a universal grammar.
 Property names remain tenant-specific and API validation errors suggest the corresponding properties command.
 Attack searches require wire limits of at least 100 even for smaller output windows, so retain excess rows in bounded continuation state.
 Card wire pages cap at 25; home requests five.
