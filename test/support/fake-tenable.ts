@@ -65,7 +65,7 @@ export async function fakeHttpsTenable(replies: Reply[]) {
     pending.on("error", reject);
     pending.end(init.body);
   });
-  return { requests,
+  return { requests, fetch,
     transport: (bindings: Record<string, OperationBinding>) => constructTransport({ keys: syntheticKeys }, { bindings, fetch }),
     async close() {
       server.closeAllConnections();

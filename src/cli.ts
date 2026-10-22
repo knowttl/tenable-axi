@@ -7,8 +7,10 @@ import { inventoryCommand } from "./inventory.js";
 import { exposureCommand, type TransportFactory } from "./exposure.js";
 import { TransportError } from "./transport.js";
 import { attackCommand } from "./attack.js";
+import { inventoryExportCommand, type WriteCoordinatorFactory } from "./inventory-export.js";
+import { createWriteCoordinator } from "./writes.js";
 
-export async function main(argv = process.argv.slice(2), options: { credentials?: CredentialContext; stdout?: { write: (chunk: string) => unknown }; transportFactory?: TransportFactory } = {}): Promise<void> {
+export async function main(argv = process.argv.slice(2), options: { credentials?: CredentialContext; stdout?: { write: (chunk: string) => unknown }; transportFactory?: TransportFactory; writeCoordinatorFactory?: WriteCoordinatorFactory } = {}): Promise<void> {
   const store = credentialStore(options.credentials);
   await runAxiCli({
     description: DESCRIPTION,
@@ -23,6 +25,8 @@ export async function main(argv = process.argv.slice(2), options: { credentials?
     }),
     commands: {
       scaffold: async () => {
+        if (argv[0] === "export") return store.redactor.payload(await inventoryExportCommand(argv, store, options.transportFactory,
+          options.writeCoordinatorFactory ?? ((flags) => createWriteCoordinator(flags, options.credentials)))) as Record<string, unknown>;
         if (["attack-path", "attack-technique", "connector"].includes(argv[0] ?? "")) {
           const result = await attackCommand(argv, store, options.transportFactory);
           if (result.error) process.exitCode = 1;
