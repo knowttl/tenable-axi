@@ -22,7 +22,7 @@ Transport errors carry a stable code, operation, optional HTTP status and `retry
 Production binds reviewed inventory search/properties and exports, Exposure Management tag and card reads, attack searches, attack exports, connector logs and platform tags; offline tests use synthetic fixtures and a CA-verified loopback HTTPS fake through the internal construction seam.
 No flag or environment variable enables that seam in the CLI.
 
-Inventory and attack export creation use the write coordinator and are read-only by default.
+Inventory and attack export creation and platform tag mutations use the write coordinator and are read-only by default.
 It enforces immutable configured scope, redacted previews, exact confirmation, optional host approval, stale-state refusal and a durable private journal before a single authorized send.
 Unknown outcomes include an audit ID and read-back guidance and are never replayed.
 Named write commands register strict mutation definitions alongside transport bindings in the catalogue and call `createWriteCoordinator().run(operationId, input, options)`.
@@ -62,7 +62,7 @@ Use `--help` on each leaf for selectors and defaults.
 
 Use `tag category list/show/create/update/delete` and `tag value list/show/create/update/delete/bulk-delete` for platform tags.
 Category creates and updates require `--name`, with optional `--description`; show, update and delete select an exact `--id` UUID.
-Value creates and updates require `--body-file <file>` with only documented non-security fields.
+Value creates and updates require `--body-file <file>` with only documented non-security fields; show, update and delete select an exact `--id` UUID.
 Creates accept category UUID or name, optional category description, value, description and dynamic filters; a new category name may create a category.
 Updates accept value, description, filters and the documented `version` field; read `tag value show --id <id> --fields id,value,version` before updating.
 Dynamic rules use `filters.asset.and` or `filters.asset.or` arrays of `{property, operator, value}`, where value is a string or string array, with at most 40 rules and 1024 values per rule.
