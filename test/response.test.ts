@@ -115,16 +115,17 @@ test("generated hints preserve shell-sensitive selectors and body paths literall
   expect(followed.code).toBe(0);
   expect(followed.data).toMatchObject({ kind: "dry-run", preview: { proposed: { body: { description: "a".repeat(1001) } } } });
   const listArgs = ["combination", "list", "--config", config, "--profile", "example", "--limit", "1"];
-  const first = await f.run(listArgs, [{ body: { combinations: [{ id, ...combination }, { id: other, ...combination }] } }]);
+  const listed = { body: { combinations: [{ id, ...combination }, { id: other, ...combination }] } };
+  const first = await f.run(listArgs, [listed]);
   expect(first.code).toBe(0);
   const hints = first.data.help as string[];
   const show = shellArgs(hints[0]!.slice(4).replace("<id>", id));
   expect((await f.run(show.slice(1), [{ body: { id, ...combination } }])).code).toBe(0);
-  const resume = shellArgs(hints[1]!.slice(4, -" to resume the saved unpaged collection".length).replace("<cursor>", first.data.cursor as string));
-  const resumed = await f.run(resume.slice(1));
+  const resume = shellArgs(hints[1]!.slice(4, -" to re-fetch the collection and resume".length).replace("<cursor>", first.data.cursor as string));
+  const resumed = await f.run(resume.slice(1), [listed]);
   expect(resumed.code).toBe(0);
   expect(resumed.data).toMatchObject({ combinations: [{ id: other }], complete: true });
-  expect(resumed.requests).toHaveLength(0);
+  expect(resumed.requests).toHaveLength(1);
 });
 
 test.each([null, { property: "cve.id", operator: "eq" }, { and: [{ or: [null] }] }, { or: [] }])(
@@ -135,9 +136,10 @@ test.each([null, { property: "cve.id", operator: "eq" }, { and: [{ or: [null] }]
     expect(show.code).toBe(1);
     expect(show.data).toMatchObject({ error: { code: "RESPONSE_INVALID" } });
     const args = ["combination", "list", "--fields", "id,query"];
-    const first = await f.run([...args, "--limit", "1"], [{ body: { combinations: [{ id: other, ...combination }, row] } }]);
+    const collection = { body: { combinations: [{ id: other, ...combination }, row] } };
+    const first = await f.run([...args, "--limit", "1"], [collection]);
     expect(first.code).toBe(0);
-    const resumed = await f.run([...args, "--cursor", first.data.cursor as string]);
+    const resumed = await f.run([...args, "--cursor", first.data.cursor as string], [collection]);
     expect(resumed.code).toBe(1);
     expect(resumed.data).toMatchObject({ error: { code: "RESPONSE_INVALID" } });
     const listed = await f.run(args, [{ body: { combinations: [row] } }]);
@@ -177,7 +179,7 @@ test("combination reads preserve valid recursive and existence queries", async (
   expect(result.data).toMatchObject({ combination: { query: nested } });
 });
 
-test.each(["initiative", "combination"])("%s lists resume locally without invented server parameters", async (kind) => {
+test.each(["initiative", "combination"])("%s lists re-fetch and resume without invented server parameters", async (kind) => {
   const f = fixture(kind, "list");
   const body = { [`${kind}s`]: [{ id, ...(kind === "initiative" ? initiative : combination), beta: true }, { id: other, ...(kind === "initiative" ? initiative : combination) }] };
   const first = await f.run([...f.args, "--limit", "1"], [{ body }]);
@@ -186,30 +188,79 @@ test.each(["initiative", "combination"])("%s lists resume locally without invent
   expect(first.requests[0]!.url).toBe(`https://cloud.tenable.com/exposure-response/${kind}s`);
   const resumed = await f.run([...f.args, "--cursor", first.data.cursor as string], [{ body }]);
   expect(resumed.data).toMatchObject({ [`${kind}s`]: [{ id: other }], count: 1, complete: true });
-  expect(resumed.requests).toHaveLength(0);
+  expect(resumed.requests).toHaveLength(1);
+  expect(resumed.requests[0]!.url).toBe(first.requests[0]!.url);
+});
+
+test.each(["initiative", "combination"])("%s continuation commands stay small with long selected descriptions", async (kind) => {
+  const f = fixture(kind, "list");
+  const rows = Array.from({ length: 250 }, (_, index) => ({
+    id: `00000000-0000-4000-8000-${index.toString(16).padStart(12, "0")}`,
+    name: `Synthetic ${index}`, description: "d".repeat(1024),
+  }));
+  const reply = { body: { [`${kind}s`]: rows } };
+  const first = await f.run([...f.args, "--fields", "id,name,description", "--full"], [reply]);
+  expect(first.code).toBe(0);
+  expect(first.data).toMatchObject({ [`${kind}s`]: rows.slice(0, 100), count: 100, complete: false });
+  expect(Buffer.byteLength(first.data.cursor as string)).toBeLessThan(1024);
+  const command = (first.data.help as string[])[1]!.slice(4, -" to re-fetch the collection and resume".length)
+    .replace("<cursor>", first.data.cursor as string);
+  expect(Buffer.byteLength(command)).toBeLessThan(8192);
+  const second = await f.run(shellArgs(command).slice(1), [reply]);
+  expect(second.code).toBe(0);
+  expect(second.data).toMatchObject({ [`${kind}s`]: rows.slice(100, 200), count: 100, complete: false });
+  const nextCommand = (second.data.help as string[])[1]!.slice(4, -" to re-fetch the collection and resume".length)
+    .replace("<cursor>", second.data.cursor as string);
+  expect(Buffer.byteLength(nextCommand)).toBeLessThan(8192);
+  const thirdPage = await f.run(shellArgs(nextCommand).slice(1), [reply]);
+  expect(thirdPage.code).toBe(0);
+  expect(thirdPage.data).toMatchObject({ [`${kind}s`]: rows.slice(200), count: 50, complete: true });
+  expect(thirdPage.data).not.toHaveProperty("cursor");
+});
+
+test.each([
+  { kind: "initiative", verb: "list", key: "initiatives" },
+  { kind: "combination", verb: "list", key: "combinations" },
+  { kind: "combination", verb: "filters", key: "filters" },
+])("$kind $verb refuses continuation after collection reordering", async ({ kind, verb, key }) => {
+  const f = fixture(kind, verb);
+  const rows = [{ id, name: "First", operators: ["eq"] }, { id: other, name: "Second", operators: ["eq"] }];
+  const args = [...f.args, "--fields", "name"];
+  const first = await f.run([...args, "--limit", "1"], [{ body: { [key]: rows } }]);
+  expect(first.code).toBe(0);
+  const resumed = await f.run([...args, "--cursor", first.data.cursor as string], [{ body: { [key]: [rows[1], rows[0]] } }]);
+  expect(resumed.code).toBe(2);
+  expect(resumed.data).toMatchObject({ error: { code: "VALIDATION_ERROR", message: expect.stringContaining("restart without --cursor") } });
+  expect(resumed.data).not.toHaveProperty(key);
 });
 
 test("combination type scopes both the request and resume cursor", async () => {
   const f = fixture("combination", "list");
-  const first = await f.run([...f.args, "--type", "tenable", "--limit", "1"], [{ body: { combinations: [{ id, name: "Curated" }, { id: other, name: "Other" }] } }]);
+  const reply = { body: { combinations: [{ id, name: "Curated" }, { id: other, name: "Other" }] } };
+  const first = await f.run([...f.args, "--type", "tenable", "--limit", "1"], [reply]);
   expect(first.data).toMatchObject({ combinations: [{ type: "tenable" }] });
   expect(first.requests[0]!.url).toBe("https://cloud.tenable.com/exposure-response/combinations?type=tenable");
+  const resumed = await f.run([...f.args, "--type", "tenable", "--cursor", first.data.cursor as string], [reply]);
+  expect(resumed.code).toBe(0);
+  expect(resumed.data).toMatchObject({ combinations: [{ id: other, type: "tenable" }], complete: true });
+  expect(resumed.requests[0]!.url).toBe(first.requests[0]!.url);
   const changed = await f.run([...f.args, "--type", "private", "--cursor", first.data.cursor as string]);
   expect(changed.code).toBe(2);
   expect(changed.requests).toHaveLength(0);
 });
 
-test("resume preserves unreturned rows and redacts secrets before encoding the cursor", async () => {
+test("resume re-fetches unreturned rows and redacts secrets without encoding row data", async () => {
   const f = fixture("combination", "list");
   const args = [...f.args, "--fields", "id,name,description"];
-  const first = await f.run([...args, "--limit", "1"], [{ body: { combinations: [{ id, ...combination, description: "First" },
-    { id: other, ...combination, description: syntheticKeys.secretKey, unused: "discard" }] } }]);
+  const listed = { body: { combinations: [{ id, ...combination, description: "First" },
+    { id: other, ...combination, description: syntheticKeys.secretKey, unused: "discard" }] } };
+  const first = await f.run([...args, "--limit", "1"], [listed]);
   const saved = Buffer.from(first.data.cursor as string, "base64url").toString("utf8");
   expect(saved).not.toContain(syntheticKeys.secretKey); expect(saved).not.toContain("discard");
-  const resumed = await f.run([...args, "--cursor", first.data.cursor as string]);
+  const resumed = await f.run([...args, "--cursor", first.data.cursor as string], [listed]);
   expect(resumed.code).toBe(0);
   expect(resumed.data).toMatchObject({ combinations: [{ id: other, description: "***redacted***" }], complete: true });
-  expect(resumed.requests).toHaveLength(0);
+  expect(resumed.requests).toHaveLength(1);
 });
 
 test("a malformed later row retains valid rows and exits with a failure", async () => {
@@ -239,14 +290,15 @@ test("combination filters map the documented property name and retain operator m
 test("optional filter metadata stays absent through continuation", async () => {
   const f = fixture();
   const args = ["combination", "filters", "--fields", "property,operators,allowedValues,selectMultiValue"];
-  const first = await f.run([...args, "--limit", "1"], [{ body: { filters: [
+  const listed = { body: { filters: [
     { name: "cve.category", operators: ["eq"], allowedValues: ["ransomware"], selectMultiValue: true },
     { name: "cve.vulnerability_names", operators: ["eq", "exists"] },
     { name: "cve.zero_day", operators: ["eq"], allowedValues: [], selectMultiValue: false },
-  ] } }]);
+  ] } };
+  const first = await f.run([...args, "--limit", "1"], [listed]);
   expect(first.code).toBe(0);
   expect(first.data).toMatchObject({ filters: [{ property: "cve.category", allowedValues: ["ransomware"], selectMultiValue: true }], complete: false });
-  const resumed = await f.run([...args, "--cursor", first.data.cursor as string]);
+  const resumed = await f.run([...args, "--cursor", first.data.cursor as string], [listed]);
   expect(resumed.code).toBe(0);
   expect(resumed.data).toMatchObject({ filters: [
     { property: "cve.vulnerability_names", operators: ["eq", "exists"] },
@@ -254,7 +306,7 @@ test("optional filter metadata stays absent through continuation", async () => {
   ], complete: true });
   expect((resumed.data.filters as object[])[0]).not.toHaveProperty("allowedValues");
   expect((resumed.data.filters as object[])[0]).not.toHaveProperty("selectMultiValue");
-  expect(resumed.requests).toHaveLength(0);
+  expect(resumed.requests).toHaveLength(1);
 });
 
 test("optional filter metadata stays absent on the initial read", async () => {
@@ -279,15 +331,16 @@ test.each([
   expect(result.code).toBe(1);
   expect(result.data).toMatchObject({ error: { code: "RESPONSE_INVALID" } });
   const args = ["combination", "filters", "--fields", `property,${field}`];
-  const first = await f.run([...args, "--limit", "1"], [{ body: { filters: [
+  const listed = { body: { filters: [
     { name: "cve.vulnerability_names", operators: ["eq"] },
     { name: "cve.category", operators: ["eq"], [field]: value },
-  ] } }]);
+  ] } };
+  const first = await f.run([...args, "--limit", "1"], [listed]);
   expect(first.code).toBe(0);
-  const resumed = await f.run([...args, "--cursor", first.data.cursor as string]);
+  const resumed = await f.run([...args, "--cursor", first.data.cursor as string], [listed]);
   expect(resumed.code).toBe(1);
   expect(resumed.data).toMatchObject({ error: { code: "RESPONSE_INVALID" } });
-  expect(resumed.requests).toHaveLength(0);
+  expect(resumed.requests).toHaveLength(1);
 });
 
 test("initiative detail metrics preserve missing values and reject malformed counters", async () => {

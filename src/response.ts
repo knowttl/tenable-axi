@@ -26,8 +26,9 @@ function bodyFile(path: string): unknown {
   } finally { if (path !== "-") closeSync(fd); }
 }
 const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
-const cursorSchema = z.strictObject({ version: z.literal(1), scope: z.string(), pending: z.array(z.record(z.string(), z.unknown())) });
-const maxCursor = 28 * 1024 * 1024;
+const cursorSchema = z.strictObject({ version: z.literal(2), scope: z.string().regex(/^[a-f0-9]{64}$/),
+  snapshot: z.string().regex(/^[a-f0-9]{64}$/), position: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER) });
+const maxCursor = 1024;
 const counts = z.object({ last_count: z.number().int(), current_count: z.number().int() }).partial().passthrough();
 const statistics = z.object({ total_assets: z.number().int(), total_findings: z.number().int(), findings_remediated: z.number().int(),
   average_vuln_age: z.number(), average_remediated_time: z.number(), total_cves: z.number().int(), total_cves_change: z.number(),
@@ -154,19 +155,22 @@ export async function responseCommand(argv: string[], store: ReturnType<typeof c
   const scope = hash([profile.origin, profile.name, profile.accessKey, profile.secretKey, loaded.path, operation, get("type"), selected]);
   if (cursor && cursor.scope !== scope) usage("Cursor belongs to different profile, operation, type or fields");
   const transport = factory({ keys: store.credentials(profile), origin: profile.origin });
-  const response = cursor ? undefined : await transport.request(operation, verb === "show" ? { pathParams: { [`${kind}_id`]: get("id")! } }
+  const response = await transport.request(operation, verb === "show" ? { pathParams: { [`${kind}_id`]: get("id")! } }
     : get("type") ? { query: { type: get("type")! } } : {});
   if (verb === "show") {
-    const row = response!.body as Record<string, unknown>;
+    const row = response.body as Record<string, unknown>;
     if (row.id !== get("id")) throw new TransportError({ code: "RESPONSE_INVALID", message: "Details returned a different ID", operation });
     const output = project(row);
     return { [kind]: output, ...(truncated ? { help: fullHelp() } : {}) };
   }
   const key = verb === "filters" ? "filters" : `${kind}s`;
-  const rows = cursor?.pending ?? (response!.body as Record<string, Record<string, unknown>[]>)[key]!;
+  const rows = (response.body as Record<string, Record<string, unknown>[]>)[key]!;
+  const snapshot = hash(rows);
+  if (cursor && (cursor.snapshot !== snapshot || cursor.position >= rows.length)) usage("Collection changed or cursor position is invalid; restart without --cursor");
+  const position = cursor?.position ?? 0;
   const data: Record<string, unknown>[] = [];
   let failure: TransportError | undefined;
-  for (const row of rows.slice(0, limit)) {
+  for (const row of rows.slice(position, position + limit)) {
     try { data.push(project(row)); }
     catch (error) {
       if (!(error instanceof TransportError) || !data.length) throw error;
@@ -174,16 +178,11 @@ export async function responseCommand(argv: string[], store: ReturnType<typeof c
       break;
     }
   }
-  const next = data.length;
+  const next = position + data.length;
   const complete = next === rows.length;
-  // Preserve only selected wire fields, before text truncation, with the same bounded cursor contract as connector logs.
-  const wireFields = [...new Set([...selected.map((field) => alias[field] ?? field), ...(kind === "combination" && selected.includes("type") && verb !== "filters" ? ["is_public"] : [])])];
-  const pending = store.redactor.payload(rows.slice(next).map((row) => Object.fromEntries(wireFields.flatMap((field) =>
-    row[field] === undefined ? [] : [[field, row[field]]]))));
-  const resume = complete ? undefined : Buffer.from(JSON.stringify({ version: 1, scope, pending })).toString("base64url");
-  if (resume && resume.length > maxCursor) throw new TransportError({ code: "RESPONSE_INVALID", message: "Continuation exceeds its byte bound; narrow selected fields", operation });
+  const resume = complete ? undefined : Buffer.from(JSON.stringify({ version: 2, scope, snapshot, position: next })).toString("base64url");
   const help = [...fullHelp(), ...(verb === "list" ? [`Run tenable-axi ${kind} show --id <id>${get("config") ? ` --config ${quote(get("config")!)}` : ""}${profile.source === "env-profile" ? "" : ` --profile ${quote(profile.name)}`}`] : [])];
-  if (!complete) help.push(`Run ${command(["--cursor"])} --cursor <cursor> to resume the saved unpaged collection`);
+  if (!complete) help.push(`Run ${command(["--cursor"])} --cursor <cursor> to re-fetch the collection and resume`);
   return { [key]: data, count: data.length, total: null, complete,
     ...(!data.length ? { message: `0 ${key} matched the selected filters` } : {}),
     ...(!complete ? { reason: failure ? "READ_FAILED" : get("all") ? "ROW_BUDGET_EXCEEDED" : "LIMIT", cursor: resume } : {}),

@@ -44,7 +44,8 @@ Run again with `--execute --confirm '<exact preview confirmation>'` to send once
 Updates re-read the selected resource before sending and refuse changed state; identical updates/creates and verified absent deletes are no-ops.
 The API does not document conditional writes, so re-reading narrows the race without guaranteeing atomic comparison.
 Lists and allowed filters are unpaged upstream; `--limit` defaults to 100 and `--all` caps output at 10,000 rows.
-Their scoped cursors preserve unreturned selected fields in redacted continuation data bounded at 28 MiB, resuming without another request or invented server paging parameters.
+Their scoped cursors contain only a position and collection fingerprint, bounded at 1 KiB, without row data or invented server paging parameters.
+Resume re-fetches the collection with the original selectors and refuses changed collections; restart without `--cursor` if the collection changed.
 `combination list --type private|shared|tenable` scopes the upstream request; the displayed type uses that selector or the returned `is_public` value, and stays null when neither establishes it.
 No upstream total is supplied, so `total` remains null.
 Use `--fields` for documented wire fields or compact aliases (`slaInDays`, filter `property`); `--full` removes text truncation while retaining invocation bounds.

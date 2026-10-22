@@ -32,7 +32,7 @@ export const responseMutations: Record<string, MutationOperation> = {};
 export const responseCatalogue: Record<string, { description: string; operationId: string; flags: Record<string, string>; defaultFields: string[]; examples: string[]; evidence: string }> = {};
 const common = { config: "Config path; default credential precedence", profile: "Profile name; default credential precedence",
   fields: "Comma-separated fields; default compact view", full: "Full text; default false", help: "Show help" };
-const paging = { limit: "Output rows; default 100, maximum 10000", all: "Up to 10000 rows; excludes --limit", cursor: "Resume the same unpaged collection; requires original selectors" };
+const paging = { limit: "Output rows; default 100, maximum 10000", all: "Up to 10000 rows; excludes --limit", cursor: "Re-fetch and resume an unchanged unpaged collection; requires original selectors" };
 const write = { execute: "Send once; default preview", "dry-run": "Preview only; excludes --execute", confirm: "Exact preview confirmation; required to execute" };
 const fail = (code: string, message: string, operation: string): never => { throw new TransportError({ code, message, operation }); };
 const canonical = (value: unknown): string => JSON.stringify(value && typeof value === "object"
