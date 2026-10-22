@@ -7,6 +7,7 @@ import { inventoryCommand } from "./inventory.js";
 import { exposureCommand, type TransportFactory } from "./exposure.js";
 import { TransportError } from "./transport.js";
 import { attackCommand } from "./attack.js";
+import { attackExportCommand } from "./attack-export.js";
 import { inventoryExportCommand, type WriteCoordinatorFactory } from "./inventory-export.js";
 import { createWriteCoordinator } from "./writes.js";
 
@@ -25,7 +26,7 @@ export async function main(argv = process.argv.slice(2), options: { credentials?
     }),
     commands: {
       scaffold: async () => {
-        if (argv[0] === "export") return store.redactor.payload(await inventoryExportCommand(argv, store, options.transportFactory,
+        if (argv[0] === "export") return store.redactor.payload(await (["attack-path", "attack-technique", "mitre-heatmap", "attack"].includes(argv[1] ?? "") ? attackExportCommand : inventoryExportCommand)(argv, store, options.transportFactory,
           options.writeCoordinatorFactory ?? ((flags) => createWriteCoordinator(flags, options.credentials)))) as Record<string, unknown>;
         if (["attack-path", "attack-technique", "connector"].includes(argv[0] ?? "")) {
           const result = await attackCommand(argv, store, options.transportFactory);

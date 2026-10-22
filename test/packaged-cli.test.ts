@@ -169,3 +169,43 @@ test("version startup stays close to the same-machine Node startup floor", () =>
   const median = (values: number[]) => values.sort((a, b) => a - b)[3]!;
   expect(median(versionTimes) / median(floor)).toBeLessThan(4);
 });
+
+test("packaged CLI guards an attack export then downloads redacted JSON through HTTPS", async () => {
+  const { main } = await import(pathToFileURL(join(directory, "package/dist/src/cli.js")).href);
+  const { transportBindings, mutationOperations } = await import(pathToFileURL(join(directory, "package/dist/src/catalogue.js")).href);
+  const { constructWriteCoordinator } = await import(pathToFileURL(join(directory, "package/dist/src/writes-core.js")).href);
+  const id = "00000000-0000-4000-8000-000000000001";
+  const fake = await fakeHttpsTenable([
+    { status: 202, body: { export_id: id } },
+    { body: { export_id: id, status: "FINISHED" } },
+    { body: [{ path_name: "Synthetic path", password: "synthetic-hidden", note: syntheticKeys.secretKey }] },
+  ]);
+  const config = join(directory, "export-config.json"), body = join(directory, "export-body.json"), output = join(directory, "attack.json");
+  writeFileSync(config, JSON.stringify({ version: 1, profiles: { example: { writes: { allowWrites: true, operations: ["apa-export-attack-path"] } } } }), { mode: 0o600 });
+  writeFileSync(body, '{"file_format":"JSON"}');
+  const credentials = { home: directory, env: { XDG_STATE_HOME: directory, TENABLE_AXI_ACCESS_KEY: syntheticKeys.accessKey, TENABLE_AXI_SECRET_KEY: syntheticKeys.secretKey } };
+  const invoke = async (args: string[]) => {
+    let stdout = "";
+    await main([...args, "--config", config, "--profile", "example"], { credentials,
+      transportFactory: () => fake.transport(transportBindings),
+      writeCoordinatorFactory: (options: Record<string, unknown>) => constructWriteCoordinator(options, {
+        operations: mutationOperations, bindings: transportBindings, fetch: fake.fetch, credentials,
+      }), stdout: { write: (chunk: string) => { stdout += chunk; } },
+    });
+    expect(stdout).not.toContain(syntheticKeys.secretKey);
+    return decode(stdout) as Record<string, unknown>;
+  };
+  try {
+    const start = ["export", "attack-path", "start", "--body-file", body];
+    const preview = await invoke(start);
+    expect(fake.requests).toHaveLength(0);
+    const created = await invoke([...start, "--execute", "--confirm", (preview.preview as { confirm: string }).confirm]);
+    expect(created).toMatchObject({ job: { id, state: "SUBMITTED" } });
+    expect(await invoke(["export", "attack", "status", "--id", id])).toMatchObject({ job: { id, state: "FINISHED" } });
+    expect(await invoke(["export", "attack", "download", "--id", id, "--output", output])).toMatchObject({ file: { id, format: "JSON" } });
+    expect(JSON.parse(readFileSync(output, "utf8"))).toEqual([{ path_name: "Synthetic path", password: "***redacted***", note: "***redacted***" }]);
+    expect(fake.requests.map(({ method, url }) => [method, url])).toEqual([
+      ["POST", "/api/v1/export/attack-path"], ["GET", `/api/v1/export/${id}/status`], ["GET", `/api/v1/export/${id}/download`],
+    ]);
+  } finally { await fake.close(); }
+});

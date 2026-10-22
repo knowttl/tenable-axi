@@ -170,12 +170,18 @@ export function constructTransport(options: TransportOptions, dependencies: {
         }
         const reader = response.body?.getReader();
         const chunks: Uint8Array[] = [];
+        const downloading = record.responseMode === "file" && response.status >= 200 && response.status < 300;
+        const ceiling = downloading ? 128 * 1024 * 1024 : 20 * 1024 * 1024;
+        if (downloading && Number(response.headers.get("content-length")) > ceiling) {
+          await reader?.cancel();
+          fail("BYTE_BUDGET_EXCEEDED", "Export encoded file exceeds 128 MiB", operation);
+        }
         try {
           while (reader) {
             const chunk = await reader.read();
             if (chunk.done) break;
             bytes += chunk.value.byteLength;
-            if (bytes > (record.responseMode === "file" ? 128 : 20) * 1024 * 1024) {
+            if (bytes > ceiling) {
               controller.abort();
               fail("BYTE_BUDGET_EXCEEDED", "Invocation decoded response byte budget exceeded", operation);
             }
@@ -183,8 +189,8 @@ export function constructTransport(options: TransportOptions, dependencies: {
           }
         } finally { await reader?.cancel().catch(() => {}); }
         const contents = Buffer.concat(chunks);
-        if (record.responseMode === "file") file = contents;
-        text = record.responseMode === "file" && response.ok ? "" : contents.toString("utf8");
+        if (downloading) file = contents;
+        text = downloading ? "" : contents.toString("utf8");
       } catch (error) {
         if (error instanceof TransportError) throw error;
         const code = record.effect === "write" ? "OUTCOME_UNKNOWN"

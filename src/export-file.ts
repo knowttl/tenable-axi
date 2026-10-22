@@ -72,7 +72,9 @@ export function saveExport(contents: unknown, output: string, redactor: SecretRe
     let safe: string;
     if (/^\s*[\[{]/.test(text)) {
       const value: unknown = JSON.parse(text);
-      if (!Array.isArray(value) || value.some((row) => !row || typeof row !== "object" || Array.isArray(row))) invalid();
+      if (Array.isArray(value)
+        ? value.some((row) => !row || typeof row !== "object" || Array.isArray(row))
+        : operation !== "apa-export-download" || !value || typeof value !== "object") invalid();
       format = "JSON";
       safe = JSON.stringify(scan(value));
     } else {
