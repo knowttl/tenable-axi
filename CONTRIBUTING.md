@@ -2,11 +2,11 @@
 
 Keep changes focused and describe the problem, resulting behavior, scope, and verification in the pull request.
 Follow [the design](docs/design.md); capability evidence does not enable an executable command.
-This initial slice contains documentation and repository metadata only.
+See [README](README.md) for shipped behavior and development commands.
 
 ## TypeScript conventions
 
-Use Node.js 22, TypeScript with strict checking, ESM, and pnpm with a committed lockfile once the scaffold lands.
+Use the runtime required by [package.json](package.json), TypeScript with strict checking, ESM, and pnpm with the committed lockfile.
 Use `axi-sdk-js` for the CLI boundary and `@toon-format/toon` for stdout encoding.
 Keep JSON internally and decode untrusted responses with zod at the boundary.
 Require rendered fields, tolerate extra upstream fields, and keep command input schemas strict.
@@ -27,9 +27,20 @@ Do not add tautological mock-echo checks, checks already covered by the compiler
 Never require a live tenant, customer data, or a real credential for a test.
 T1 configures `.no-mistakes.yaml` following vectra-axi's separated prepare/test/lint command pattern.
 Run only tests affected by the change plus a small fixed baseline.
-Once implemented, run build, lint, tests, spec drift checks, and generated documentation and skill checks before review.
+`corepack pnpm test` always builds and typechecks, then `scripts/test-changes.mjs` selects tests related to files changed since the merge base with `origin/main`, including tracked working-tree changes and untracked files.
+The fixed baseline is `test/packaged-cli.test.ts`, plus `test/write-safety.test.ts` and `test/redaction.test.ts` once present.
+Package, lockfile, TypeScript/Vitest configuration, test support, scripts, pinned specifications and `.no-mistakes.yaml` changes run the full suite.
+The selector prints its mode and fails if it cannot compute the merge base or find the required CLI baseline.
+No hosted test CI is configured; `.no-mistakes.yaml` declares `no_ci: true`.
+Run the development commands in [README](README.md) before review.
+T12 adds generated documentation and skill checks.
 Repeat changed async, clock, and I/O tests to detect leaks and order dependence.
 Live acceptance is a separate, explicitly authorized manual activity described in T13.
+
+`inventory/specs.json` pins the unmodified bytes under `specs/`.
+`docs/design.md` owns the reviewed operation dispositions and planned commands.
+After an explicit specification review, run `corepack pnpm run build` and `corepack pnpm run spec:generate` to regenerate the inventory and declarations, then run `spec:check` offline.
+Never edit `src/generated/` or `inventory/capabilities.json` by hand.
 
 ## Public repository hygiene
 

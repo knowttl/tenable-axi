@@ -1,0 +1,5 @@
+[
+  { "id": "exposure-management", "url": "https://developer.tenable.com/openapi/exposure-management.json", "sha256": "1f1f9d6702f4d92bdd98f63cf780cd93f0475fdaf828b1a147b76701efc9337e", "operations": 24 },
+  { "id": "tenable-platform-settings", "url": "https://developer.tenable.com/openapi/tenable-platform-settings.json", "sha256": "bba0d2a7902cc2dc34fcb5841f533be7066e8bcf41796430d8f0e27b17ab67ca", "operations": 185 },
+  { "id": "vulnerability-management", "url": "https://developer.tenable.com/openapi/vulnerability-management.json", "sha256": "8055e8ce890349a8ec5d95dc7b015144696fe4b637081ec7ae87d37ee2393485", "operations": 151 }
+]

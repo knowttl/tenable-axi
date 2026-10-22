@@ -1,0 +1,3728 @@
+{
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "id": "exposure-management",
+      "url": "https://developer.tenable.com/openapi/exposure-management.json",
+      "sha256": "1f1f9d6702f4d92bdd98f63cf780cd93f0475fdaf828b1a147b76701efc9337e",
+      "operations": 24
+    },
+    {
+      "id": "tenable-platform-settings",
+      "url": "https://developer.tenable.com/openapi/tenable-platform-settings.json",
+      "sha256": "bba0d2a7902cc2dc34fcb5841f533be7066e8bcf41796430d8f0e27b17ab67ca",
+      "operations": 185
+    },
+    {
+      "id": "vulnerability-management",
+      "url": "https://developer.tenable.com/openapi/vulnerability-management.json",
+      "sha256": "8055e8ce890349a8ec5d95dc7b015144696fe4b637081ec7ae87d37ee2393485",
+      "operations": 151
+    }
+  ],
+  "operations": [
+    {
+      "source": "exposure-management",
+      "operationId": "apa-attack-paths-search",
+      "method": "POST",
+      "path": "/api/v1/t1/apa/top-attack-paths/search",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "attack-path list"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T7"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "apa-attack-techniques-search",
+      "method": "POST",
+      "path": "/api/v1/t1/apa/top-attack-techniques/search",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "attack-technique list"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T7"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "connectors-logs",
+      "method": "GET",
+      "path": "/api/v1/t1/connectors/logs",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "connector logs"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T7"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "apa-export-attack-path",
+      "method": "POST",
+      "path": "/api/v1/export/attack-path",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "export attack-path start"
+      ],
+      "reason": "Creates a tenant-side export job; gated write.",
+      "slice": "T9"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "apa-export-attack-technique",
+      "method": "POST",
+      "path": "/api/v1/export/attack-technique",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "export attack-technique start"
+      ],
+      "reason": "Creates a tenant-side export job; gated write.",
+      "slice": "T9"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "apa-export-mitre-heatmap",
+      "method": "POST",
+      "path": "/api/v1/export/mitre-heatmap",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "export mitre-heatmap start"
+      ],
+      "reason": "Creates a tenant-side export job; gated write.",
+      "slice": "T9"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "apa-export-status",
+      "method": "GET",
+      "path": "/api/v1/export/{export_id}/status",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "export attack status"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T9"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "apa-export-download",
+      "method": "GET",
+      "path": "/api/v1/export/{export_id}/download",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "export attack download"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T9"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "exposure-view-cards-search",
+      "method": "GET",
+      "path": "/api/v1/t1/exposure-view/cards",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "card list"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T6"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "exposure-view-card-details",
+      "method": "GET",
+      "path": "/api/v1/t1/exposure-view/cards/{card_id}",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "card show"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T6"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "inventory-assets-search",
+      "method": "POST",
+      "path": "/api/v1/t1/inventory/assets/search",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "asset list",
+        "asset show"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T5"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "inventory-findings-search",
+      "method": "POST",
+      "path": "/api/v1/t1/inventory/findings/search",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "finding list",
+        "finding show"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T5"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "inventory-software-search",
+      "method": "POST",
+      "path": "/api/v1/t1/inventory/software/search",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "software list"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T5"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "inventory-asset-properties-list",
+      "method": "GET",
+      "path": "/api/v1/t1/inventory/assets/properties",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "asset properties"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T5"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "inventory-finding-properties-list",
+      "method": "GET",
+      "path": "/api/v1/t1/inventory/findings/properties",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "finding properties"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T5"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "inventory-software-properties-list",
+      "method": "GET",
+      "path": "/api/v1/t1/inventory/software/properties",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "software properties"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T5"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "inventory-export-assets",
+      "method": "POST",
+      "path": "/api/v1/t1/inventory/export/assets",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "export asset start"
+      ],
+      "reason": "Creates a tenant-side export job; gated write.",
+      "slice": "T8"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "inventory-export-findings",
+      "method": "POST",
+      "path": "/api/v1/t1/inventory/export/findings",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "export finding start"
+      ],
+      "reason": "Creates a tenant-side export job; gated write.",
+      "slice": "T8"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "inventory-export-assets-jobs",
+      "method": "GET",
+      "path": "/api/v1/t1/inventory/export/assets/status",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "export asset jobs"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T8"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "inventory-export-findings-jobs",
+      "method": "GET",
+      "path": "/api/v1/t1/inventory/export/findings/status",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "export finding jobs"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T8"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "inventory-export-status",
+      "method": "GET",
+      "path": "/api/v1/t1/inventory/export/{export_id}/status",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "export inventory status"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T8"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "inventory-export-download",
+      "method": "GET",
+      "path": "/api/v1/t1/inventory/export/{export_id}/download/{chunk_id}",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "export inventory download"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T8"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "inventory-tag-search",
+      "method": "POST",
+      "path": "/api/v1/t1/tags/search",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "tag list"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T6"
+    },
+    {
+      "source": "exposure-management",
+      "operationId": "inventory-tag-properties-list",
+      "method": "GET",
+      "path": "/api/v1/t1/tags/properties",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "tag properties"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T6"
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "vm-api-security-settings-list",
+      "method": "GET",
+      "path": "/access-control/v1/api-security-settings",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "vm-api-security-settings-update",
+      "method": "PUT",
+      "path": "/access-control/v1/api-security-settings",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "groups-create",
+      "method": "POST",
+      "path": "/groups",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "groups-list",
+      "method": "GET",
+      "path": "/groups",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "groups-edit",
+      "method": "PUT",
+      "path": "/groups/{group_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "groups-delete",
+      "method": "DELETE",
+      "path": "/groups/{group_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "groups-list-users",
+      "method": "GET",
+      "path": "/groups/{group_uuid}/users",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "groups-add-user",
+      "method": "POST",
+      "path": "/groups/{group_uuid}/users/{user_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "groups-delete-user",
+      "method": "DELETE",
+      "path": "/groups/{group_uuid}/users/{user_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v3-access-control-permission-create",
+      "method": "POST",
+      "path": "/api/v3/access-control/permissions",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v3-access-control-permissions-list",
+      "method": "GET",
+      "path": "/api/v3/access-control/permissions",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v3-access-control-permissions-details",
+      "method": "GET",
+      "path": "/api/v3/access-control/permissions/{permission_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v3-access-control-permission-update",
+      "method": "PUT",
+      "path": "/api/v3/access-control/permissions/{permission_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v3-access-control-permission-delete",
+      "method": "DELETE",
+      "path": "/api/v3/access-control/permissions/{permission_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v3-access-control-permissions-user-list",
+      "method": "GET",
+      "path": "/api/v3/access-control/permissions/users/{user_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v3-access-control-permissions-user-group-list",
+      "method": "GET",
+      "path": "/api/v3/access-control/permissions/user-groups/{user_group_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v3-access-control-permissions-current-user-list",
+      "method": "GET",
+      "path": "/api/v3/access-control/permissions/users/me",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "access-control-roles-create",
+      "method": "POST",
+      "path": "/access-control/v1/roles",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "access-control-roles-list",
+      "method": "GET",
+      "path": "/access-control/v1/roles",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "access-control-roles-details",
+      "method": "GET",
+      "path": "/access-control/v1/roles/{role_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "access-control-roles-update",
+      "method": "PUT",
+      "path": "/access-control/v1/roles/{role_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "access-control-roles-delete",
+      "method": "DELETE",
+      "path": "/access-control/v1/roles/{role_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "access-control-roles-list-permissions",
+      "method": "GET",
+      "path": "/access-control/v1/role-permissions",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "users-create",
+      "method": "POST",
+      "path": "/users",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "users-list",
+      "method": "GET",
+      "path": "/users",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "users-details",
+      "method": "GET",
+      "path": "/users/{user_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "users-edit",
+      "method": "PUT",
+      "path": "/users/{user_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "users-delete",
+      "method": "DELETE",
+      "path": "/users/{user_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "access-control-users-role-list",
+      "method": "GET",
+      "path": "/access-control/v1/users/{user_uuid}/roles",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "access-control-users-role-update",
+      "method": "PUT",
+      "path": "/access-control/v1/users/{user_uuid}/roles",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "users-password",
+      "method": "PUT",
+      "path": "/users/{user_uuid}/chpasswd",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "users-enabled",
+      "method": "PUT",
+      "path": "/users/{user_id}/enabled",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "users-list-auths",
+      "method": "GET",
+      "path": "/users/{user_id}/authorizations",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "users-update-auths",
+      "method": "PUT",
+      "path": "/users/{user_id}/authorizations",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "users-keys",
+      "method": "PUT",
+      "path": "/users/{user_id}/keys",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Credential minting invalidates the existing API key pair; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "users-two-factor-enable",
+      "method": "POST",
+      "path": "/users/{user_id}/two-factor/send-verification",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "users-two-factor-enable-verify",
+      "method": "POST",
+      "path": "/users/{user_id}/two-factor/verify-code",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "users-two-factor",
+      "method": "PUT",
+      "path": "/users/{user_id}/two-factor",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v1-access-groups-create",
+      "method": "POST",
+      "path": "/access-groups",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v1-access-groups-list",
+      "method": "GET",
+      "path": "/access-groups",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v1-access-groups-edit",
+      "method": "PUT",
+      "path": "/access-groups/{id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v1-access-groups-delete",
+      "method": "DELETE",
+      "path": "/access-groups/{id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v1-access-groups-details",
+      "method": "GET",
+      "path": "/access-groups/{id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v1-access-groups-list-filters",
+      "method": "GET",
+      "path": "/access-groups/filters",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v1-access-groups-list-rule-filters",
+      "method": "GET",
+      "path": "/access-groups/rules/filters",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v2-access-groups-create",
+      "method": "POST",
+      "path": "/v2/access-groups",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v2-access-groups-list",
+      "method": "GET",
+      "path": "/v2/access-groups",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v2-access-groups-edit",
+      "method": "PUT",
+      "path": "/v2/access-groups/{id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v2-access-groups-delete",
+      "method": "DELETE",
+      "path": "/v2/access-groups/{id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v2-access-groups-details",
+      "method": "GET",
+      "path": "/v2/access-groups/{id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v2-access-groups-list-filters",
+      "method": "GET",
+      "path": "/v2/access-groups/filters",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-v2-access-groups-list-rule-filters",
+      "method": "GET",
+      "path": "/v2/access-groups/rules/filters",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "audit-log-events",
+      "method": "GET",
+      "path": "/audit-log/v1/events",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agents-list",
+      "method": "GET",
+      "path": "/scanners/null/agents",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agent-group-list-agents",
+      "method": "GET",
+      "path": "/scanners/null/agent-groups/{agent_group_id}/agents",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agents-get-safe-mode-summary",
+      "method": "GET",
+      "path": "/agents/safe-mode-summary",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agents-get",
+      "method": "GET",
+      "path": "/scanners/null/agents/{agent_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-agents-rename",
+      "method": "PATCH",
+      "path": "/scanners/null/agents/{agent_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agents-delete",
+      "method": "DELETE",
+      "path": "/scanners/null/agents/{agent_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agents-directives-create",
+      "method": "POST",
+      "path": "/scanners/null/agents/{agent_id}/directives",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agent-config-details",
+      "method": "GET",
+      "path": "/scanners/null/agents/config",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agent-config-edit",
+      "method": "PUT",
+      "path": "/scanners/null/agents/config",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agent-exclusions-create",
+      "method": "POST",
+      "path": "/scanners/null/agents/exclusions",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agent-exclusions-list",
+      "method": "GET",
+      "path": "/scanners/null/agents/exclusions",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agent-exclusions-details",
+      "method": "GET",
+      "path": "/scanners/null/agents/exclusions/{exclusion_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agent-exclusions-edit",
+      "method": "PUT",
+      "path": "/scanners/null/agents/exclusions/{exclusion_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agent-exclusions-delete",
+      "method": "DELETE",
+      "path": "/scanners/null/agents/exclusions/{exclusion_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agent-groups-create",
+      "method": "POST",
+      "path": "/scanners/null/agent-groups",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agent-groups-list",
+      "method": "GET",
+      "path": "/scanners/null/agent-groups",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agent-groups-details",
+      "method": "GET",
+      "path": "/scanners/null/agent-groups/{group_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agent-groups-configure",
+      "method": "PUT",
+      "path": "/scanners/null/agent-groups/{group_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agent-groups-delete",
+      "method": "DELETE",
+      "path": "/scanners/null/agent-groups/{group_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agent-groups-add-agent",
+      "method": "PUT",
+      "path": "/scanners/null/agent-groups/{group_id}/agents/{agent_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agent-groups-delete-agent",
+      "method": "DELETE",
+      "path": "/scanners/null/agent-groups/{group_id}/agents/{agent_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "bulk-task-agent-status",
+      "method": "GET",
+      "path": "/scanners/null/agents/_bulk/{task_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "bulk-task-agent-group-status",
+      "method": "GET",
+      "path": "/scanners/null/agent-groups/{group_id}/agents/_bulk/{task_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "bulk-add-agents",
+      "method": "POST",
+      "path": "/scanners/null/agent-groups/{group_id}/agents/_bulk/add",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "bulk-remove-agents",
+      "method": "POST",
+      "path": "/scanners/null/agent-groups/{group_id}/agents/_bulk/remove",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-agent-bulk-operations-add-to-network",
+      "method": "POST",
+      "path": "/scanners/null/agents/_bulk/addToNetwork",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-agent-bulk-operations-remove-from-network",
+      "method": "POST",
+      "path": "/scanners/null/agents/_bulk/removeFromNetwork",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "agent-bulk-operations-profile",
+      "method": "POST",
+      "path": "/scanners/null/agents/_bulk/assignToProfile",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-agent-bulk-operations-directive",
+      "method": "POST",
+      "path": "/scanners/null/agents/_bulk/directive",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-agent-bulk-operations-group-directive",
+      "method": "POST",
+      "path": "/scanners/null/agent-groups/{group_id}/agents/_bulk/directive",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "bulk-unlink-agents",
+      "method": "POST",
+      "path": "/scanners/null/agents/_bulk/unlink",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-connectors-create",
+      "method": "POST",
+      "path": "/settings/connectors",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-connectors-list",
+      "method": "GET",
+      "path": "/settings/connectors",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-connectors-details",
+      "method": "GET",
+      "path": "/settings/connectors/{connector_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-connectors-update",
+      "method": "PUT",
+      "path": "/settings/connectors/{connector_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-connectors-delete",
+      "method": "DELETE",
+      "path": "/settings/connectors/{connector_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-connectors-get-arm-template",
+      "method": "GET",
+      "path": "/settings/connectors/azure-fa/{connector_id}/arm-template",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-connectors-get-cft-template",
+      "method": "POST",
+      "path": "/settings/connectors/cloudformation-template",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-connectors-get-aws-cloudtrails",
+      "method": "POST",
+      "path": "/settings/connectors/aws/cloudtrails",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-connectors-import-assets",
+      "method": "POST",
+      "path": "/settings/connectors/{connector_id}/import",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "credentials-create",
+      "method": "POST",
+      "path": "/credentials",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Credential/key administration outside approved business scope; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "credentials-list",
+      "method": "GET",
+      "path": "/credentials",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Credential/key administration outside approved business scope; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "credentials-details",
+      "method": "GET",
+      "path": "/credentials/{uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Credential/key administration outside approved business scope; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "credentials-update",
+      "method": "PUT",
+      "path": "/credentials/{uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Credential/key administration outside approved business scope; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "credentials-delete",
+      "method": "DELETE",
+      "path": "/credentials/{uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Credential/key administration outside approved business scope; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "credentials-list-credential-types",
+      "method": "GET",
+      "path": "/credentials/types",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Credential/key administration outside approved business scope; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "credentials-file-upload",
+      "method": "POST",
+      "path": "/credentials/files",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Credential/key administration outside approved business scope; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "exclusions-create",
+      "method": "POST",
+      "path": "/exclusions",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "exclusions-list",
+      "method": "GET",
+      "path": "/exclusions",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "exclusions-import",
+      "method": "POST",
+      "path": "/exclusions/import",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "exclusions-details",
+      "method": "GET",
+      "path": "/exclusions/{exclusion_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "exclusions-edit",
+      "method": "PUT",
+      "path": "/exclusions/{exclusion_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "exclusions-delete",
+      "method": "DELETE",
+      "path": "/exclusions/{exclusion_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "networks-create",
+      "method": "POST",
+      "path": "/networks",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "networks-list",
+      "method": "GET",
+      "path": "/networks",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "networks-details",
+      "method": "GET",
+      "path": "/networks/{network_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "networks-update",
+      "method": "PUT",
+      "path": "/networks/{network_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "networks-delete",
+      "method": "DELETE",
+      "path": "/networks/{network_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-networks-asset-count-details",
+      "method": "GET",
+      "path": "/networks/{network_id}/counts/assets-not-seen-in/{num_days}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "networks-assign-scanner",
+      "method": "POST",
+      "path": "/networks/{network_id}/scanners/{scanner_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "networks-list-scanners",
+      "method": "GET",
+      "path": "/networks/{network_id}/scanners",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "networks-assign-scanner-bulk",
+      "method": "POST",
+      "path": "/networks/{network_id}/scanners",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "networks-list-assignable-scanners",
+      "method": "GET",
+      "path": "/networks/{network_id}/assignable-scanners",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "sensors-ot-create",
+      "method": "POST",
+      "path": "/sensors",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "sensors-ot-list",
+      "method": "GET",
+      "path": "/sensors/{type}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "sensors-ot-details",
+      "method": "GET",
+      "path": "/sensors/{type}/{id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "sensors-ot-update",
+      "method": "PUT",
+      "path": "/sensors/{type}/{id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "sensors-ot-delete",
+      "method": "DELETE",
+      "path": "/sensors/{type}/{id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "sensors-ot-linking-key-generate",
+      "method": "POST",
+      "path": "/sensors/{type}/linking-key",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Credential/key administration outside approved business scope; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "permissions-list",
+      "method": "GET",
+      "path": "/permissions/{object_type}/{object_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "permissions-change",
+      "method": "PUT",
+      "path": "/permissions/{object_type}/{object_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "User, role, group or access-control management; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "profiles-create",
+      "method": "POST",
+      "path": "/sensors/profiles/{sensor_type}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "profiles-list",
+      "method": "GET",
+      "path": "/sensors/profiles/{sensor_type}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "profiles-details",
+      "method": "GET",
+      "path": "/sensors/profiles/{sensor_type}/{profile_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "profiles-update",
+      "method": "PUT",
+      "path": "/sensors/profiles/{sensor_type}/{profile_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "profiles-delete",
+      "method": "DELETE",
+      "path": "/sensors/profiles/{sensor_type}/{profile_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "profiles-clone",
+      "method": "POST",
+      "path": "/sensors/profiles/{sensor_type}/{profile_uuid}/clone",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "profiles-feed-versions",
+      "method": "GET",
+      "path": "/sensors/profiles/feed_versions",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "recast-rules-create",
+      "method": "POST",
+      "path": "/v1/recast/rules",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "recast-rules-search",
+      "method": "POST",
+      "path": "/v1/recast/rules/search",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "recast-rules-details",
+      "method": "GET",
+      "path": "/v1/recast/rules/{rule_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "recast-rules-update",
+      "method": "PUT",
+      "path": "/v1/recast/rules/{rule_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "recast-rules-delete",
+      "method": "DELETE",
+      "path": "/v1/recast/rules/{rule_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "recast-rules-filters-list",
+      "method": "GET",
+      "path": "/v1/recast/rules/filters",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanners-list",
+      "method": "GET",
+      "path": "/scanners",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanners-details",
+      "method": "GET",
+      "path": "/scanners/{scanner_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanners-edit",
+      "method": "PUT",
+      "path": "/scanners/{scanner_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanners-delete",
+      "method": "DELETE",
+      "path": "/scanners/{scanner_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanners-get-scanner-key",
+      "method": "GET",
+      "path": "/scanners/{scanner_id}/key",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Credential/key administration outside approved business scope; never exposed.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanners-get-aws-targets",
+      "method": "GET",
+      "path": "/scanners/{scanner_id}/aws-targets",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanners-get-scans",
+      "method": "GET",
+      "path": "/scanners/{scanner_id}/scans",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanner-config-details",
+      "method": "GET",
+      "path": "/scanners/config",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanner-config-edit",
+      "method": "PUT",
+      "path": "/scanners/config",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanner-groups-create",
+      "method": "POST",
+      "path": "/scanner-groups",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanner-groups-list",
+      "method": "GET",
+      "path": "/scanner-groups",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanner-groups-details",
+      "method": "GET",
+      "path": "/scanner-groups/{group_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanner-groups-edit",
+      "method": "PUT",
+      "path": "/scanner-groups/{group_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanner-groups-delete",
+      "method": "DELETE",
+      "path": "/scanner-groups/{group_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanner-groups-list-scanners",
+      "method": "GET",
+      "path": "/scanner-groups/{group_id}/scanners",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanner-groups-add-scanner",
+      "method": "POST",
+      "path": "/scanner-groups/{group_id}/scanners/{scanner_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanner-groups-delete-scanner",
+      "method": "DELETE",
+      "path": "/scanner-groups/{group_id}/scanners/{scanner_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-scanner-groups-list-routes",
+      "method": "GET",
+      "path": "/scanner-groups/{group_id}/routes",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-scanner-groups-update-routes",
+      "method": "PUT",
+      "path": "/scanner-groups/{group_id}/routes",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanner-profile-assign-bulk",
+      "method": "POST",
+      "path": "/scanners/scanners/bulkAssignToProfile",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanner-profile-remove-bulk",
+      "method": "DELETE",
+      "path": "/scanners/scanners/bulkAssignToProfile",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanner-task-status",
+      "method": "GET",
+      "path": "/scanners/request-status/{request_status_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-scanners-directive",
+      "method": "POST",
+      "path": "/scanners/{scanner_uuid}/directives",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "io-scanners-directive-bulk",
+      "method": "POST",
+      "path": "/scanners/bulk/directives",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanners-control-scans",
+      "method": "POST",
+      "path": "/scanners/{scanner_id}/scans/{scan_uuid}/control",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "scanners-toggle-link-state",
+      "method": "PUT",
+      "path": "/scanners/{scanner_id}/link",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "server-status",
+      "method": "GET",
+      "path": "/server/status",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "server-properties",
+      "method": "GET",
+      "path": "/server/properties",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "tags-create-tag-category",
+      "method": "POST",
+      "path": "/tags/categories",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "tag category create"
+      ],
+      "reason": "Approved business mutation; security fields excluded; gated write.",
+      "slice": "T10"
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "tags-list-tag-categories",
+      "method": "GET",
+      "path": "/tags/categories",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "tag category list"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T10"
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "tags-tag-category-details",
+      "method": "GET",
+      "path": "/tags/categories/{tag_category_uuid}",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "tag category show"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T10"
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "tags-edit-tag-category",
+      "method": "PUT",
+      "path": "/tags/categories/{tag_category_uuid}",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "tag category update"
+      ],
+      "reason": "Approved business mutation; security fields excluded; gated write.",
+      "slice": "T10"
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "tags-delete-tag-category",
+      "method": "DELETE",
+      "path": "/tags/categories/{tag_category_uuid}",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "tag category delete"
+      ],
+      "reason": "Approved business mutation; security fields excluded; gated write.",
+      "slice": "T10"
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "tags-create-tag-value",
+      "method": "POST",
+      "path": "/tags/values",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "tag value create"
+      ],
+      "reason": "Approved business mutation; security fields excluded; gated write.",
+      "slice": "T10"
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "tags-list-tag-values",
+      "method": "GET",
+      "path": "/tags/values",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "tag value list"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T10"
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "tags-tag-value-details",
+      "method": "GET",
+      "path": "/tags/values/{tag_value_uuid}",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "tag value show"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T10"
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "tags-update-tag-value",
+      "method": "PUT",
+      "path": "/tags/values/{tag_value_uuid}",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "tag value update"
+      ],
+      "reason": "Approved business mutation; security fields excluded; gated write.",
+      "slice": "T10"
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "tags-delete-tag-value",
+      "method": "DELETE",
+      "path": "/tags/values/{tag_value_uuid}",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "tag value delete"
+      ],
+      "reason": "Approved business mutation; security fields excluded; gated write.",
+      "slice": "T10"
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "tags-delete-tag-values-bulk",
+      "method": "POST",
+      "path": "/tags/values/delete-requests",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "tag value bulk-delete"
+      ],
+      "reason": "Approved business mutation; security fields excluded; gated write.",
+      "slice": "T10"
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "tags-assign-asset-tags",
+      "method": "POST",
+      "path": "/tags/assets/assignments",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "tag assignment add",
+        "tag assignment remove"
+      ],
+      "reason": "Approved business mutation; security fields excluded; gated write.",
+      "slice": "T10"
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "tags-list-asset-tags",
+      "method": "GET",
+      "path": "/tags/assets/{asset_uuid}/assignments",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "tag assignment list"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T10"
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "tags-list-exclusions",
+      "method": "GET",
+      "path": "/tags/values/{tag_value_uuid}/exclusions",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "tag exclusion list"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T10"
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "tags-list-asset-filters",
+      "method": "GET",
+      "path": "/tags/assets/filters",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "tag asset-filter list"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T10"
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "target-groups-list",
+      "method": "GET",
+      "path": "/target-groups",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "target-groups-create",
+      "method": "POST",
+      "path": "/target-groups",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "target-groups-details",
+      "method": "GET",
+      "path": "/target-groups/{group_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "target-groups-edit",
+      "method": "PUT",
+      "path": "/target-groups/{group_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "tenable-platform-settings",
+      "operationId": "target-groups-delete",
+      "method": "DELETE",
+      "path": "/target-groups/{group_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "assets-list-assets",
+      "method": "GET",
+      "path": "/assets",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "assets-asset-info",
+      "method": "GET",
+      "path": "/assets/{asset_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "assets-bulk-update-acr",
+      "method": "POST",
+      "path": "/api/v2/assets/bulk-jobs/acr",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "assets-bulk-move",
+      "method": "POST",
+      "path": "/api/v2/assets/bulk-jobs/move-to-network",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "assets-bulk-delete",
+      "method": "POST",
+      "path": "/api/v2/assets/bulk-jobs/delete",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "assets-import",
+      "method": "POST",
+      "path": "/import/assets",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "assets-list-import-jobs",
+      "method": "GET",
+      "path": "/import/asset-jobs",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "assets-import-job-info",
+      "method": "GET",
+      "path": "/import/asset-jobs/{asset_import_job_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-v3-asset-attributes-create",
+      "method": "POST",
+      "path": "/api/v3/assets/attributes",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-v3-asset-attributes-list",
+      "method": "GET",
+      "path": "/api/v3/assets/attributes",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-v3-asset-attributes-update",
+      "method": "PUT",
+      "path": "/api/v3/assets/attributes/{attribute_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-v3-asset-attributes-delete",
+      "method": "DELETE",
+      "path": "/api/v3/assets/attributes/{attribute_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-v3-asset-attributes-assign",
+      "method": "PUT",
+      "path": "/api/v3/assets/{asset_id}/attributes",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-v3-asset-attributes-assigned-list",
+      "method": "GET",
+      "path": "/api/v3/assets/{asset_id}/attributes",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-v3-asset-attributes-assigned-delete",
+      "method": "DELETE",
+      "path": "/api/v3/assets/{asset_id}/attributes",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-v3-asset-attributes-single-update",
+      "method": "PUT",
+      "path": "/api/v3/assets/{asset_id}/attributes/{attribute_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-v3-asset-attributes-single-delete",
+      "method": "DELETE",
+      "path": "/api/v3/assets/{asset_id}/attributes/{attribute_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "editor-details",
+      "method": "GET",
+      "path": "/editor/{type}/{id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "editor-list-templates",
+      "method": "GET",
+      "path": "/editor/{type}/templates",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "editor-template-details",
+      "method": "GET",
+      "path": "/editor/{type}/templates/{wizard_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "editor-plugin-description",
+      "method": "GET",
+      "path": "/editor/policy/{policy_id}/families/{family_id}/plugins/{plugin_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "editor-audits",
+      "method": "GET",
+      "path": "/editor/{type}/{object_id}/audits/{file_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "export-assets-v1",
+      "method": "POST",
+      "path": "/assets/export",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "export-assets-v2",
+      "method": "POST",
+      "path": "/assets/v2/export",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "exports-assets-export-status",
+      "method": "GET",
+      "path": "/assets/export/{export_uuid}/status",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "exports-assets-export-status-recent",
+      "method": "GET",
+      "path": "/assets/export/status",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "exports-assets-download-chunk",
+      "method": "GET",
+      "path": "/assets/export/{export_uuid}/chunks/{chunk_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "exports-assets-export-cancel",
+      "method": "POST",
+      "path": "/assets/export/{export_uuid}/cancel",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-exports-compliance-create",
+      "method": "POST",
+      "path": "/compliance/export",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-exports-compliance-status",
+      "method": "GET",
+      "path": "/compliance/export/{export_uuid}/status",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "exports-compliance-status-list",
+      "method": "GET",
+      "path": "/compliance/export/status",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-exports-compliance-download",
+      "method": "GET",
+      "path": "/compliance/export/{export_uuid}/chunks/{chunk_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-exports-compliance-cancel",
+      "method": "POST",
+      "path": "/compliance/export/{export_uuid}/cancel",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "exports-vulns-request-export",
+      "method": "POST",
+      "path": "/vulns/export",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "exports-vulns-export-status",
+      "method": "GET",
+      "path": "/vulns/export/{export_uuid}/status",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "exports-vulns-export-status-recent",
+      "method": "GET",
+      "path": "/vulns/export/status",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "exports-vulns-download-chunk",
+      "method": "GET",
+      "path": "/vulns/export/{export_uuid}/chunks/{chunk_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "exports-vulns-export-cancel",
+      "method": "POST",
+      "path": "/vulns/export/{export_uuid}/cancel",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "combinations-create",
+      "method": "POST",
+      "path": "/exposure-response/combinations",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "combination create"
+      ],
+      "reason": "Approved business mutation; security fields excluded; gated write.",
+      "slice": "T11"
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "combinations-list",
+      "method": "GET",
+      "path": "/exposure-response/combinations",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "combination list"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T11"
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "combinations-details",
+      "method": "GET",
+      "path": "/exposure-response/combinations/{combination_id}",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "combination show"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T11"
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "combinations-update",
+      "method": "PUT",
+      "path": "/exposure-response/combinations/{combination_id}",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "combination update"
+      ],
+      "reason": "Approved business mutation; security fields excluded; gated write.",
+      "slice": "T11"
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "combinations-delete",
+      "method": "DELETE",
+      "path": "/exposure-response/combinations/{combination_id}",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "combination delete"
+      ],
+      "reason": "Approved business mutation; security fields excluded; gated write.",
+      "slice": "T11"
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "combinations-timelines-list",
+      "method": "GET",
+      "path": "/api/v3/combinations/timeline",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "initiatives-create",
+      "method": "POST",
+      "path": "/exposure-response/initiatives",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "initiative create"
+      ],
+      "reason": "Approved business mutation; security fields excluded; gated write.",
+      "slice": "T11"
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "initiatives-list",
+      "method": "GET",
+      "path": "/exposure-response/initiatives",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "initiative list"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T11"
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "initiatives-details",
+      "method": "GET",
+      "path": "/exposure-response/initiatives/{initiative_id}",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "initiative show"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T11"
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "initiatives-update",
+      "method": "PUT",
+      "path": "/exposure-response/initiatives/{initiative_id}",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "initiative update"
+      ],
+      "reason": "Approved business mutation; security fields excluded; gated write.",
+      "slice": "T11"
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "initiatives-delete",
+      "method": "DELETE",
+      "path": "/exposure-response/initiatives/{initiative_id}",
+      "disposition": "v1-write",
+      "plannedCommands": [
+        "initiative delete"
+      ],
+      "reason": "Approved business mutation; security fields excluded; gated write.",
+      "slice": "T11"
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "initiatives-filter-details",
+      "method": "GET",
+      "path": "/api/v3/initiatives/{initiative_id}/filter",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "initiatives-share",
+      "method": "POST",
+      "path": "/api/v3/initiatives/{initiative_id}/share/{user_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "file-upload",
+      "method": "POST",
+      "path": "/file/upload",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-filters-agents-list",
+      "method": "GET",
+      "path": "/filters/scans/agents",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-filters-assets-list",
+      "method": "GET",
+      "path": "/filters/workbenches/assets",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-filters-assets-list-v2",
+      "method": "POST",
+      "path": "/filters/workbenches/assets",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-filters-credentials-list",
+      "method": "GET",
+      "path": "/filters/credentials",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "vm-filters-reports-list",
+      "method": "GET",
+      "path": "/filters/reports/export",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-filters-scan-list",
+      "method": "GET",
+      "path": "/filters/scans/reports",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-filters-scan-history-list",
+      "method": "GET",
+      "path": "/filters/scans/reports/history",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-filters-vulnerabilities-workbench-list",
+      "method": "GET",
+      "path": "/filters/workbenches/vulnerabilities",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-filters-vulnerabilities-workbench-list-v2",
+      "method": "POST",
+      "path": "/filters/workbenches/vulnerabilities",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "combinations-filters-list",
+      "method": "GET",
+      "path": "/exposure-response/combinations/allowed/filters",
+      "disposition": "v1-read",
+      "plannedCommands": [
+        "combination filters"
+      ],
+      "reason": "Approved investigation or supporting read.",
+      "slice": "T11"
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "folders-create",
+      "method": "POST",
+      "path": "/folders",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "folders-list",
+      "method": "GET",
+      "path": "/folders",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "folders-edit",
+      "method": "PUT",
+      "path": "/folders/{folder_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "folders-delete",
+      "method": "DELETE",
+      "path": "/folders/{folder_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-plugins-list",
+      "method": "GET",
+      "path": "/plugins/plugin",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-plugins-details",
+      "method": "GET",
+      "path": "/plugins/plugin/{id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-plugins-families-list",
+      "method": "GET",
+      "path": "/plugins/families",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-plugins-family-details-id",
+      "method": "GET",
+      "path": "/plugins/families/{id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-plugins-family-details-name",
+      "method": "POST",
+      "path": "/plugins/families/_byName",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "policies-create",
+      "method": "POST",
+      "path": "/policies",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "policies-list",
+      "method": "GET",
+      "path": "/policies",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "policies-copy",
+      "method": "POST",
+      "path": "/policies/{policy_id}/copy",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "policies-import",
+      "method": "POST",
+      "path": "/policies/import",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "policies-export",
+      "method": "GET",
+      "path": "/policies/{policy_id}/export",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "policies-details",
+      "method": "GET",
+      "path": "/policies/{policy_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "policies-configure",
+      "method": "PUT",
+      "path": "/policies/{policy_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "policies-delete",
+      "method": "DELETE",
+      "path": "/policies/{policy_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-remediation-goals-create",
+      "method": "POST",
+      "path": "/remediation/goal",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-remediation-goals-delete",
+      "method": "PATCH",
+      "path": "/remediation/goal",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-remediation-goals-search",
+      "method": "POST",
+      "path": "/remediation/goal/search",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-remediation-goals-details",
+      "method": "GET",
+      "path": "/remediation/goal/{goaluuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-remediation-goals-update",
+      "method": "PUT",
+      "path": "/remediation/goal/{goaluuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-remediation-projects-create",
+      "method": "POST",
+      "path": "/remediation",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-remediation-projects-delete",
+      "method": "PATCH",
+      "path": "/remediation",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-remediation-projects-search",
+      "method": "POST",
+      "path": "/remediation/search",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-remediation-projects-details",
+      "method": "GET",
+      "path": "/remediation/{projectUuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-remediation-projects-update",
+      "method": "PUT",
+      "path": "/remediation/{projectUuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-scans-remediation-create",
+      "method": "POST",
+      "path": "/scans/remediation",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-scans-remediation-list",
+      "method": "GET",
+      "path": "/scans/remediation",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "vm-reports-create",
+      "method": "POST",
+      "path": "/reports/export",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "vm-reports-status",
+      "method": "GET",
+      "path": "/reports/export/{report_uuid}/status",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "vm-reports-download",
+      "method": "GET",
+      "path": "/reports/export/{report_uuid}/download",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-create",
+      "method": "POST",
+      "path": "/scans",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-list",
+      "method": "GET",
+      "path": "/scans",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-details",
+      "method": "GET",
+      "path": "/scans/{scan_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-configure",
+      "method": "PUT",
+      "path": "/scans/{scan_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-delete",
+      "method": "DELETE",
+      "path": "/scans/{scan_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-list-by-agent-group",
+      "method": "GET",
+      "path": "/scan-configs/references/by-agent-group/{agent_group_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-launch",
+      "method": "POST",
+      "path": "/scans/{scan_id}/launch",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-pause",
+      "method": "POST",
+      "path": "/scans/{scan_id}/pause",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-resume",
+      "method": "POST",
+      "path": "/scans/{scan_id}/resume",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-stop",
+      "method": "POST",
+      "path": "/scans/{scan_id}/stop",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "vm-scans-stop-force",
+      "method": "POST",
+      "path": "/scans/{schedule_uuid}/force-stop",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-export-request",
+      "method": "POST",
+      "path": "/scans/{scan_id}/export",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-export-list",
+      "method": "GET",
+      "path": "/scans/exports",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-export-status",
+      "method": "GET",
+      "path": "/scans/{scan_id}/export/{file_id}/status",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-export-download",
+      "method": "GET",
+      "path": "/scans/{scan_id}/export/{file_id}/download",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-history",
+      "method": "GET",
+      "path": "/scans/{scan_id}/history",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-history-details",
+      "method": "GET",
+      "path": "/scans/{scan_id}/history/{history_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-delete-history",
+      "method": "DELETE",
+      "path": "/scans/{scan_id}/history/{history_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-host-details",
+      "method": "GET",
+      "path": "/scans/{scan_uuid}/hosts/{host_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-plugin-output",
+      "method": "GET",
+      "path": "/scans/{scan_uuid}/hosts/{host_id}/plugins/{plugin_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-attachments",
+      "method": "GET",
+      "path": "/scans/{scan_id}/attachments/{attachment_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-get-latest-status",
+      "method": "GET",
+      "path": "/scans/{scan_id}/latest-status",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-read-status",
+      "method": "PUT",
+      "path": "/scans/{scan_id}/status",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-vm-scans-progress-get",
+      "method": "GET",
+      "path": "/scans/{scan_id}/progress",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-schedule",
+      "method": "PUT",
+      "path": "/scans/{scan_id}/schedule",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-copy",
+      "method": "POST",
+      "path": "/scans/{scan_id}/copy",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-scans-credentials-convert",
+      "method": "POST",
+      "path": "/scans/{scan_id}/credentials/{credentials_id}/upgrade",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-import",
+      "method": "POST",
+      "path": "/scans/import",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-scans-count",
+      "method": "GET",
+      "path": "/scans/count",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "scans-timezones",
+      "method": "GET",
+      "path": "/scans/timezones",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "io-scans-check-auto-targets",
+      "method": "POST",
+      "path": "/scans/check-auto-targets",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "shared-collections-create",
+      "method": "POST",
+      "path": "/shared-collections",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "shared-collections-list",
+      "method": "GET",
+      "path": "/shared-collections",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "shared-collections-details",
+      "method": "GET",
+      "path": "/shared-collections/{shared_collection_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "shared-collections-update",
+      "method": "PUT",
+      "path": "/shared-collections/{shared_collection_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "shared-collections-delete",
+      "method": "DELETE",
+      "path": "/shared-collections/{shared_collection_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "shared-collections-details-by-name",
+      "method": "POST",
+      "path": "/shared-collections/_byName",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "shared-collections-job-status",
+      "method": "GET",
+      "path": "/shared-collections/request-status/{request_status_id}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "shared-collections-config-add",
+      "method": "POST",
+      "path": "/shared-collections/{shared_collection_id}/scan-configs",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "shared-collections-config-list",
+      "method": "GET",
+      "path": "/shared-collections/{shared_collection_id}/scan-configs",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "shared-collections-configs-remove",
+      "method": "DELETE",
+      "path": "/shared-collections/{shared_collection_id}/scan-configs",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "vulnerabilities-import",
+      "method": "POST",
+      "path": "/import/vulnerabilities",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "vulnerabilities-import-v2",
+      "method": "POST",
+      "path": "/api/v2/vulnerabilities",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "workbenches-vulnerabilities",
+      "method": "GET",
+      "path": "/workbenches/vulnerabilities",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "workbenches-vulnerability-info",
+      "method": "GET",
+      "path": "/workbenches/vulnerabilities/{plugin_id}/info",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "workbenches-vulnerability-output",
+      "method": "GET",
+      "path": "/workbenches/vulnerabilities/{plugin_id}/outputs",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "workbenches-assets",
+      "method": "GET",
+      "path": "/workbenches/assets",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "workbenches-assets-vulnerabilities",
+      "method": "GET",
+      "path": "/workbenches/assets/vulnerabilities",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "workbenches-asset-info",
+      "method": "GET",
+      "path": "/workbenches/assets/{asset_id}/info",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "workbenches-assets-activity",
+      "method": "GET",
+      "path": "/workbenches/assets/{asset_uuid}/activity",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "workbenches-asset-vulnerabilities",
+      "method": "GET",
+      "path": "/workbenches/assets/{asset_id}/vulnerabilities",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "workbenches-asset-vulnerability-info",
+      "method": "GET",
+      "path": "/workbenches/assets/{asset_id}/vulnerabilities/{plugin_id}/info",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "workbenches-asset-vulnerability-output",
+      "method": "GET",
+      "path": "/workbenches/assets/{asset_id}/vulnerabilities/{plugin_id}/outputs",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "workbenches-assets-delete",
+      "method": "DELETE",
+      "path": "/workbenches/assets/{asset_uuid}",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "workbenches-export-request",
+      "method": "GET",
+      "path": "/workbenches/export",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "workbenches-export-status",
+      "method": "GET",
+      "path": "/workbenches/export/{file_id}/status",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    },
+    {
+      "source": "vulnerability-management",
+      "operationId": "workbenches-export-download",
+      "method": "GET",
+      "path": "/workbenches/export/{file_id}/download",
+      "disposition": "blocked",
+      "plannedCommands": [],
+      "reason": "Outside approved Tenable One v1 modules.",
+      "slice": null
+    }
+  ]
+}

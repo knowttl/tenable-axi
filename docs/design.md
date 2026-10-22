@@ -1,8 +1,8 @@
 # tenable-axi design
 
 Planning baseline prepared on 2026-10-22.
-This document defines intended behavior; this slice ships documentation and repository metadata only.
-Commands, schemas, inventories, generated types, and tests below are commitments for later slices.
+This document defines intended behavior; T1 ships the scaffold, pinned specifications, generated types, complete inventory and local home/help/version commands.
+Endpoint commands and safety boundaries below remain commitments for later slices.
 
 ## Purpose and scope
 
@@ -20,7 +20,7 @@ No design research or automated test uses a live tenant or credential.
 
 | Decision | Choice and consequence |
 |---|---|
-| Runtime | TypeScript on Node.js 22, strict ESM, `axi-sdk-js`, `@toon-format/toon`, and zod. |
+| Runtime | TypeScript, strict ESM, `axi-sdk-js`, `@toon-format/toon`, and zod; minimum Node.js version in [package.json](../package.json). |
 | API client | Thin hand-written `fetch` transport; generate compile-time types only from pinned OpenAPI bytes. |
 | Coverage | 50 approved operations: 31 reads and 19 writes; 310 blocked across three specs. |
 | Writes | Implemented in v1 but read-only by default, with per-profile policy, preview, exact-target confirmation, and journal. |
@@ -40,13 +40,9 @@ A generated runtime client would still need replacement auth, errors, retry, ori
 The [API navigation](https://developer.tenable.com/reference/navigate) separates Exposure Management from Platform and Vulnerability Management.
 Downloads on 2026-10-22 identify all three as OpenAPI 3.1.2 with `info.version` 1.0.0.
 Pin the full SHA-256 because that version string does not identify a particular snapshot.
-Downloads are research inputs only in this slice; T1 commits pinned specs and declarations.
+T1 commits these unmodified snapshots, their byte hashes and generated declarations.
 
-| Source | Operations | SHA-256 |
-|---|---:|---|
-| [exposure-management.json](https://developer.tenable.com/openapi/exposure-management.json) | 24 | `1f1f9d6702f4d92bdd98f63cf780cd93f0475fdaf828b1a147b76701efc9337e` |
-| [tenable-platform-settings.json](https://developer.tenable.com/openapi/tenable-platform-settings.json) | 185 | `bba0d2a7902cc2dc34fcb5841f533be7066e8bcf41796430d8f0e27b17ab67ca` |
-| [vulnerability-management.json](https://developer.tenable.com/openapi/vulnerability-management.json) | 151 | `8055e8ce890349a8ec5d95dc7b015144696fe4b637081ec7ae87d37ee2393485` |
+The authoritative source URLs, operation counts and SHA-256 hashes are in [inventory/specs.json](../inventory/specs.json), checked against the snapshots by `spec:check`.
 
 Fifteen Exposure Management operations warn that their response structure is beta and subject to change.
 Some filter examples disagree with schema enums and value types.
@@ -323,7 +319,7 @@ The journal is an audit aid, not tamper-proof or a server-side exactly-once guar
 
 Add an endpoint by updating evidence/effect, binding a named command, writing its projection/decoder, and testing outcomes through its real public interface.
 T1 configures `.no-mistakes.yaml` following vectra-axi's separated prepare/test/lint command pattern.
-The test command runs only tests affected by the change plus a small fixed baseline.
+See [contribution verification](../CONTRIBUTING.md#verification) for affected-test selection, the fixed baseline and shared-input full-suite triggers.
 Require practical observable behavior through the CLI and transport against the fake Tenable upstream.
 Do not add tautological mock-echo checks, checks already covered by the compiler, or implementation snapshots.
 Use our own fake transport and synthetic fixtures for populated, empty, denied, malformed, beta-extra-field, and partial cases.
