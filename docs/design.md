@@ -2,6 +2,7 @@
 
 Planning baseline prepared on 2026-10-22.
 This document defines intended behavior; see [README](../README.md) for shipped commands.
+T10 ships platform tag categories, values, assignments, exclusions and filters with guarded mutations.
 Remaining endpoint commands and safety boundaries below remain commitments for later slices.
 
 ## Purpose and scope
