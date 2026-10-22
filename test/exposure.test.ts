@@ -93,6 +93,52 @@ test("card cursor refuses changed search scope before HTTP", async () => {
   expect(fixture.requests).toHaveLength(1);
 });
 
+test("card list buffers an oversized upstream window and resumes without loss or duplication", async () => {
+  const fixture = setup([{ body: { data: [card("1"), card("2"), card("3")], pagination: { total_record_count: 4 } } },
+    { body: { data: [card("4")], pagination: { total_record_count: 4 } } }]);
+  const first = await fixture.cli(["card", "list", "--limit", "1"]);
+  expect(first).toMatchObject({ code: 0, data: { cards: [{ id: "1", name: "Card 1", score: 42 }], count: 1, total: 4, complete: false, cursor: expect.any(String) } });
+  const second = await fixture.cli(["card", "list", "--limit", "1", "--cursor", String(first.data.cursor)]);
+  expect(second).toMatchObject({ code: 0, data: { cards: [{ id: "2", name: "Card 2", score: 42 }], count: 1, total: 4, complete: false } });
+  expect(fixture.requests).toHaveLength(1);
+  const last = await fixture.cli(["card", "list", "--limit", "2", "--cursor", String(second.data.cursor)]);
+  expect(last).toMatchObject({ code: 0, data: { cards: [{ id: "3", name: "Card 3", score: 42 }, { id: "4", name: "Card 4", score: 42 }], count: 2, total: 4, complete: true } });
+  expect(new URL(fixture.requests[1]!.url).searchParams.get("offset")).toBe("3");
+});
+
+test("card list completes only after the final buffered card is emitted", async () => {
+  const fixture = setup([{ body: { data: [card("1"), card("2"), card("3")], pagination: { total_record_count: 3 } } }]);
+  const first = await fixture.cli(["card", "list", "--limit", "1"]);
+  expect(first).toMatchObject({ code: 0, data: { count: 1, complete: false } });
+  const last = await fixture.cli(["card", "list", "--limit", "2", "--cursor", String(first.data.cursor)]);
+  expect(last).toMatchObject({ code: 0, data: { cards: [{ id: "2", name: "Card 2", score: 42 }, { id: "3", name: "Card 3", score: 42 }], count: 2, total: 3, complete: true } });
+  expect(last.data).not.toHaveProperty("cursor");
+  expect(fixture.requests).toHaveLength(1);
+});
+
+test.each([
+  { data: Array.from({ length: 26 }, (_, index) => card(String(index))) },
+  { data: [card("1"), { id: "2", name: "Missing score" }] },
+  { data: [card("1"), { ...card("2"), name: "x".repeat(64 * 1024) }] },
+])("card list rejects unsafe overflow before emitting a partial window: %j", async (body) => {
+  const fixture = setup([{ body }]);
+  const result = await fixture.cli(["card", "list", "--limit", "1"]);
+  expect(result).toMatchObject({ code: 1, data: { error: { code: "RESPONSE_INVALID" } } });
+  expect(result.data).not.toHaveProperty("cards");
+});
+
+test("card continuation redacts buffered secrets before encoding and rendering", async () => {
+  const fixture = setup([{ body: { data: [card("1"), { ...card("2"), name: syntheticKeys.accessKey, token: "synthetic-buffer-token" }], pagination: { total_record_count: 2 } } }]);
+  const first = await fixture.cli(["card", "list", "--limit", "1"]);
+  expect(first.code).toBe(0);
+  const cursor = Buffer.from(String(first.data.cursor), "base64url").toString("utf8");
+  expect(cursor).not.toContain(syntheticKeys.accessKey);
+  expect(cursor).not.toContain("synthetic-buffer-token");
+  const last = await fixture.cli(["card", "list", "--limit", "1", "--cursor", String(first.data.cursor)]);
+  expect(last).toMatchObject({ code: 0, data: { count: 1, complete: true } });
+  expect(last.stdout).not.toContain(syntheticKeys.accessKey);
+});
+
 test("card details map total score and trend/SLA selectors without losing zero", async () => {
   const fixture = setup([{ body: { id: "example", name: "Example", ces_scores: { total: { score: 0 } }, ces_trend: [], exposure_classes_details: {} } }]);
   const result = await fixture.cli(["card", "show", "--id", "example", "--trend-start-date", "2026-01-01T00:00:00Z", "--trend-end-date", "2026-01-31T00:00:00Z", "--sla-breakdown-filter", "NON_REMEDIATED", "--include-trend-events", "true"]);

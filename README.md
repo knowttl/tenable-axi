@@ -183,6 +183,8 @@ Attack path, attack technique and MITRE heatmap exports support guarded creation
 `tag list`, `tag properties`, `card list` and `card show` provide bounded Exposure Management reads.
 Platform tag categories, values, assignments, exclusions and dynamic filter definitions are implemented, including guarded mutations.
 Home shows up to five exposure cards when configured and setup guidance offline otherwise.
+Card lists accept up to 25 cards per upstream page, emit only the requested limit, and preserve overflow in a scoped, redacted cursor bounded at 64 KiB.
+Resume with the original selectors and fields; an oversized page or cursor fails validation rather than dropping cards.
 Exposure response initiatives and combinations support reads and guarded writes, including allowed combination filters.
 `hook` reports local profile context without resolving secrets or contacting Tenable.
 Help, version, `auth status`, `profile list` and `config path` remain local.
