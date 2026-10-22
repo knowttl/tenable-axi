@@ -28,7 +28,7 @@ Never require a live tenant, customer data, or a real credential for a test.
 T1 configures `.no-mistakes.yaml` following vectra-axi's separated prepare/test/lint command pattern.
 Run only tests affected by the change plus a small fixed baseline.
 `corepack pnpm test` always builds and typechecks, then `scripts/test-changes.mjs` selects tests related to files changed since the merge base with `origin/main`, including tracked working-tree changes and untracked files.
-The fixed baseline is `test/packaged-cli.test.ts`, plus `test/write-safety.test.ts` and `test/redaction.test.ts` once present.
+The fixed baseline always includes `test/packaged-cli.test.ts`; `scripts/test-changes.mjs` defines any additional safety baselines.
 Package, lockfile, TypeScript/Vitest configuration, test support, scripts, pinned specifications and `.no-mistakes.yaml` changes run the full suite.
 The selector prints its mode and fails if it cannot compute the merge base or find the required CLI baseline.
 No hosted test CI is configured; `.no-mistakes.yaml` declares `no_ci: true`.
