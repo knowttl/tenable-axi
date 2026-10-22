@@ -169,6 +169,23 @@ test("explicit wait returns a pending job when its polling budget ends", async (
   expect(vi.getTimerCount()).toBe(0);
 });
 
+test.each(["QUEUED", "PROCESSING"])("explicit wait preserves the last %s status when recovered retries exhaust requests", async (status) => {
+  vi.useFakeTimers();
+  const f = fixture();
+  const submittedAt = "2026-01-01T00:00:00Z", lastRefreshedAt = "2026-01-01T00:00:17Z";
+  const resultPromise = f.run([...f.status, "--wait", "--fields", "id,state,submittedAt,lastRefreshedAt"], [
+    { status: 503 }, { status: 503 },
+    ...Array.from({ length: 17 }, () => ({ body: { export_id: id, status: "QUEUED" } })),
+    { body: { export_id: id, status, submitted_at: submittedAt, last_refreshed_at: lastRefreshedAt } },
+  ]);
+  await vi.advanceTimersByTimeAsync(19000);
+  const result = await resultPromise;
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ job: { id, state: status, submittedAt, lastRefreshedAt }, complete: false, reason: "POLL_BUDGET_EXCEEDED" });
+  expect(result.requests).toHaveLength(20);
+  expect(vi.getTimerCount()).toBe(0);
+});
+
 test.each(["status", "download"])("unknown attack job on %s is an error rather than empty success", async (verb) => {
   const f = fixture();
   const result = await f.run(verb === "status" ? f.status : f.download, [{ status: 404, body: { message: "Request not found", status: 404 } }]);

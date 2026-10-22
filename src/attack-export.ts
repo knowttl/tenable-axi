@@ -99,15 +99,22 @@ export async function attackExportCommand(argv: string[], store: ReturnType<type
     catch { throw new TransportError({ code: "EXPORT_FILE_INVALID", message: "Export could not be validated, redacted or saved within 128 MiB to a new file", operation }); }
   }
   const deadline = Date.now() + 19_000;
+  let status: z.infer<typeof attackExportStatus> | undefined;
   for (;;) {
-    const response = await transport.request(operation, request);
-    const status = attackExportStatus.parse(response.body);
+    let response;
+    try { response = await transport.request(operation, request); }
+    catch (error) {
+      if (get("wait") && status && error instanceof TransportError && error.error.code === "REQUEST_BUDGET_EXCEEDED") break;
+      throw error;
+    }
+    status = attackExportStatus.parse(response.body);
     if (status.export_id !== get("id")) throw new TransportError({ code: "RESPONSE_INVALID", message: "Status belongs to a different attack export", operation });
     const pending = ["QUEUED", "PROCESSING"].includes(status.status);
-    if (!get("wait") || !pending || Date.now() + 1000 >= deadline) return {
-      job: project({ id: status.export_id, state: status.status, submittedAt: status.submitted_at, lastRefreshedAt: status.last_refreshed_at }),
-      ...(get("wait") && pending ? { complete: false, reason: "POLL_BUDGET_EXCEEDED" } : {}),
-    };
+    if (!get("wait") || !pending || Date.now() + 1000 >= deadline) break;
     await new Promise<void>((resolve) => setTimeout(resolve, 1000));
   }
+  return {
+    job: project({ id: status.export_id, state: status.status, submittedAt: status.submitted_at, lastRefreshedAt: status.last_refreshed_at }),
+    ...(get("wait") && ["QUEUED", "PROCESSING"].includes(status.status) ? { complete: false, reason: "POLL_BUDGET_EXCEEDED" } : {}),
+  };
 }
