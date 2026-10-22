@@ -76,11 +76,9 @@ export function saveExport(contents: unknown, output: string, redactor: SecretRe
       format = "JSON";
       safe = JSON.stringify(scan(value));
     } else {
-      // A CSV export has a header and at least two columns. Arbitrary error text
-      // must not become a plausible successful artifact.
       const rows = csv(text);
       const headers = rows[0]!;
-      if (headers.length < 2 || headers.some((header) => /[<>\r\n]/.test(header))) invalid();
+      if (headers.some((header) => /[<>\r\n]/.test(header))) invalid();
       format = "CSV";
       const quote = (value: string) => `"${value.replace(/"/g, '""')}"`;
       safe = rows.map((row, index) => row.map((cell, column) => {

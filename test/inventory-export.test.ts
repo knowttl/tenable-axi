@@ -41,7 +41,7 @@ test.each(["asset", "finding"])("%s start previews the complete scope then creat
   const f = fixture();
   const body = join(f.home, "scope.json");
   writeFileSync(body, JSON.stringify({ query: { mode: "advanced", text: "Assets HAS aes >= 700" }, filters: [{ property: "name", operator: "match", value: ["example"] }] }));
-  const args = [kind, "start", "--body-file", body, "--properties", "asset_id,name", "--file-format", "CSV", "--compress", "true",
+  const args = [kind, "start", "--body-file", body, "--properties", "asset_id", "--file-format", "CSV", "--compress", "true",
     "--use-readable-name", "false", "--max-chunk-file-size", "104857600", "--sort", "name:asc"];
   const preview = await f.run(args);
   expect(preview.code).toBe(0);
@@ -215,6 +215,31 @@ test("CSV secret columns and quoted multiline cells survive format-aware redacti
   ]);
   expect(valid.code).toBe(0);
   expect(readFileSync(path, "utf8")).toBe('"Name","Access Key","Description"\n"example, device","***redacted***","line one\n***redacted*** ""quoted"""');
+});
+
+test.each([false, true])("single-column CSV downloads preserve rows and redaction (gzip=%s)", async (compressed) => {
+  const f = fixture();
+  const path = join(f.home, "export.csv");
+  const raw = Buffer.from(`asset_id\r\nexample-asset\r\n${syntheticKeys.accessKey}\r\n`);
+  const result = await f.run(["inventory", "download", "--id", id, "--chunk", "1", "--output", path], [
+    { bytes: compressed ? gzipSync(raw) : raw },
+  ]);
+  expect(result.code).toBe(0);
+  const contents = readFileSync(path);
+  expect((compressed ? gunzipSync(contents) : contents).toString("utf8")).toBe('"asset_id"\n"example-asset"\n"***redacted***"');
+  expect(result.data.file).toMatchObject({ bytes: contents.length, format: "CSV", compressed });
+});
+
+test.each([false, true])("single-column CSV downloads allow header-only exports (gzip=%s)", async (compressed) => {
+  const f = fixture();
+  const path = join(f.home, "export.csv");
+  const raw = Buffer.from("asset_id\r\n");
+  const result = await f.run(["inventory", "download", "--id", id, "--chunk", "1", "--output", path], [
+    { bytes: compressed ? gzipSync(raw) : raw },
+  ]);
+  expect(result.code).toBe(0);
+  const contents = readFileSync(path);
+  expect((compressed ? gunzipSync(contents) : contents).toString("utf8")).toBe('"asset_id"');
 });
 
 test("download refuses overwrite before sending", async () => {
