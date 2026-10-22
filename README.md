@@ -2,7 +2,7 @@
 
 An AXI command-line tool for Tenable One, under construction.
 It uses TypeScript on Node.js 22.12 or later and will be published as `@knowttl/tenable-axi`.
-Inventory reads, attack searches and connector logs are implemented.
+Inventory reads and exports, attack searches and connector logs are implemented.
 `tag list`, `tag properties`, `card list` and `card show` provide bounded Exposure Management reads.
 Home shows up to five exposure cards when configured and setup guidance offline otherwise.
 `hook` reports local profile context without resolving secrets or contacting Tenable.
@@ -14,17 +14,29 @@ Run `tenable-axi auth status` to check sources and file security locally; it nev
 The package ships [axi-credential.schema.json](axi-credential.schema.json) for hosts.
 
 The internal transport enforces the exact commercial origin, reviewed catalogue bindings, escaped paths, scoped continuations, and redirect refusal.
-One transport instance represents one invocation, sharing a 20-second deadline, 20-request ceiling and 20-MiB decoded response ceiling across pages and retries.
+One transport instance represents one invocation, sharing the [transport budgets](docs/design.md#transport-contract) across pages and retries.
 Read operations may retry 429/502/503/504 twice; writes require coordinator authorization and never replay automatically.
 Transport errors carry a stable code, operation, optional HTTP status and `retryAfter` in milliseconds, plus bounded redacted guidance.
-Production binds reviewed inventory search/properties, Exposure Management tag and card reads, attack searches and connector logs; offline tests use synthetic fixtures and a CA-verified loopback HTTPS fake through the internal construction seam.
+Production binds reviewed inventory search/properties and exports, Exposure Management tag and card reads, attack searches and connector logs; offline tests use synthetic fixtures and a CA-verified loopback HTTPS fake through the internal construction seam.
 No flag or environment variable enables that seam in the CLI.
 
-The internal write coordinator is ready for named endpoint slices; it ships no write command or executable write binding yet.
+Inventory export creation uses the write coordinator and is read-only by default.
 It enforces immutable configured scope, redacted previews, exact confirmation, optional host approval, stale-state refusal and a durable private journal before a single authorized send.
 Unknown outcomes include an audit ID and read-back guidance and are never replayed.
-Later slices register strict mutation definitions alongside transport bindings in the catalogue and call `createWriteCoordinator().run(operationId, input, options)` from their named commands.
+Named write commands register strict mutation definitions alongside transport bindings in the catalogue and call `createWriteCoordinator().run(operationId, input, options)`.
 State readers establish no-ops and include concurrency fields in the compared state; operation definitions own documented payload validation and read-back guidance.
+
+Use `export asset start` or `export finding start` to preview the filters, properties, format and compression for a tenant-side job.
+The selected file profile must configure `writes.allowWrites: true` and allow the exact `inventory-export-assets` or `inventory-export-findings` operation, including for previews.
+Optional `--body-file` accepts strict documented query/filters JSON, or `-` for stdin, within 1 MiB.
+Query options use `--properties`, `--use-readable-name true|false`, `--max-chunk-file-size`, `--sort`, `--file-format JSON|CSV` and `--compress true|false`.
+Run again with `--execute --confirm '<exact preview confirmation>'` to create once and return immediately; exports have no server dry run or idempotency guarantee.
+`TENABLE_AXI_READ_ONLY=true` overrides every configured write policy.
+`export asset jobs` and `export finding jobs` expose `--status` and `--limit` (default 100, maximum 1000), returning only the last three days without server paging or a claim of complete history.
+`export inventory status --id <id>` reads once without polling and reports available chunks.
+`export inventory download --id <id> --chunk <number> --output <new-file>` downloads one explicit chunk and prints file metadata only.
+Files are validated as JSON or CSV, scanned for secrets, redacted and published atomically without overwrite; gzip exports are decoded and re-encoded with the same format.
+See [download bounds](docs/design.md#collections-jobs-and-bounded-reads) for file size and decompression limits.
 
 Use `asset list/show/properties`, `finding list/show/properties`, and `software list/properties` with `--help` for their flags and examples.
 Lists default to 100 rows, expose upstream totals when supplied, and return a cursor when more rows remain.

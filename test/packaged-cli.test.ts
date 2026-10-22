@@ -99,6 +99,49 @@ test("packaged CLI resumes an inventory read through the closed HTTPS transport"
   } finally { await fake.close(); }
 });
 
+test("packaged export previews, creates once and downloads a redacted chunk over HTTPS", async () => {
+  const { main } = await import(pathToFileURL(join(directory, "package/dist/src/cli.js")).href);
+  const { transportBindings, mutationOperations } = await import(pathToFileURL(join(directory, "package/dist/src/catalogue.js")).href);
+  const { constructWriteCoordinator } = await import(pathToFileURL(join(directory, "package/dist/src/writes-core.js")).href);
+  const id = "00000000-0000-4000-8000-000000000001";
+  const config = join(directory, "export-config.json");
+  writeFileSync(config, JSON.stringify({ version: 1, profiles: { example: { writes: {
+    allowWrites: true, operations: ["inventory-export-assets"],
+  } } } }), { mode: 0o600 });
+  const credentials = { home: directory, env: { TENABLE_AXI_ACCESS_KEY: syntheticKeys.accessKey,
+    TENABLE_AXI_SECRET_KEY: syntheticKeys.secretKey, XDG_STATE_HOME: join(directory, "export-state") } };
+  const fake = await fakeHttpsTenable([{ body: { export_id: id } },
+    { body: [{ asset_name: "Example device", password: "synthetic-export-password", description: syntheticKeys.secretKey }] }]);
+  const invoke = async (args: string[]) => {
+    let stdout = "";
+    await main(["export", ...args, "--config", config, "--profile", "example"], { credentials,
+      transportFactory: () => fake.transport(transportBindings),
+      writeCoordinatorFactory: (options: unknown) => constructWriteCoordinator(options, {
+        credentials, bindings: transportBindings, operations: mutationOperations, fetch: fake.fetch,
+      }), stdout: { write: (chunk: string) => { stdout += chunk; } } });
+    expect(stdout).not.toContain(syntheticKeys.secretKey);
+    return decode(stdout) as Record<string, any>;
+  };
+  try {
+    const preview = await invoke(["asset", "start"]);
+    expect(preview.kind).toBe("dry-run");
+    expect(fake.requests).toHaveLength(0);
+    const started = await invoke(["asset", "start", "--execute", "--confirm", preview.preview.confirm]);
+    expect(started.job).toEqual({ id, state: "QUEUED" });
+    expect(fake.requests).toHaveLength(1);
+    const output = join(directory, "assets.json");
+    const downloaded = await invoke(["inventory", "download", "--id", id, "--chunk", "2", "--output", output]);
+    expect(downloaded.file).toMatchObject({ id, chunk: 2, output, format: "JSON" });
+    expect(JSON.parse(readFileSync(output, "utf8"))).toEqual([
+      { asset_name: "Example device", password: "***redacted***", description: "***redacted***" },
+    ]);
+    expect(fake.requests.map((request) => [request.method, request.url])).toEqual([
+      ["POST", "/api/v1/t1/inventory/export/assets"],
+      ["GET", `/api/v1/t1/inventory/export/${id}/download/2`],
+    ]);
+  } finally { await fake.close(); }
+});
+
 test.each([["unknown", "list"], ["home", "--unknown"], ["home", "--help", "--help"]])(
   "rejects unsupported invocation %j with actionable usage output", (...args) => {
     const result = cli(...args);
