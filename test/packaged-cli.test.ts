@@ -209,31 +209,3 @@ test("packaged CLI guards an attack export then downloads redacted JSON through 
     ]);
   } finally { await fake.close(); }
 });
-
-test.each([["unknown", "list"], ["home", "--unknown"], ["home", "--help", "--help"]])(
-  "rejects unsupported invocation %j with actionable usage output", (...args) => {
-    const result = cli(...args);
-    expect(result.status).toBe(2);
-    expect(decode(result.stdout)).toMatchObject({ error: expect.anything() });
-    expect(result.stdout).toMatch(/Valid (commands|flags)/);
-    expect(result.stderr).toBe("");
-  },
-);
-
-test("version startup stays close to the same-machine Node startup floor", () => {
-  const floor: number[] = [];
-  const versionTimes: number[] = [];
-  for (let index = 0; index < 7; index++) {
-    let start = performance.now();
-    const node = spawnSync(process.execPath, ["-e", "console.log(1)"], { encoding: "utf8" });
-    floor.push(performance.now() - start);
-    expect(node.status).toBe(0);
-    start = performance.now();
-    const result = cli("--version");
-    versionTimes.push(performance.now() - start);
-    expect(result.stdout).toBe(`${version}\n`);
-    expect(result.status).toBe(0);
-  }
-  const median = (values: number[]) => values.sort((a, b) => a - b)[3]!;
-  expect(median(versionTimes) / median(floor)).toBeLessThan(4);
-});

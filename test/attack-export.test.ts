@@ -242,6 +242,24 @@ test("JSON downloads redact nested key names, exact credentials and encoded sent
   expect(readdirSync(f.home).some((name) => name.endsWith(".tmp"))).toBe(false);
 });
 
+test.each([false, true])("Navigator layer downloads preserve structure and redact secrets (gzip=%s)", async (compressed) => {
+  const f = fixture("mitre-heatmap");
+  const raw = Buffer.from(JSON.stringify({ name: "Synthetic heatmap", versions: { attack: "14", navigator: "4.9.5", layer: "4.5" },
+    domain: "enterprise-attack", description: syntheticKeys.secretKey, password: "hidden-password",
+    techniques: [{ techniqueID: "T1078", score: 10, comment: encodeURIComponent(syntheticKeys.accessKey), extra: { token: "hidden-token" } }] }));
+  const result = await f.run(f.download, [{ bytes: compressed ? gzipSync(raw) : raw }]);
+  expect(result.code).toBe(0);
+  const contents = readFileSync(f.output);
+  const text = (compressed ? gunzipSync(contents) : contents).toString("utf8");
+  expect(JSON.parse(text)).toEqual({ name: "Synthetic heatmap", versions: { attack: "14", navigator: "4.9.5", layer: "4.5" },
+    domain: "enterprise-attack", description: "***redacted***", password: "***redacted***",
+    techniques: [{ techniqueID: "T1078", score: 10, comment: "***redacted***", extra: { token: "***redacted***" } }] });
+  expect(result.data).toMatchObject({ file: { id, output: f.output, format: "JSON", bytes: contents.length } });
+  expect(result.stdout).not.toContain("Synthetic heatmap");
+  expect(text).not.toMatch(/hidden-password|hidden-token|synthetic-secret-sentinel|synthetic-access-sentinel/);
+  expect(readdirSync(f.home).some((name) => name.endsWith(".tmp"))).toBe(false);
+});
+
 test("CSV downloads scan secret columns and quoted multiline cells without corrupting CSV", async () => {
   const f = fixture();
   const text = `path_name,password,note\r\n"Synthetic, path",hidden-password,"line 1\n${syntheticKeys.secretKey} and ""quoted"""\r\n`;

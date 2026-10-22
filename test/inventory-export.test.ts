@@ -202,6 +202,17 @@ test.each([false, true])("chunk download redacts JSON before publishing (gzip=%s
   expect(readdirSync(f.home).filter((name) => name.endsWith(".tmp"))).toEqual([]);
 });
 
+test.each([false, true])("inventory chunk download rejects Navigator objects (gzip=%s)", async (compressed) => {
+  const f = fixture();
+  const path = join(f.home, "export.json");
+  const before = readdirSync(f.home);
+  const raw = Buffer.from(JSON.stringify({ name: "Synthetic heatmap", versions: { layer: "4.5" }, domain: "enterprise-attack", techniques: [] }));
+  const result = await f.run(["inventory", "download", "--id", id, "--chunk", "1", "--output", path], [{ bytes: compressed ? gzipSync(raw) : raw }]);
+  expect(result.code).toBe(1);
+  expect(result.data.error.code).toBe("RESPONSE_INVALID");
+  expect(readdirSync(f.home)).toEqual(before);
+});
+
 test("CSV secret columns and quoted multiline cells survive format-aware redaction", async () => {
   const f = fixture();
   const path = join(f.home, "export.csv");
