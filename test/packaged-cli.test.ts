@@ -173,10 +173,12 @@ test.each([
     expect(decode(codexContext.stdout)).toMatchObject({ status: "not configured" });
     expect(parseToml(readFileSync(config, "utf8"))).toEqual({ features: { hooks: true, other: true } });
     const openCodeContext = spawnSync(process.execPath, ["--input-type=module", "-e", `
-      const { default: plugin } = await import(${JSON.stringify(pathToFileURL(join(fixture.home, plugin)).href)});
-      const server = await plugin.server({ directory: process.cwd() });
+      const plugins = await import(${JSON.stringify(pathToFileURL(join(fixture.home, plugin)).href)});
       const output = { system: [] };
-      await server["experimental.chat.system.transform"]({ sessionID: "example" }, output);
+      for (const initialize of Object.values(plugins)) {
+        const hooks = await initialize({ directory: process.cwd() });
+        await hooks["experimental.chat.system.transform"]({ sessionID: "example" }, output);
+      }
       process.stdout.write(output.system[0].split("\\n").slice(1).join("\\n"));
     `], { cwd: project, env, encoding: "utf8" });
     expect(openCodeContext.status, openCodeContext.stderr).toBe(0);
@@ -213,20 +215,18 @@ test.each(["user", "project"])("%s hooks execute fallback paths with shell metac
     const plugin = join(fixture.home, scope === "user" ? ".config/opencode" : ".opencode", "plugins/axi-tenable-axi-hook.js");
     chmodSync(hookScript, 0o600);
     const result = spawnSync(process.execPath, ["--input-type=module", "-e", `
-      const { default: plugin } = await import(${JSON.stringify(pathToFileURL(plugin).href)});
-      const server = await plugin.server({ directory: process.cwd() });
+      const plugins = await import(${JSON.stringify(pathToFileURL(plugin).href)});
       const output = { system: [] };
-      await server["experimental.chat.system.transform"]({ sessionID: "example" }, output);
-      let context;
-      await plugin.setup({ location: { directory: process.cwd() }, session: { hook: async (_, handler) => { context = handler; } } });
-      const event = { sessionID: "example", system: [] };
-      await context(event);
-      console.log(JSON.stringify({ legacy: output.system, current: event.system }));
+      for (const initialize of Object.values(plugins)) {
+        const hooks = await initialize({ directory: process.cwd() });
+        await hooks["experimental.chat.system.transform"]({ sessionID: "example" }, output);
+      }
+      console.log(JSON.stringify(output.system));
     `], { cwd: fixture.home, env, encoding: "utf8" });
     expect(result.status, result.stderr).toBe(0);
     const context = JSON.parse(result.stdout);
-    expect(decode(context.legacy[0].split("\n").slice(1).join("\n"))).toMatchObject({ status: "not configured" });
-    expect(context.current).toEqual([{ type: "text", text: context.legacy[0] }]);
+    expect(context).toHaveLength(1);
+    expect(decode(context[0].split("\n").slice(1).join("\n"))).toMatchObject({ status: "not configured" });
   } finally { chmodSync(hookScript, hookMode); fixture.cleanup(); }
 });
 

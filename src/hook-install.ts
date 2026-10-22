@@ -107,23 +107,13 @@ function ambientContext(directory) {
   };
 }
 
-export default {
-  id: "axi-tenable-axi-hook",
-  async setup(ctx) {
-    const context = ambientContext(ctx.location.directory);
-    await ctx.session.hook("context", async (event) => {
-      const text = await context(event.sessionID);
-      if (text) event.system.push({ type: "text", text });
-    });
-  },
-  async server({ directory }) {
-    const context = ambientContext(directory);
-    return { "experimental.chat.system.transform": async (input, output) => {
-      const text = await context(input.sessionID);
-      if (text) output.system.push(text);
-    } };
-  },
-};
+export default async function ({ directory }) {
+  const context = ambientContext(directory);
+  return { "experimental.chat.system.transform": async (input, output) => {
+    const text = await context(input.sessionID);
+    if (text) output.system.push(text);
+  } };
+}
 `;
   });
 }
