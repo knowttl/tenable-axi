@@ -68,9 +68,11 @@ Restart the agent session after setup.
 The hook prints local profile/origin/write posture, resolves no secrets, and never contacts Tenable.
 It follows the session's `TENABLE_AXI_PROFILE` and `TENABLE_AXI_CONFIG`, so select those explicitly when working with multiple tenants.
 Use `tenable-axi setup hooks --scope project` for integrations confined to the current project directory.
-Project setup still enables Codex's shared user-level hooks feature.
+User setup honors `CLAUDE_CONFIG_DIR` (default `~/.claude`), `CODEX_HOME` (default `~/.codex`), and `$XDG_CONFIG_HOME/opencode` (default `~/.config/opencode`).
+Project hook destinations remain `.claude`, `.codex`, and `.opencode` under the working directory.
+Both scopes enable Codex's shared user-level hooks feature in the active `CODEX_HOME/config.toml`.
 No repository-local Tenable configuration is discovered automatically.
-To remove hooks, remove only entries containing `tenable-axi-hook` from `~/.claude/settings.json` and `~/.codex/hooks.json`, and the managed `~/.config/opencode/plugins/axi-tenable-axi-hook.js` plugin.
+To remove user hooks, remove only entries containing `tenable-axi-hook` from `settings.json` in the active Claude configuration directory and `hooks.json` in the active Codex directory, and the managed `plugins/axi-tenable-axi-hook.js` under OpenCode's active configuration directory.
 For project scope, remove the corresponding `.claude/settings.json`, `.codex/hooks.json` entries and `.opencode/plugins/axi-tenable-axi-hook.js` under that project.
 Keep unrelated entries and Codex's shared hooks feature enabled for other tools.
 

@@ -29,7 +29,11 @@ function portableHookCommand(execPath: string, name: string): string {
 export function installHooks(execPath: string, scope: "user" | "project", onError: (message: string) => void): void {
   const marker = "tenable-axi-hook";
   const home = homedir();
-  const root = scope === "project" ? process.cwd() : home;
+  const root = process.cwd();
+  const codexHome = process.env.CODEX_HOME || join(home, ".codex");
+  const claudeSettingsPath = join(scope === "project" ? join(root, ".claude") : process.env.CLAUDE_CONFIG_DIR || join(home, ".claude"), "settings.json");
+  const codexHooksPath = join(scope === "project" ? join(root, ".codex") : codexHome, "hooks.json");
+  const openCodeDirectory = scope === "project" ? join(root, ".opencode") : join(process.env.XDG_CONFIG_HOME || join(home, ".config"), "opencode");
   const command = portableHookCommand(execPath, marker);
   const shellCommand = command === marker ? command : `'${command.replaceAll("'", "'\\''")}'`;
   const update = (path: string, transform: (content: string) => string) => {
@@ -42,7 +46,7 @@ export function installHooks(execPath: string, scope: "user" | "project", onErro
       }
     } catch (error) { onError(`${path}: ${error instanceof Error ? error.message : String(error)}`); }
   };
-  for (const path of [join(root, ".claude/settings.json"), join(root, ".codex/hooks.json")]) {
+  for (const path of [claudeSettingsPath, codexHooksPath]) {
     update(path, (current) => {
       const settings = current ? JSON.parse(current) : {};
       for (const group of settings.hooks?.SessionStart ?? []) {
@@ -58,7 +62,7 @@ export function installHooks(execPath: string, scope: "user" | "project", onErro
       delete hook.args;
       delete hook.commandWindows;
       if (process.platform === "win32") {
-        if (path === join(root, ".claude/settings.json")) {
+        if (path === claudeSettingsPath) {
           hook.command = process.execPath;
           hook.args = [execPath];
         } else {
@@ -70,7 +74,7 @@ export function installHooks(execPath: string, scope: "user" | "project", onErro
       return `${JSON.stringify(next, null, 2)}\n`;
     });
   }
-  update(join(home, ".codex/config.toml"), (current) => {
+  update(join(codexHome, "config.toml"), (current) => {
     const config = parse(current, { integersAsBigInt: true });
     const features = config.features ?? {};
     if (typeof features !== "object" || features === null || Array.isArray(features) || features instanceof Date) {
@@ -83,7 +87,7 @@ export function installHooks(execPath: string, scope: "user" | "project", onErro
     return stringify(config);
   });
   const managedMarker = `axi-sdk-js managed opencode plugin: ${marker}`;
-  update(join(scope === "project" ? join(root, ".opencode") : join(home, ".config/opencode"), "plugins/axi-tenable-axi-hook.js"), (current) => {
+  update(join(openCodeDirectory, "plugins/axi-tenable-axi-hook.js"), (current) => {
     if (current && !current.includes(managedMarker)) throw new Error("refusing to overwrite unmanaged OpenCode plugin");
     return `// ${managedMarker}
 import { execFile } from "node:child_process";

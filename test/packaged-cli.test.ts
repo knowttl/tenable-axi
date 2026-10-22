@@ -47,6 +47,7 @@ function hookFixture() {
   const home = mkdtempSync(join(tmpdir(), "tenable-axi-hook-"));
   const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith("TENABLE_AXI_")));
   const isolated = { ...env, HOME: home, USERPROFILE: home, XDG_CONFIG_HOME: join(home, ".config"),
+    CODEX_HOME: join(home, ".codex"), CLAUDE_CONFIG_DIR: join(home, ".claude"),
     XDG_STATE_HOME: join(home, "state"), APPDATA: join(home, "AppData/Roaming"), LOCALAPPDATA: join(home, "AppData/Local"),
     NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --import=${resolve("test/support/deny-network.mjs")}` };
   const run = (args: string[], extra: NodeJS.ProcessEnv = {}) => spawnSync(process.execPath, [entry, ...args], {
@@ -144,6 +145,52 @@ test("project setup confines integrations to the working directory and enables C
   } finally { fixture.cleanup(); }
 });
 
+test.each([
+  { scope: "user", claude: "agents/claude/settings.json", codex: "agents/codex/hooks.json", plugin: "agents/xdg/opencode/plugins/axi-tenable-axi-hook.js" },
+  { scope: "project", claude: "workspace/.claude/settings.json", codex: "workspace/.codex/hooks.json", plugin: "workspace/.opencode/plugins/axi-tenable-axi-hook.js" },
+])("$scope setup honors active user configuration directories", ({ scope, claude, codex, plugin }) => {
+  const fixture = hookFixture();
+  try {
+    const project = join(fixture.home, "workspace");
+    const env = { ...fixture.env, CLAUDE_CONFIG_DIR: join(fixture.home, "agents/claude"),
+      CODEX_HOME: join(fixture.home, "agents/codex"), XDG_CONFIG_HOME: join(fixture.home, "agents/xdg") };
+    mkdirSync(project);
+    mkdirSync(env.CODEX_HOME, { recursive: true });
+    const config = join(env.CODEX_HOME, "config.toml");
+    writeFileSync(config, "[features]\nhooks = false\nother = true\n");
+    const setup = () => spawnSync(process.execPath, [entry, "setup", "hooks", "--scope", scope], {
+      cwd: project, env, encoding: "utf8",
+    });
+    const result = setup();
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    const claudeSettings = JSON.parse(readFileSync(join(fixture.home, claude), "utf8"));
+    const claudeContext = runInstalledHook(claudeSettings.hooks.SessionStart[0].hooks[0], project, env);
+    expect(claudeContext.status, claudeContext.stderr).toBe(0);
+    expect(decode(claudeContext.stdout)).toMatchObject({ status: "not configured" });
+    const codexSettings = JSON.parse(readFileSync(join(fixture.home, codex), "utf8"));
+    const codexContext = runInstalledHook(codexSettings.hooks.SessionStart[0].hooks[0], project, env);
+    expect(codexContext.status, codexContext.stderr).toBe(0);
+    expect(decode(codexContext.stdout)).toMatchObject({ status: "not configured" });
+    expect(parseToml(readFileSync(config, "utf8"))).toEqual({ features: { hooks: true, other: true } });
+    const openCodeContext = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      const { default: plugin } = await import(${JSON.stringify(pathToFileURL(join(fixture.home, plugin)).href)});
+      const server = await plugin.server({ directory: process.cwd() });
+      const output = { system: [] };
+      await server["experimental.chat.system.transform"]({ sessionID: "example" }, output);
+      process.stdout.write(output.system[0].split("\\n").slice(1).join("\\n"));
+    `], { cwd: project, env, encoding: "utf8" });
+    expect(openCodeContext.status, openCodeContext.stderr).toBe(0);
+    expect(decode(openCodeContext.stdout)).toMatchObject({ status: "not configured" });
+    const paths = [claude, codex, plugin].map((path) => join(fixture.home, path)).concat(config);
+    const before = paths.map((path) => ({ content: readFileSync(path, "utf8"), modified: statSync(path).mtimeMs }));
+    expect(setup().status).toBe(0);
+    expect(paths.map((path) => ({ content: readFileSync(path, "utf8"), modified: statSync(path).mtimeMs }))).toEqual(before);
+    expect(existsSync(join(fixture.home, ".claude"))).toBe(false);
+    expect(existsSync(join(fixture.home, ".codex"))).toBe(false);
+    expect(existsSync(join(fixture.home, ".config"))).toBe(false);
+  } finally { fixture.cleanup(); }
+});
+
 test.each(["user", "project"])("%s hooks execute fallback paths with shell metacharacters in every integration", (scope) => {
   const fixture = hookFixture();
   const hookScript = join(packageRoot, "bin/tenable-axi-hook.js");
@@ -186,25 +233,26 @@ test.each(["user", "project"])("%s hooks execute fallback paths with shell metac
 test.each(["user", "project"])("%s Windows setup emits an executable Claude argument vector and repairs it idempotently", (scope) => {
   const fixture = hookFixture();
   try {
+    const env = { ...fixture.env, CLAUDE_CONFIG_DIR: join(fixture.home, "alternate-claude") };
     const setup = () => spawnSync(process.execPath, ["--input-type=module", "-e", `
       Object.defineProperty(process, "platform", { value: "win32" });
       const { main } = await import(${JSON.stringify(pathToFileURL(join(packageRoot, "dist/src/cli.js")).href)});
       await main(["setup", "hooks", "--scope", ${JSON.stringify(scope)}]);
-    `], { cwd: fixture.home, env: fixture.env, encoding: "utf8" });
+    `], { cwd: fixture.home, env, encoding: "utf8" });
     const result = setup();
     expect(result.status, result.stdout + result.stderr).toBe(0);
-    const path = join(fixture.home, ".claude/settings.json");
+    const path = join(scope === "user" ? env.CLAUDE_CONFIG_DIR : join(fixture.home, ".claude"), "settings.json");
     const hook = JSON.parse(readFileSync(path, "utf8")).hooks.SessionStart[0].hooks[0];
-    const context = runInstalledHook(hook, fixture.home, fixture.env);
+    const context = runInstalledHook(hook, fixture.home, env);
     expect(context.status, context.stderr).toBe(0);
     expect(decode(context.stdout)).toMatchObject({ status: "not configured" });
     const before = { content: readFileSync(path, "utf8"), modified: statSync(path).mtimeMs };
     expect(setup().status).toBe(0);
     expect({ content: readFileSync(path, "utf8"), modified: statSync(path).mtimeMs }).toEqual(before);
-    expect(fixture.run(["setup", "hooks", "--scope", scope]).status).toBe(0);
+    expect(fixture.run(["setup", "hooks", "--scope", scope], env).status).toBe(0);
     const repaired = JSON.parse(readFileSync(path, "utf8")).hooks.SessionStart[0].hooks;
     expect(repaired).toHaveLength(1);
-    expect(runInstalledHook(repaired[0], fixture.home, fixture.env).status).toBe(0);
+    expect(runInstalledHook(repaired[0], fixture.home, env).status).toBe(0);
   } finally { fixture.cleanup(); }
 });
 
