@@ -55,6 +55,11 @@ function hookFixture() {
   return { home, env: isolated, run, cleanup: () => rmSync(home, { recursive: true, force: true }) };
 }
 
+function runInstalledHook(hook: { command: string; args?: string[]; commandWindows?: string }, home: string, env: NodeJS.ProcessEnv) {
+  const command = process.platform === "win32" ? hook.commandWindows ?? hook.command : hook.command;
+  return spawnSync(command, hook.args ?? [], { shell: hook.args === undefined, cwd: home, env, encoding: "utf8" });
+}
+
 test("ordinary packaged commands and setup help never install agent integrations", () => {
   const fixture = hookFixture();
   try {
@@ -82,7 +87,7 @@ test("explicit setup installs executable hooks and preserves unrelated integrati
     expect(claude.hooks.SessionStart).toContainEqual(unrelated);
     const hook = claude.hooks.SessionStart.flatMap((group: { hooks: { command: string }[] }) => group.hooks)
       .find((item: { command: string }) => item.command.includes("tenable-axi-hook"));
-    const ambient = spawnSync(hook.command, [], { shell: true, env: fixture.env, cwd: fixture.home, encoding: "utf8" });
+    const ambient = runInstalledHook(hook, fixture.home, fixture.env);
     expect(ambient.status, ambient.stderr).toBe(0);
     expect(decode(ambient.stdout)).toMatchObject({ status: "not configured" });
     const paths = [settings, join(fixture.home, ".codex/hooks.json"), join(fixture.home, ".codex/config.toml"),
@@ -91,7 +96,11 @@ test("explicit setup installs executable hooks and preserves unrelated integrati
     expect(fixture.run(["setup", "hooks"]).status).toBe(0);
     expect(before.map(({ path }) => ({ path, content: readFileSync(path, "utf8"), modified: statSync(path).mtimeMs }))).toEqual(before);
     const codex = JSON.parse(readFileSync(paths[1]!, "utf8"));
-    expect(codex.hooks.SessionStart.flatMap((group: { hooks: unknown[] }) => group.hooks)).toEqual([hook]);
+    const codexHooks = codex.hooks.SessionStart.flatMap((group: { hooks: unknown[] }) => group.hooks);
+    expect(codexHooks).toHaveLength(1);
+    const codexAmbient = runInstalledHook(codexHooks[0], fixture.home, fixture.env);
+    expect(codexAmbient.status, codexAmbient.stderr).toBe(0);
+    expect(decode(codexAmbient.stdout)).toMatchObject({ status: "not configured" });
     expect(parseToml(readFileSync(paths[2]!, "utf8"))).toMatchObject({ features: { hooks: true } });
   } finally { fixture.cleanup(); }
 });
@@ -110,7 +119,9 @@ test("setup repairs a stale hook path using the verified installed binary on PAT
     expect(result.status, result.stdout).toBe(0);
     const installed = JSON.parse(readFileSync(settings, "utf8")).hooks.SessionStart;
     expect(installed.flatMap((group: { hooks: unknown[] }) => group.hooks)).toEqual([
-      { type: "command", command: "tenable-axi-hook", timeout: 10 },
+      process.platform === "win32"
+        ? { type: "command", command: process.execPath, args: [join(packageRoot, "bin/tenable-axi-hook.js")], timeout: 10 }
+        : { type: "command", command: "tenable-axi-hook", timeout: 10 },
     ]);
   } finally { fixture.cleanup(); }
 });
@@ -147,8 +158,7 @@ test.each(["user", "project"])("%s hooks execute fallback paths with shell metac
     expect(fixture.run(["setup", "hooks", "--scope", scope], env).status).toBe(0);
     for (const path of [".claude/settings.json", ".codex/hooks.json"]) {
       const settings = JSON.parse(readFileSync(join(fixture.home, path), "utf8"));
-      const command = settings.hooks.SessionStart[0].hooks[0].command;
-      const result = spawnSync(command, { shell: true, cwd: fixture.home, env, encoding: "utf8" });
+      const result = runInstalledHook(settings.hooks.SessionStart[0].hooks[0], fixture.home, env);
       expect(result.status, result.stderr).toBe(0);
       expect(decode(result.stdout)).toMatchObject({ status: "not configured" });
     }
@@ -170,6 +180,53 @@ test.each(["user", "project"])("%s hooks execute fallback paths with shell metac
     expect(decode(context.legacy[0].split("\n").slice(1).join("\n"))).toMatchObject({ status: "not configured" });
     expect(context.current).toEqual([{ type: "text", text: context.legacy[0] }]);
   } finally { chmodSync(hookScript, hookMode); fixture.cleanup(); }
+});
+
+test.each(["user", "project"])("%s Windows setup emits an executable Claude argument vector and repairs it idempotently", (scope) => {
+  const fixture = hookFixture();
+  try {
+    const setup = () => spawnSync(process.execPath, ["--input-type=module", "-e", `
+      Object.defineProperty(process, "platform", { value: "win32" });
+      const { main } = await import(${JSON.stringify(pathToFileURL(join(packageRoot, "dist/src/cli.js")).href)});
+      await main(["setup", "hooks", "--scope", ${JSON.stringify(scope)}]);
+    `], { cwd: fixture.home, env: fixture.env, encoding: "utf8" });
+    const result = setup();
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    const path = join(fixture.home, ".claude/settings.json");
+    const hook = JSON.parse(readFileSync(path, "utf8")).hooks.SessionStart[0].hooks[0];
+    const context = runInstalledHook(hook, fixture.home, fixture.env);
+    expect(context.status, context.stderr).toBe(0);
+    expect(decode(context.stdout)).toMatchObject({ status: "not configured" });
+    const before = { content: readFileSync(path, "utf8"), modified: statSync(path).mtimeMs };
+    expect(setup().status).toBe(0);
+    expect({ content: readFileSync(path, "utf8"), modified: statSync(path).mtimeMs }).toEqual(before);
+    expect(fixture.run(["setup", "hooks", "--scope", scope]).status).toBe(0);
+    const repaired = JSON.parse(readFileSync(path, "utf8")).hooks.SessionStart[0].hooks;
+    expect(repaired).toHaveLength(1);
+    expect(runInstalledHook(repaired[0], fixture.home, fixture.env).status).toBe(0);
+  } finally { fixture.cleanup(); }
+});
+
+test.skipIf(process.platform !== "win32").each(["user", "project"])("%s Windows hooks execute through Claude exec form and Codex's Windows command", (scope) => {
+  const fixture = hookFixture();
+  try {
+    const result = fixture.run(["setup", "hooks", "--scope", scope]);
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    const claudePath = join(fixture.home, ".claude/settings.json");
+    const codexPath = join(fixture.home, ".codex/hooks.json");
+    const claude = JSON.parse(readFileSync(claudePath, "utf8")).hooks.SessionStart[0].hooks[0];
+    const codex = JSON.parse(readFileSync(codexPath, "utf8")).hooks.SessionStart[0].hooks[0];
+    const claudeContext = spawnSync(claude.command, claude.args, { cwd: fixture.home, env: fixture.env, encoding: "utf8" });
+    expect(claudeContext.status, claudeContext.stderr).toBe(0);
+    expect(decode(claudeContext.stdout)).toMatchObject({ status: "not configured" });
+    const codexContext = spawnSync(codex.commandWindows, { shell: true, cwd: fixture.home, env: fixture.env, encoding: "utf8" });
+    expect(codexContext.status, codexContext.stderr).toBe(0);
+    expect(decode(codexContext.stdout)).toMatchObject({ status: "not configured" });
+    const paths = [claudePath, codexPath];
+    const before = paths.map((path) => ({ content: readFileSync(path, "utf8"), modified: statSync(path).mtimeMs }));
+    expect(fixture.run(["setup", "hooks", "--scope", scope]).status).toBe(0);
+    expect(paths.map((path) => ({ content: readFileSync(path, "utf8"), modified: statSync(path).mtimeMs }))).toEqual(before);
+  } finally { fixture.cleanup(); }
 });
 
 test.each(["user", "project"].flatMap((scope) => [

@@ -1,4 +1,4 @@
-import { computeSessionStartHookUpdate, extractNpmShimScriptPath } from "axi-sdk-js";
+import { computeSessionStartHookUpdate, extractNpmShimScriptPath, type HookEntry } from "axi-sdk-js";
 import { accessSync, constants, existsSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
@@ -44,8 +44,30 @@ export function installHooks(execPath: string, scope: "user" | "project", onErro
   };
   for (const path of [join(root, ".claude/settings.json"), join(root, ".codex/hooks.json")]) {
     update(path, (current) => {
-      const [next, changed] = computeSessionStartHookUpdate(current ? JSON.parse(current) : {}, { marker, command: shellCommand });
-      return changed ? `${JSON.stringify(next, null, 2)}\n` : current;
+      const settings = current ? JSON.parse(current) : {};
+      for (const group of settings.hooks?.SessionStart ?? []) {
+        for (const hook of group.hooks ?? []) {
+          if (Array.isArray(hook.args) && hook.args.some((arg: unknown) => typeof arg === "string" && arg.includes(marker))) {
+            hook.command = shellCommand;
+          }
+        }
+      }
+      const [next] = computeSessionStartHookUpdate(settings, { marker, command: shellCommand });
+      const hook = next.hooks!.SessionStart!.flatMap((group) => group.hooks ?? [])
+        .find((hook) => hook.command === shellCommand)! as HookEntry & { args?: string[]; commandWindows?: string };
+      delete hook.args;
+      delete hook.commandWindows;
+      if (process.platform === "win32") {
+        if (path === join(root, ".claude/settings.json")) {
+          hook.command = process.execPath;
+          hook.args = [execPath];
+        } else {
+          const argv = Buffer.from(JSON.stringify([process.execPath, execPath])).toString("base64");
+          const script = `$ErrorActionPreference = 'Stop'; $argv = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('${argv}')) | ConvertFrom-Json; & $argv[0] $argv[1]; exit $LASTEXITCODE`;
+          hook.commandWindows = `powershell.exe -NoProfile -NonInteractive -EncodedCommand ${Buffer.from(script, "utf16le").toString("base64")}`;
+        }
+      }
+      return `${JSON.stringify(next, null, 2)}\n`;
     });
   }
   update(join(home, ".codex/config.toml"), (current) => {
