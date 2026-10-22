@@ -19,6 +19,7 @@ export type RequestOptions = {
   continuation?: string;
   signal?: AbortSignal;
   authorization?: unknown;
+  retry?: false;
 };
 export type Transport = {
   prepare(operation: string, options?: RequestOptions): PreparedRequest;
@@ -206,7 +207,7 @@ export function constructTransport(options: TransportOptions, dependencies: {
       const status = response!.status;
       const delay = retryAfter(response!.headers.get("retry-after"), now());
       if (delay !== undefined) lastRetryAfter = delay;
-      const retryable = record.effect === "read" && [429, 502, 503, 504].includes(status);
+      const retryable = input.retry !== false && record.effect === "read" && [429, 502, 503, 504].includes(status);
       const wait = delay ?? (attempt === 0 ? 250 : 500);
       if (retryable && attempt < 2 && requests < 20 && wait < deadline - now()) {
         await new Promise<void>((resolve, reject) => {
