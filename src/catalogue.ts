@@ -3,19 +3,21 @@ import type { MutationOperation } from "./writes-core.js";
 import { inventoryBindings, inventoryCatalogue } from "./inventory-catalogue.js";
 import { exposureBindings } from "./exposure-contracts.js";
 import { attackBindings, attackCatalogue } from "./attack-catalogue.js";
+import { attackExportBindings, attackExportCatalogue, attackExportMutations } from "./attack-export-catalogue.js";
 import { inventoryExportBindings, inventoryExportCatalogue, inventoryExportMutations } from "./inventory-export-catalogue.js";
 
 export const DESCRIPTION = "Agent-friendly CLI for Tenable One, under construction";
 
 // Endpoint slices add reviewed executable bindings alongside their commands.
-export const transportBindings: Readonly<Record<string, OperationBinding>> = Object.freeze({ ...inventoryBindings, ...exposureBindings, ...attackBindings, ...inventoryExportBindings });
-export const mutationOperations: Readonly<Record<string, MutationOperation>> = Object.freeze({ ...inventoryExportMutations });
+export const transportBindings: Readonly<Record<string, OperationBinding>> = Object.freeze({ ...inventoryBindings, ...exposureBindings, ...attackBindings, ...inventoryExportBindings, ...attackExportBindings });
+export const mutationOperations: Readonly<Record<string, MutationOperation>> = Object.freeze({ ...inventoryExportMutations, ...attackExportMutations });
 
 // Evidence and planned commands never enable execution. Endpoint slices add explicit bindings here.
 export const catalogue = {
   ...inventoryCatalogue,
   ...attackCatalogue,
   ...inventoryExportCatalogue,
+  ...attackExportCatalogue,
   home: {
     description: "Show profile state and up to five live exposure cards",
     flags: { config: "Config path; default platform path", profile: "Profile name; default credential precedence", fields: "Card fields; default id,name,score", full: "Full text; default false", help: "Show help; default false" },

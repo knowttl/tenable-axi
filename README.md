@@ -3,6 +3,7 @@
 An AXI command-line tool for Tenable One, under construction.
 It uses TypeScript on Node.js 22.12 or later and will be published as `@knowttl/tenable-axi`.
 Inventory reads and exports, attack searches and connector logs are implemented.
+Attack path, attack technique and MITRE heatmap exports support guarded creation, status and redacted file downloads.
 `tag list`, `tag properties`, `card list` and `card show` provide bounded Exposure Management reads.
 Home shows up to five exposure cards when configured and setup guidance offline otherwise.
 `hook` reports local profile context without resolving secrets or contacting Tenable.
@@ -17,10 +18,10 @@ The internal transport enforces the exact commercial origin, reviewed catalogue 
 One transport instance represents one invocation, sharing the [transport budgets](docs/design.md#transport-contract) across pages and retries.
 Read operations may retry 429/502/503/504 twice; writes require coordinator authorization and never replay automatically.
 Transport errors carry a stable code, operation, optional HTTP status and `retryAfter` in milliseconds, plus bounded redacted guidance.
-Production binds reviewed inventory search/properties and exports, Exposure Management tag and card reads, attack searches and connector logs; offline tests use synthetic fixtures and a CA-verified loopback HTTPS fake through the internal construction seam.
+Production binds reviewed inventory search/properties and exports, Exposure Management tag and card reads, attack searches, attack exports and connector logs; offline tests use synthetic fixtures and a CA-verified loopback HTTPS fake through the internal construction seam.
 No flag or environment variable enables that seam in the CLI.
 
-Inventory export creation uses the write coordinator and is read-only by default.
+Inventory and attack export creation use the write coordinator and are read-only by default.
 It enforces immutable configured scope, redacted previews, exact confirmation, optional host approval, stale-state refusal and a durable private journal before a single authorized send.
 Unknown outcomes include an audit ID and read-back guidance and are never replayed.
 Named write commands register strict mutation definitions alongside transport bindings in the catalogue and call `createWriteCoordinator().run(operationId, input, options)`.
@@ -69,6 +70,17 @@ Connector logs accept connector ID, sync status, and paired date boundaries (inc
 Log `timestamp` is the sync start time; use `--fields connectorId,status,sync_logs --full` for event details.
 Unpaged log collections retain unreturned rows for bounded local resume; if the upstream total exceeds the available collection, output reports that limitation and suggests narrowing the selectors.
 Connector log denial explains Administrator or the documented connector-read privilege without recommending Administrator for inventory access.
+
+Use `export attack-path start`, `export attack-technique start` or `export mitre-heatmap start` with a strict JSON `--body-file` containing `file_format: "JSON"` or `"CSV"` and the operation's documented options.
+Export filter logical operators use lowercase `and`/`or`, including attack path exports.
+Select a configured profile with `--profile`; its `writes.allowWrites` must be true and `writes.operations` must include the exact operation ID (`apa-export-attack-path`, `apa-export-attack-technique` or `apa-export-mitre-heatmap`), even for previews.
+Environment profiles cannot enable writes, and `TENABLE_AXI_READ_ONLY=true` blocks all creation.
+Preview first, then pass `--execute --confirm '<exact-preview-confirmation>'` to create one job and return immediately.
+Exports require `EXPOSURE_MANAGEMENT.ATTACK_PATH.ATTACK_PATH.WRITE` and the corresponding upstream entitlement.
+Use `export attack status --id <id>` for a single status read, or add `--wait` to poll within the shared deadline and request budgets.
+Use `export attack download --id <id> --output <new-file>` to download JSON or CSV, including gzip-encoded files, with format-aware secret redaction and a 128-MiB ceiling before atomic publication.
+Downloads refuse overwrite and print file metadata only.
+Attack and inventory job namespaces are separate; these commands never address inventory export jobs.
 
 See the [design](docs/design.md) for v1 scope, credentials, write policy, verification, and implementation slices.
 See [contributing](CONTRIBUTING.md) for development conventions.
