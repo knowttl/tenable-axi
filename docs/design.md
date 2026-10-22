@@ -269,7 +269,9 @@ Use operation-specific paging shapes, minimum sizes, and maxima; do not blindly 
 Fetch sequentially only what is needed for the requested output.
 `--all` is bounded by 10,000 emitted rows and the shared 20-request, 20-second, 20-MiB budgets.
 A normal budget stop emits `complete:false`, reason, and resumable cursor; a partial transport/schema failure retains valid rows but exits 1.
-Cursors bind origin, profile identity, operation, filters, sort, and within-page position, preserve unreturned rows, and detect repeated continuations.
+Cursors bind origin, profile identity, operation, supported selectors, and position.
+Paged operations preserve unreturned rows and detect repeated continuations.
+Exposure Response uses re-fetching continuation instead; see [README](../README.md) for its cursor bounds and changed-collection behavior.
 Offset paging does not promise snapshot isolation.
 Unpaged collections still obey byte/output limits without invented paging parameters.
 
