@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, renameSync, rmSync, symlinkSync } from "node:fs";
+import { mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
@@ -46,6 +46,22 @@ test("packaged help describes only executable scaffold commands offline", () => 
   expect(result.status, result.stderr).toBe(0);
   expect(result.stderr).toBe("");
   expect(decode(result.stdout)).toMatchObject({ commands: { home: "Show scaffold status without contacting Tenable" } });
+});
+
+test("packaged credentials report sources locally and ship the host schema", () => {
+  const config = join(directory, "credentials-config.json");
+  writeFileSync(config, JSON.stringify({ version: 1, profiles: { example: {} } }), { mode: 0o600 });
+  const result = spawnSync(process.execPath, [entry, "auth", "status", "--config", config, "--profile", "example"], {
+    encoding: "utf8", cwd: directory, timeout: 10_000,
+    env: { ...process.env, HOME: directory, XDG_CONFIG_HOME: directory, XDG_STATE_HOME: directory,
+      TENABLE_AXI_ACCESS_KEY: "synthetic-packaged-access", TENABLE_AXI_SECRET_KEY: "synthetic-packaged-secret" },
+  });
+  expect(result.status, result.stderr).toBe(0);
+  expect(result.stderr).toBe("");
+  expect(decode(result.stdout)).toMatchObject({ profile: "example", accessKey: { env: "TENABLE_AXI_ACCESS_KEY" }, secretKey: { env: "TENABLE_AXI_SECRET_KEY" }, readOnly: true });
+  expect(result.stdout).not.toContain("synthetic-packaged");
+  const schema = JSON.parse(readFileSync(join(directory, "package/axi-credential.schema.json"), "utf8"));
+  expect(schema.properties).toMatchObject({ accessKey: { "x-secret": true }, secretKey: { "x-secret": true } });
 });
 
 test.each([["asset", "list"], ["home", "--unknown"], ["home", "--help", "--help"]])(
