@@ -14,7 +14,7 @@ export type OperationBinding = Readonly<{
 }>;
 export type RequestOptions = {
   pathParams?: Readonly<Record<string, string>>;
-  query?: Readonly<Record<string, string | number | boolean>>;
+  query?: Readonly<Record<string, string | number | boolean | readonly string[]>>;
   body?: unknown;
   continuation?: string;
   signal?: AbortSignal;
@@ -95,7 +95,7 @@ export function constructTransport(options: TransportOptions, dependencies: {
     const initial = new URL(path, TENABLE_ORIGIN);
     for (const [key, value] of Object.entries(input.query ?? {})) {
       if (!binding.query.includes(key)) fail("VALIDATION_ERROR", "Unsupported query parameter", operation);
-      initial.searchParams.set(key, String(value));
+      for (const item of Array.isArray(value) ? value : [value]) initial.searchParams.append(key, String(item));
     }
     if (input.continuation === undefined) return initial;
     const next = input.continuation;

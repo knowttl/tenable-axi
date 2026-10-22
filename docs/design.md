@@ -194,7 +194,7 @@ This table defines selectors, extra flags, and compact projections; display fiel
 |---|---|---|
 | `asset list/show/properties` | Show: `--id`, using exact ID search; list: query/filter/sort and `--class`. | id, name, class, exposureScore |
 | `finding list/show/properties` | Show: `--id`, using exact ID search; list: query/filter/sort. | id, name, severity, state |
-| `software list/properties` | Query/filter/sort. | id, name, version |
+| `software list/properties` | Query/filter/sort; the [pinned spec](../specs/exposure-management.json) exposes no stable software ID. | name (application), version (extra_properties.version), publisher |
 | `tag list/properties` | Exposure Management query/filter/sort. | id, category, value |
 | `card list/show` | List: `--global`, `--query`, `--sorting-order`; show: `--id` and trend/SLA flags below. | id, name, score |
 | `attack-path list` | Documented filters/sort and `--include-resolved`; AI summarization off by default. | id, name, priority |
@@ -224,7 +224,7 @@ All unspecified API defaults follow the pinned schema, except the CLI's explicit
 
 | Leaves | Additional mapping |
 |---|---|
-| Inventory and tag searches | `--extra-properties` maps `extra_properties`; `--fields` automatically requests properties needed by the selected projection; `--filter-file` accepts the strict nested filter schema, mutually exclusive with repeatable simple `--filter`. |
+| Inventory and tag searches | `--extra-properties` maps `extra_properties`; `--fields` automatically requests properties needed by the selected projection; `--filter-file` accepts the [pinned spec's](../specs/exposure-management.json) flat array of {property, operator, value: string[]}, mutually exclusive with repeatable simple `--filter`; nested boolean expressions are unsupported. |
 | `asset properties` | `--asset-classes` maps the documented `asset_classes` array; list `--class` is a validated server-side class filter rather than an invented query parameter. |
 | Attack searches | `--filter-file` represents the documented single/nested filter body; `--sort`, offset/limit, and `--include-resolved` map their query fields; attack paths also exposes `--run-ai-summarization true\|false`, default false. |
 | `connector logs` | `--connector-id`, `--status`, `--start-date`, `--end-date` map the four documented query fields; dates use YYYY-MM-DD. |
@@ -234,7 +234,7 @@ All unspecified API defaults follow the pinned schema, except the CLI's explicit
 | Inventory job lists | `--status QUEUED\|PROCESSING\|FINISHED\|ERROR` and `--limit`; there is no server-side offset or continuation parameter. |
 | Attack export starts | Body fields include `file_format`, filter(s), columns, file_name, and operation-specific vector/technique IDs and sort exactly where documented. |
 
-Simple filters use `--filter '<property> <operator> <JSON-value>'`; structured files preserve the schema's nested boolean expressions without inventing a universal grammar.
+Simple filters use `--filter '<property> <operator> <JSON-value>'`; inventory filter files preserve the [pinned spec's](../specs/exposure-management.json) flat property-filter array without inventing nested boolean expressions.
 Property names remain tenant-specific and API validation errors suggest the corresponding properties command.
 Attack searches require wire limits of at least 100 even for smaller output windows, so retain excess rows in bounded continuation state.
 Card wire pages cap at 25; home requests five.

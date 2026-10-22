@@ -14,12 +14,12 @@ export function localFixture() {
     writeFileSync(path, JSON.stringify({ version: 1, profiles, ...extra }), { mode: 0o600 });
     return path;
   }
-  async function cli(args: string[], context: CredentialContext = {}) {
+  async function cli(args: string[], context: CredentialContext = {}, transportFactory?: NonNullable<Parameters<typeof main>[1]>["transportFactory"]) {
     let stdout = "";
     const previous = process.exitCode;
     process.exitCode = 0;
     try {
-      await main(args, { credentials: { home, env, ...context }, stdout: { write: (chunk) => { stdout += chunk; } } });
+      await main(args, { credentials: { home, env, ...context }, transportFactory, stdout: { write: (chunk) => { stdout += chunk; } } });
       return { code: process.exitCode, stdout, data: decode(stdout) as Record<string, unknown> };
     } finally { process.exitCode = previous; }
   }
