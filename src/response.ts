@@ -101,7 +101,7 @@ export async function responseCommand(argv: string[], store: ReturnType<typeof c
   };
   const command = (exclude: string[] = []) => ["tenable-axi", name, ...[...flags].flatMap(([flag, value]) => exclude.includes(flag) ? []
     : [flag, ...(["--help", "--full", "--all", "--execute", "--dry-run"].includes(flag) ? [] : [JSON.stringify(value)])])].join(" ");
-  const fullHelp = () => truncated ? [`Run ${command(["--full"])} --full to read complete text`] : [];
+  const fullHelp = () => truncated ? [`Run ${command(["--full", "--execute", "--confirm"])} --full to read complete text`] : [];
   const project = (row: Record<string, unknown>) => Object.fromEntries(selected.flatMap((field) => {
     const wire = alias[field] ?? field;
     if (verb === "filters" && ["selectMultiValue", "allowedValues"].includes(wire) && row[wire] === undefined) return [];

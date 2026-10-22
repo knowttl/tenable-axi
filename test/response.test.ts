@@ -119,6 +119,17 @@ test("optional filter metadata stays absent through continuation", async () => {
   expect(resumed.requests).toHaveLength(0);
 });
 
+test("optional filter metadata stays absent on the initial read", async () => {
+  const f = fixture();
+  const result = await f.run(["combination", "filters", "--fields", "property,allowedValues,selectMultiValue"], [
+    { body: { filters: [{ name: "cve.vulnerability_names", operators: ["eq", "exists"] }] } },
+  ]);
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ filters: [{ property: "cve.vulnerability_names" }], complete: true });
+  expect((result.data.filters as object[])[0]).not.toHaveProperty("allowedValues");
+  expect((result.data.filters as object[])[0]).not.toHaveProperty("selectMultiValue");
+});
+
 test.each([
   { field: "allowedValues", value: null }, { field: "allowedValues", value: [1] },
   { field: "selectMultiValue", value: null }, { field: "selectMultiValue", value: "true" },
@@ -129,6 +140,16 @@ test.each([
   ]);
   expect(result.code).toBe(1);
   expect(result.data).toMatchObject({ error: { code: "RESPONSE_INVALID" } });
+  const args = ["combination", "filters", "--fields", `property,${field}`];
+  const first = await f.run([...args, "--limit", "1"], [{ body: { filters: [
+    { name: "cve.vulnerability_names", operators: ["eq"] },
+    { name: "cve.category", operators: ["eq"], [field]: value },
+  ] } }]);
+  expect(first.code).toBe(0);
+  const resumed = await f.run([...args, "--cursor", first.data.cursor as string]);
+  expect(resumed.code).toBe(1);
+  expect(resumed.data).toMatchObject({ error: { code: "RESPONSE_INVALID" } });
+  expect(resumed.requests).toHaveLength(0);
 });
 
 test("initiative detail metrics preserve missing values and reject malformed counters", async () => {
@@ -203,6 +224,38 @@ test.each([true, false])("combination preview makes public=%s visibility explici
   expect(result.data).toMatchObject({ preview: { proposed: { body: { is_public } }, effect: expect.stringContaining("organization") } });
 });
 
+test.each(["initiative", "combination"].flatMap((kind) =>
+  ["create", "update", "delete"].map((verb) => ({ kind, verb }))))("$kind $verb full-text hints only preview", async ({ kind, verb }) => {
+  const description = "a".repeat(1001);
+  const body = { ...(kind === "initiative" ? initiative : combination), description };
+  const f = fixture(kind, verb, body);
+  const listed = { body: { [`${kind}s`]: verb === "create" ? [] : [{ id, name: body.name }] } };
+  const old = { body: { id, ...body, name: "Old" } };
+  const reads = verb === "create" ? [listed] : verb === "update" ? [old] : [listed, old];
+  const preview = await f.run(f.args, [...reads]);
+  expect(preview.code).toBe(0);
+  const executed = await f.run([...f.args, "--execute", "--confirm", (preview.data.preview as { confirm: string }).confirm], [
+    ...reads, ...reads, { body: verb === "delete" ? {} : { id, ...body } },
+  ]);
+  expect(executed.code).toBe(0);
+  expect(executed.data).toMatchObject({ kind: "success" });
+  const hint = (executed.data.help as string[])[0]!;
+  const tokens = hint.slice("Run tenable-axi ".length, -" to read complete text".length)
+    .match(/"(?:\\.|[^"\\])*"|\S+/g)!.map((token) => token.startsWith('"') ? JSON.parse(token) as string : token);
+  expect(tokens).not.toContain("--execute");
+  expect(tokens).not.toContain("--confirm");
+  expect(tokens).toContain("--full");
+  const journal = readFileSync(f.journal, "utf8");
+  const changed = { body: { id, ...body, description: "b".repeat(1001), ...(kind === "initiative" ? { scope: [third] } : {}) } };
+  const replayReads = verb === "create" ? [listed] : verb === "update" ? [changed] : [listed, changed];
+  const followed = await f.run(tokens, replayReads);
+  expect(followed.code).toBe(0);
+  expect(followed.data).toMatchObject({ kind: "dry-run", preview: { noop: false } });
+  expect(followed.requests.every((request) => request.init.method === "GET")).toBe(true);
+  expect(followed.data).not.toHaveProperty("help");
+  expect(readFileSync(f.journal, "utf8")).toBe(journal);
+});
+
 test.each(["initiative", "combination"])("identical %s updates are no-ops", async (kind) => {
   const f = fixture(kind, "update");
   const result = await f.run([...f.args, "--execute"], [{ body: { id, ...(kind === "initiative" ? initiative : combination), beta: true } }]);
@@ -244,7 +297,7 @@ test.each(["update", "delete"])("initiative %s tolerates membership reordering b
   const selected = { body: { combinations: [{ id: other, ...combination }, { id: third, ...combination }] } };
   const initial = verb === "delete" ? [listed, old] : [old, selected];
   const fresh = verb === "delete" ? [listed, reordered] : [reordered, selected];
-  const preview = await f.run(f.args, initial);
+  const preview = await f.run(f.args, [...initial]);
   expect(preview.code).toBe(0);
   const result = await f.run([...f.args, "--execute", "--confirm", (preview.data.preview as { confirm: string }).confirm], [
     ...initial, ...fresh, { body: verb === "delete" ? {} : { id, ...body } },
