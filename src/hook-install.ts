@@ -71,7 +71,7 @@ function ambientContext(directory) {
   return (sessionID) => {
     if (!sessions.has(sessionID)) {
       sessions.set(sessionID, new Promise((resolve) => {
-        execFile(${JSON.stringify(command)}, [], { cwd: directory, timeout: 10000 }, (error, stdout, stderr) => {
+        execFile(${JSON.stringify(process.execPath)}, [${JSON.stringify(execPath)}], { cwd: directory, timeout: 10000 }, (error, stdout, stderr) => {
           const text = error ? "error: tenable-axi-hook ambient context failed: " + (stderr || stdout || error.message).trim() : stdout.trim();
           resolve(text ? "## AXI ambient context: tenable-axi-hook\\n" + text : "");
         });

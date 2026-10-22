@@ -134,6 +134,8 @@ test("project setup confines integrations to the working directory and enables C
 
 test.each(["user", "project"])("%s hooks execute fallback paths with shell metacharacters in every integration", (scope) => {
   const fixture = hookFixture();
+  const hookScript = join(packageRoot, "bin/tenable-axi-hook.js");
+  const hookMode = statSync(hookScript).mode;
   try {
     const older = join(fixture.home, "older-bin"), current = join(fixture.home, "current-bin");
     mkdirSync(older);
@@ -151,6 +153,7 @@ test.each(["user", "project"])("%s hooks execute fallback paths with shell metac
       expect(decode(result.stdout)).toMatchObject({ status: "not configured" });
     }
     const plugin = join(fixture.home, scope === "user" ? ".config/opencode" : ".opencode", "plugins/axi-tenable-axi-hook.js");
+    chmodSync(hookScript, 0o600);
     const result = spawnSync(process.execPath, ["--input-type=module", "-e", `
       const { default: plugin } = await import(${JSON.stringify(pathToFileURL(plugin).href)});
       const server = await plugin.server({ directory: process.cwd() });
@@ -166,7 +169,7 @@ test.each(["user", "project"])("%s hooks execute fallback paths with shell metac
     const context = JSON.parse(result.stdout);
     expect(decode(context.legacy[0].split("\n").slice(1).join("\n"))).toMatchObject({ status: "not configured" });
     expect(context.current).toEqual([{ type: "text", text: context.legacy[0] }]);
-  } finally { fixture.cleanup(); }
+  } finally { chmodSync(hookScript, hookMode); fixture.cleanup(); }
 });
 
 test.each(["user", "project"].flatMap((scope) => [
