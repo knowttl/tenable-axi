@@ -21,8 +21,10 @@ export type RequestOptions = {
   authorization?: unknown;
 };
 export type Transport = {
+  prepare(operation: string, options?: RequestOptions): PreparedRequest;
   request(operation: string, options?: RequestOptions): Promise<{ status: number; body: unknown }>;
 };
+export type PreparedRequest = Readonly<{ operation: string; method: string; url: string; body?: string; effect: "read" | "write" }>;
 export type TransportOptions = { keys: ApiKeys; origin?: string };
 
 export class TransportError extends Error {
@@ -117,12 +119,17 @@ export function constructTransport(options: TransportOptions, dependencies: {
     return url;
   }
 
-  async function request(operation: string, input: RequestOptions = {}): Promise<{ status: number; body: unknown }> {
+  function prepare(operation: string, input: RequestOptions = {}): PreparedRequest {
     const binding = Object.hasOwn(bindings, operation) ? bindings[operation] : undefined;
     if (!binding) fail("OPERATION_BLOCKED", "Operation has no executable catalogue binding");
-    const record = binding!;
-    const url = destination(operation, record, input).href;
+    const url = destination(operation, binding!, input).href;
     const body = input.body === undefined ? undefined : JSON.stringify(input.body);
+    return Object.freeze({ operation, method: binding!.method, url, body, effect: binding!.effect });
+  }
+
+  async function request(operation: string, input: RequestOptions = {}): Promise<{ status: number; body: unknown }> {
+    const { url, body } = prepare(operation, input);
+    const record = bindings[operation]!;
     const canonical = new URL(url);
     canonical.searchParams.sort();
     const identity = JSON.stringify([operation, canonical.href, body]);
@@ -224,7 +231,7 @@ export function constructTransport(options: TransportOptions, dependencies: {
         ...(lastRetryAfter === undefined ? {} : { retryAfter: lastRetryAfter }) });
     }
   }
-  return { request };
+  return { prepare, request };
 }
 
 function retryAfter(value: string | null, now: number): number | undefined {

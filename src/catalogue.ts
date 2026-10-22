@@ -1,9 +1,11 @@
 import type { OperationBinding } from "./transport-core.js";
+import type { MutationOperation } from "./writes-core.js";
 
 export const DESCRIPTION = "Agent-friendly CLI for Tenable One, under construction";
 
 // Endpoint slices add reviewed executable bindings alongside their commands.
 export const transportBindings: Readonly<Record<string, OperationBinding>> = Object.freeze({});
+export const mutationOperations: Readonly<Record<string, MutationOperation>> = Object.freeze({});
 
 // Evidence and planned commands never enable execution. Endpoint slices add explicit bindings here.
 export const catalogue = {

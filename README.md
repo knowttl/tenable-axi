@@ -16,6 +16,12 @@ Transport errors carry a stable code, operation, optional HTTP status and `retry
 Production currently has no executable endpoint bindings; offline tests construct synthetic bindings and a CA-verified loopback HTTPS fake through the internal construction seam.
 No flag or environment variable enables that seam in the CLI.
 
+The internal write coordinator is ready for named endpoint slices; it ships no write command or executable write binding yet.
+It enforces immutable configured scope, redacted previews, exact confirmation, optional host approval, stale-state refusal and a durable private journal before a single authorized send.
+Unknown outcomes include an audit ID and read-back guidance and are never replayed.
+Later slices register strict mutation definitions alongside transport bindings in the catalogue and call `createWriteCoordinator().run(operationId, input, options)` from their named commands.
+State readers establish no-ops and include concurrency fields in the compared state; operation definitions own documented payload validation and read-back guidance.
+
 See the [design](docs/design.md) for v1 scope, credentials, write policy, verification, and implementation slices.
 See [contributing](CONTRIBUTING.md) for development conventions.
 

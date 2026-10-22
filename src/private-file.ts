@@ -96,5 +96,19 @@ export function privateFiles(options: PrivateFileOptions = {}) {
       if (existsSync(temporary)) unlinkSync(temporary);
     }
   }
-  return { check, read, directory, write };
+  function lock(path: string): () => void {
+    directory(dirname(path));
+    const fd = openSync(path, "wx", platform === "win32" ? undefined : 0o600);
+    try {
+      if (platform === "win32") acl(path, "restrict", false);
+      fsyncSync(fd);
+      flushDirectory(dirname(path));
+    } catch (error) {
+      closeSync(fd);
+      unlinkSync(path);
+      throw error;
+    }
+    return () => { closeSync(fd); unlinkSync(path); flushDirectory(dirname(path)); };
+  }
+  return { check, read, directory, write, lock };
 }
