@@ -136,6 +136,14 @@ export async function exposureCommand(argv: string[], store: ReturnType<typeof c
     if (extras.length) query.extra_properties = [...new Set(extras)].join(",");
   } else if (flags.has("query")) query.text_query = flags.get("query")!;
 
+  let parsedCursor: { scope: string; offset: number } | undefined;
+  if (flags.has("cursor")) {
+    try {
+      const text = flags.get("cursor")!;
+      if (text.length > 1024) usage("Invalid cursor");
+      parsedCursor = z.strictObject({ scope: z.string(), offset: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER) }).parse(JSON.parse(Buffer.from(text, "base64url").toString("utf8")));
+    } catch { usage("Cursor does not match this profile, operation, fields or filters"); }
+  }
   const config = flags.get("config"), selected = flags.get("profile");
   const identity = { bin: process.argv[1]?.replace(homedir(), "~"), description: DESCRIPTION };
   let profile;
@@ -151,13 +159,9 @@ export async function exposureCommand(argv: string[], store: ReturnType<typeof c
   if (name === "hook") return select(context);
   const operation = name === "tag list" ? "inventory-tag-search" : "exposure-view-cards-search";
   const scope = createHash("sha256").update(JSON.stringify([profile.origin, profile.name, store.configPath(config), operation, query, body, fields])).digest("hex");
-  if (flags.has("cursor")) {
-    try {
-      const text = flags.get("cursor")!;
-      if (text.length > 1024) usage("Invalid cursor");
-      const cursor = z.strictObject({ scope: z.literal(scope), offset: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER) }).parse(JSON.parse(Buffer.from(text, "base64url").toString("utf8")));
-      offset = cursor.offset;
-    } catch { usage("Cursor does not match this profile, operation, fields or filters"); }
+  if (parsedCursor) {
+    if (parsedCursor.scope !== scope) usage("Cursor does not match this profile, operation, fields or filters");
+    offset = parsedCursor.offset;
   }
   const keys = store.credentials(profile, name === "doctor");
   const transport = factory({ keys, origin: profile.origin });
