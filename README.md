@@ -1,7 +1,7 @@
 # tenable-axi
 
 An AXI command-line tool for Tenable One, under construction.
-The scaffold uses TypeScript on Node.js 22.12 or later and will be published as `@knowttl/tenable-axi`.
+It uses TypeScript on Node.js 22.12 or later and will be published as `@knowttl/tenable-axi`.
 `tag list`, `tag properties`, `card list` and `card show` provide bounded Exposure Management reads.
 Home shows up to five exposure cards when configured and setup guidance offline otherwise.
 `hook` reports local profile context without resolving secrets or contacting Tenable.
