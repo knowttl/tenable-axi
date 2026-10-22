@@ -23,7 +23,7 @@ export function fakeTransport(replies: (Reply | "disconnect" | "hang")[], bindin
     });
     return new Response(reply.bytes ?? reply.text ?? JSON.stringify(reply.body), { status: reply.status ?? 200, headers: reply.headers });
   };
-  return { requests, transport: constructTransport({ keys: options.keys ?? syntheticKeys }, {
+  return { requests, fetch, transport: constructTransport({ keys: options.keys ?? syntheticKeys }, {
     bindings, fetch, ...(options.allowWrites ? { consumeWriteAuthorization: () => true } : {}),
   }) };
 }
