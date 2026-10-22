@@ -224,7 +224,7 @@ All unspecified API defaults follow the pinned schema, except the CLI's explicit
 
 | Leaves | Additional mapping |
 |---|---|
-| Inventory and tag searches | `--extra-properties` maps `extra_properties`; `--fields` automatically requests properties needed by the selected projection; `--filter-file` accepts the strict nested filter schema, mutually exclusive with repeatable simple `--filter`. |
+| Inventory and tag searches | `--extra-properties` maps `extra_properties`; `--fields` automatically requests properties needed by the selected projection; `--filter-file` accepts the pinned flat array of `{property, operator, value}` filters with string-array `value`, mutually exclusive with repeatable simple `--filter`. |
 | `asset properties` | `--asset-classes` maps the documented `asset_classes` array; list `--class` is a validated server-side class filter rather than an invented query parameter. |
 | Attack searches | `--filter-file` represents the documented single/nested filter body; `--sort`, offset/limit, and `--include-resolved` map their query fields; attack paths also exposes `--run-ai-summarization true\|false`, default false. |
 | `connector logs` | `--connector-id`, `--status`, `--start-date`, `--end-date` map the four documented query fields; dates use YYYY-MM-DD. |
@@ -234,7 +234,7 @@ All unspecified API defaults follow the pinned schema, except the CLI's explicit
 | Inventory job lists | `--status QUEUED\|PROCESSING\|FINISHED\|ERROR` and `--limit`; there is no server-side offset or continuation parameter. |
 | Attack export starts | Body fields include `file_format`, filter(s), columns, file_name, and operation-specific vector/technique IDs and sort exactly where documented. |
 
-Simple filters use `--filter '<property> <operator> <JSON-value>'`; structured files preserve the schema's nested boolean expressions without inventing a universal grammar.
+Inventory and tag simple filters use `--filter '<property> <operator> <JSON-array-of-strings>'`; attack structured files preserve the schema's nested boolean expressions without inventing a universal grammar.
 Property names remain tenant-specific and API validation errors suggest the corresponding properties command.
 Attack searches require wire limits of at least 100 even for smaller output windows, so retain excess rows in bounded continuation state.
 Card wire pages cap at 25; home requests five.
