@@ -37,6 +37,7 @@ Run again with `--execute --confirm '<exact preview confirmation>'` to create on
 `export inventory status --id <id>` reads once without polling and reports available chunks.
 `export inventory download --id <id> --chunk <number> --output <new-file>` downloads one explicit chunk and prints file metadata only.
 Files are validated as JSON or CSV, scanned for secrets, redacted and published atomically without overwrite; gzip exports are decoded and re-encoded with the same format.
+Inventory JSON chunks must contain arrays of objects.
 See [download bounds](docs/design.md#collections-jobs-and-bounded-reads) for file size and decompression limits.
 
 Use `asset list/show/properties`, `finding list/show/properties`, and `software list/properties` with `--help` for their flags and examples.
@@ -81,7 +82,8 @@ Exports require `EXPOSURE_MANAGEMENT.ATTACK_PATH.ATTACK_PATH.WRITE` and the corr
 Use `export attack status --id <id>` for a single status read, or add `--wait` to poll within the shared deadline and request budgets.
 If a polling budget expires after a validated pending response, `--wait` returns the last validated job with `complete:false` and `reason:POLL_BUDGET_EXCEEDED`, including when retries exhaust the request budget or an in-flight poll reaches the deadline.
 Without a validated status, budget exhaustion remains an error; other polling failures remain errors.
-Use `export attack download --id <id> --output <new-file>` to download JSON or CSV, including gzip-encoded files, with format-aware secret redaction and a 128-MiB ceiling before atomic publication.
+Use `export attack download --id <id> --output <new-file>` to download JSON or CSV, including gzip-encoded files, with format-aware secret redaction and atomic publication within the [download bounds](docs/design.md#collections-jobs-and-bounded-reads).
+Attack JSON downloads accept arrays of objects and top-level objects, including MITRE heatmap Navigator layers.
 Downloads refuse overwrite and print file metadata only.
 Attack and inventory job namespaces are separate; these commands never address inventory export jobs.
 
