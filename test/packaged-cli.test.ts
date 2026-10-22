@@ -85,8 +85,9 @@ test("explicit setup installs executable hooks and preserves unrelated integrati
     const claude = JSON.parse(readFileSync(settings, "utf8"));
     expect(claude.permissions).toEqual({ allow: [] });
     expect(claude.hooks.SessionStart).toContainEqual(unrelated);
-    const hook = claude.hooks.SessionStart.flatMap((group: { hooks: { command: string }[] }) => group.hooks)
-      .find((item: { command: string }) => item.command.includes("tenable-axi-hook"));
+    const hook = claude.hooks.SessionStart.flatMap((group: { hooks: { command: string; args?: string[] }[] }) => group.hooks)
+      .find((item: { command: string; args?: string[] }) => item.command.includes("tenable-axi-hook")
+        || item.args?.some((arg) => arg.includes("tenable-axi-hook")));
     const ambient = runInstalledHook(hook, fixture.home, fixture.env);
     expect(ambient.status, ambient.stderr).toBe(0);
     expect(decode(ambient.stdout)).toMatchObject({ status: "not configured" });
