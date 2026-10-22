@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
 import { pathToFileURL } from "node:url";
 import { decode } from "@toon-format/toon";
+import { parse as parseToml } from "smol-toml";
 import { afterAll, beforeAll, expect, test } from "vitest";
 import { fakeHttpsTenable, syntheticKeys } from "./support/fake-tenable.js";
 
@@ -30,9 +31,10 @@ beforeAll(() => {
     expect(dependencyPack.status, dependencyPack.stderr).toBe(0);
     tarballs.push(join(directory, JSON.parse(dependencyPack.stdout)[0].filename));
   }
-  const installed = spawnSync("npm", ["install", "--offline", "--ignore-scripts", "--no-audit", "--no-fund", "--prefix", join(directory, "install"), ...tarballs], { encoding: "utf8" });
+  const prefix = join(directory, "Agent's $Tools");
+  const installed = spawnSync("npm", ["install", "--offline", "--ignore-scripts", "--no-audit", "--no-fund", "--prefix", prefix, ...tarballs], { encoding: "utf8" });
   expect(installed.status, installed.stderr).toBe(0);
-  packageRoot = join(directory, "install/node_modules/@knowttl/tenable-axi");
+  packageRoot = join(prefix, "node_modules/@knowttl/tenable-axi");
   entry = join(packageRoot, "bin/tenable-axi.js");
 }, 30_000);
 afterAll(() => rmSync(directory, { recursive: true, force: true }));
@@ -80,7 +82,7 @@ test("explicit setup installs executable hooks and preserves unrelated integrati
     expect(claude.hooks.SessionStart).toContainEqual(unrelated);
     const hook = claude.hooks.SessionStart.flatMap((group: { hooks: { command: string }[] }) => group.hooks)
       .find((item: { command: string }) => item.command.includes("tenable-axi-hook"));
-    const ambient = spawnSync(hook.command, [], { env: fixture.env, cwd: fixture.home, encoding: "utf8" });
+    const ambient = spawnSync(hook.command, [], { shell: true, env: fixture.env, cwd: fixture.home, encoding: "utf8" });
     expect(ambient.status, ambient.stderr).toBe(0);
     expect(decode(ambient.stdout)).toMatchObject({ status: "not configured" });
     const paths = [settings, join(fixture.home, ".codex/hooks.json"), join(fixture.home, ".codex/config.toml"),
@@ -90,6 +92,7 @@ test("explicit setup installs executable hooks and preserves unrelated integrati
     expect(before.map(({ path }) => ({ path, content: readFileSync(path, "utf8"), modified: statSync(path).mtimeMs }))).toEqual(before);
     const codex = JSON.parse(readFileSync(paths[1]!, "utf8"));
     expect(codex.hooks.SessionStart.flatMap((group: { hooks: unknown[] }) => group.hooks)).toEqual([hook]);
+    expect(parseToml(readFileSync(paths[2]!, "utf8"))).toMatchObject({ features: { hooks: true } });
   } finally { fixture.cleanup(); }
 });
 
@@ -122,7 +125,37 @@ test("project setup confines integrations to the working directory and enables C
     expect(existsSync(join(project, ".codex/hooks.json"))).toBe(true);
     expect(existsSync(join(project, ".opencode/plugins/axi-tenable-axi-hook.js"))).toBe(true);
     expect(existsSync(join(fixture.home, ".claude/settings.json"))).toBe(false);
-    expect(readFileSync(join(fixture.home, ".codex/config.toml"), "utf8")).toContain("hooks = true");
+    expect(parseToml(readFileSync(join(fixture.home, ".codex/config.toml"), "utf8"))).toMatchObject({ features: { hooks: true } });
+  } finally { fixture.cleanup(); }
+});
+
+test.each(["user", "project"])("%s hooks execute fallback paths with shell metacharacters in every integration", (scope) => {
+  const fixture = hookFixture();
+  try {
+    expect(fixture.run(["setup", "hooks", "--scope", scope]).status).toBe(0);
+    for (const path of [".claude/settings.json", ".codex/hooks.json"]) {
+      const settings = JSON.parse(readFileSync(join(fixture.home, path), "utf8"));
+      const command = settings.hooks.SessionStart[0].hooks[0].command;
+      const result = spawnSync(command, { shell: true, cwd: fixture.home, env: fixture.env, encoding: "utf8" });
+      expect(result.status, result.stderr).toBe(0);
+      expect(decode(result.stdout)).toMatchObject({ status: "not configured" });
+    }
+    const plugin = join(fixture.home, scope === "user" ? ".config/opencode" : ".opencode", "plugins/axi-tenable-axi-hook.js");
+    const result = spawnSync(process.execPath, ["--input-type=module", "-e", `
+      const { default: plugin } = await import(${JSON.stringify(pathToFileURL(plugin).href)});
+      const server = await plugin.server({ directory: process.cwd() });
+      const output = { system: [] };
+      await server["experimental.chat.system.transform"]({ sessionID: "example" }, output);
+      let context;
+      await plugin.setup({ location: { directory: process.cwd() }, session: { hook: async (_, handler) => { context = handler; } } });
+      const event = { sessionID: "example", system: [] };
+      await context(event);
+      console.log(JSON.stringify({ legacy: output.system, current: event.system }));
+    `], { cwd: fixture.home, env: fixture.env, encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(0);
+    const context = JSON.parse(result.stdout);
+    expect(decode(context.legacy[0].split("\n").slice(1).join("\n"))).toMatchObject({ status: "not configured" });
+    expect(context.current).toEqual([{ type: "text", text: context.legacy[0] }]);
   } finally { fixture.cleanup(); }
 });
 

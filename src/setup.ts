@@ -1,7 +1,8 @@
-import { AxiError, installSessionStartHooks } from "axi-sdk-js";
+import { AxiError } from "axi-sdk-js";
 import { existsSync, realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { catalogue } from "./catalogue.js";
+import { installHooks } from "./hook-install.js";
 
 export function setupHooks(argv: string[]): Record<string, unknown> {
   const usage = (): never => { throw new AxiError("Invalid hook setup command or flags", "VALIDATION_ERROR", [
@@ -24,11 +25,7 @@ export function setupHooks(argv: string[]): Record<string, unknown> {
   const entry = fileURLToPath(new URL("../../bin/tenable-axi-hook.js", import.meta.url));
   if (!existsSync(entry)) throw new AxiError("Hook entry point is missing", "HOOK_INSTALL_FAILED", ["Reinstall @knowttl/tenable-axi, then run tenable-axi setup hooks"]);
   const failures: string[] = [];
-  installSessionStartHooks({
-    marker: "tenable-axi-hook", execPath: realpathSync(entry), binaryNames: ["tenable-axi-hook"],
-    distEntrypoints: ["bin/tenable-axi-hook.js"], scope, projectDir: process.cwd(),
-    onError: (message) => { failures.push(message); },
-  });
+  installHooks(realpathSync(entry), scope, (message) => { failures.push(message); });
   if (failures.length) throw new AxiError("Agent hook setup did not complete", "HOOK_INSTALL_FAILED", failures);
   return { hooks: { status: "installed", scope, integrations: "Claude Code, Codex, OpenCode" },
     help: ["Restart your agent session; context uses TENABLE_AXI_PROFILE and TENABLE_AXI_CONFIG from the session environment"] };
