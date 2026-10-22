@@ -1,0 +1,27 @@
+{
+  "id": "b43d837f5",
+  "name": "run affected tests",
+  "command": "corepack pnpm test 2>&1 | tail -n 40; echo \"TEST_EXIT:$?\"",
+  "status": "completed",
+  "outputPath": ".pi/tasks/01a16566-7042-72ed-8788-20c773c9e42f-3653836/b43d837f5.output",
+  "cwd": "/home/brytton/.no-mistakes/worktrees/2eab06d06f72/01M5JNJS09TQPB4A14RXWG36QY",
+  "startTime": 1792702672219,
+  "endTime": 1792702677251,
+  "exitCode": 0,
+  "signal": null,
+  "pid": 3695377,
+  "bytesWritten": 534,
+  "isAgent": false,
+  "surviveReload": false,
+  "notified": true,
+  "notifyOnCompletion": true,
+  "triggerOnCompletion": true,
+  "shellPolicy": {
+    "policy": "inherit",
+    "executable": "/home/brytton/.nix-profile/bin/zsh",
+    "argvPrefix": [
+      "-c"
+    ],
+    "dialect": "posix"
+  }
+}

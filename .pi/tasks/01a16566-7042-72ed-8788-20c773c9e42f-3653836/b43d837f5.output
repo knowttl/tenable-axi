@@ -1,0 +1,15 @@
+
+> @knowttl/tenable-axi@0.1.0 test /home/brytton/.no-mistakes/worktrees/2eab06d06f72/01M5JNJS09TQPB4A14RXWG36QY
+> node scripts/isolated.mjs node scripts/test-changes.mjs
+
+Test mode: affected-only; baseline: test/packaged-cli.test.ts, test/write-safety.test.ts, test/redaction.test.ts
+
+ RUN  v5.0.2 /home/brytton/.no-mistakes/worktrees/2eab06d06f72/01M5JNJS09TQPB4A14RXWG36QY
+
+
+ Test Files  7 passed (7)
+      Tests  307 passed (307)
+   Start at  13:57:55
+   Duration  1.42s (tests 90%, import 8%, transform 2%, setup 1%)
+
+TEST_EXIT:0
