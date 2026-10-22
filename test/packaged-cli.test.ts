@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
@@ -21,11 +21,11 @@ beforeAll(() => {
   version = metadata!.version;
   // Supply real dependency tarballs locally so npm installation needs no registry.
   const tarballs = [join(directory, metadata!.filename)];
-  for (const dependency of ["axi-sdk-js", "@toon-format/toon", "zod"]) {
+  for (const dependency of ["axi-sdk-js", "@toon-format/toon", "zod", "smol-toml"]) {
     // Break pnpm store hardlinks before repacking: npm extraction omits linked entries.
     const source = join(directory, "dependencies", dependency);
     cpSync(realpathSync(resolve("node_modules", dependency)), source, { recursive: true });
-    const dependencyPack = spawnSync("npm", ["pack", "--ignore-scripts", "--json", "--pack-destination", directory], {
+    const dependencyPack = spawnSync("npm", ["pack", "--force", "--ignore-scripts", "--json", "--pack-destination", directory], {
       cwd: source, encoding: "utf8",
     });
     expect(dependencyPack.status, dependencyPack.stderr).toBe(0);
@@ -102,8 +102,11 @@ test("setup repairs a stale hook path using the verified installed binary on PAT
     mkdirSync(join(fixture.home, ".claude"));
     const settings = join(fixture.home, ".claude/settings.json");
     writeFileSync(settings, JSON.stringify({ hooks: { SessionStart: [{ hooks: [{ type: "command", command: "/old/tenable-axi-hook" }] }] } }));
+    const nonExecutable = join(fixture.home, "non-executable");
+    mkdirSync(nonExecutable);
+    writeFileSync(join(nonExecutable, "tenable-axi-hook"), "unusable binary", { mode: 0o600 });
     symlinkSync(join(packageRoot, "bin/tenable-axi-hook.js"), join(fixture.home, "tenable-axi-hook"));
-    const result = fixture.run(["setup", "hooks"], { PATH: `${fixture.home}:${process.env.PATH}` });
+    const result = fixture.run(["setup", "hooks"], { PATH: `${nonExecutable}:${fixture.home}:${process.env.PATH}` });
     expect(result.status, result.stdout).toBe(0);
     const installed = JSON.parse(readFileSync(settings, "utf8")).hooks.SessionStart;
     expect(installed.flatMap((group: { hooks: unknown[] }) => group.hooks)).toEqual([
@@ -132,11 +135,18 @@ test("project setup confines integrations to the working directory and enables C
 test.each(["user", "project"])("%s hooks execute fallback paths with shell metacharacters in every integration", (scope) => {
   const fixture = hookFixture();
   try {
-    expect(fixture.run(["setup", "hooks", "--scope", scope]).status).toBe(0);
+    const older = join(fixture.home, "older-bin"), current = join(fixture.home, "current-bin");
+    mkdirSync(older);
+    mkdirSync(current);
+    writeFileSync(join(older, "tenable-axi-hook"), "#!/bin/sh\nprintf 'wrong installation\\n'\n");
+    chmodSync(join(older, "tenable-axi-hook"), 0o755);
+    symlinkSync(join(packageRoot, "bin/tenable-axi-hook.js"), join(current, "tenable-axi-hook"));
+    const env = { ...fixture.env, PATH: `${older}:${current}:${process.env.PATH}` };
+    expect(fixture.run(["setup", "hooks", "--scope", scope], env).status).toBe(0);
     for (const path of [".claude/settings.json", ".codex/hooks.json"]) {
       const settings = JSON.parse(readFileSync(join(fixture.home, path), "utf8"));
       const command = settings.hooks.SessionStart[0].hooks[0].command;
-      const result = spawnSync(command, { shell: true, cwd: fixture.home, env: fixture.env, encoding: "utf8" });
+      const result = spawnSync(command, { shell: true, cwd: fixture.home, env, encoding: "utf8" });
       expect(result.status, result.stderr).toBe(0);
       expect(decode(result.stdout)).toMatchObject({ status: "not configured" });
     }
@@ -151,11 +161,49 @@ test.each(["user", "project"])("%s hooks execute fallback paths with shell metac
       const event = { sessionID: "example", system: [] };
       await context(event);
       console.log(JSON.stringify({ legacy: output.system, current: event.system }));
-    `], { cwd: fixture.home, env: fixture.env, encoding: "utf8" });
+    `], { cwd: fixture.home, env, encoding: "utf8" });
     expect(result.status, result.stderr).toBe(0);
     const context = JSON.parse(result.stdout);
     expect(decode(context.legacy[0].split("\n").slice(1).join("\n"))).toMatchObject({ status: "not configured" });
     expect(context.current).toEqual([{ type: "text", text: context.legacy[0] }]);
+  } finally { fixture.cleanup(); }
+});
+
+test.each(["user", "project"].flatMap((scope) => [
+  "features.hooks = false\nfeatures.other = true",
+  '["features"]\n"hooks" = false\nother = true',
+  "['features']\n'hooks' = false\nother = true",
+  '"features"."hooks" = false\nfeatures.other = true',
+  "features = { hooks = false, other = true }",
+  "[features]\n# hooks = true\nhooks = false\nother = true",
+].map((features) => ({ scope, features }))))("$scope setup enables existing Codex hooks semantically: $features", ({ scope, features }) => {
+  const fixture = hookFixture();
+  try {
+    mkdirSync(join(fixture.home, ".codex"));
+    const path = join(fixture.home, ".codex/config.toml");
+    writeFileSync(path, `model = "synthetic-model"\nthreshold = 9007199254740993\n${features}\n[projects.synthetic-project]\ntrust_level = "trusted"\n`);
+    const result = fixture.run(["setup", "hooks", "--scope", scope]);
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(parseToml(readFileSync(path, "utf8"), { integersAsBigInt: true })).toEqual({
+      model: "synthetic-model", threshold: 9007199254740993n,
+      features: { hooks: true, other: true }, projects: { "synthetic-project": { trust_level: "trusted" } },
+    });
+    const before = { content: readFileSync(path, "utf8"), modified: statSync(path).mtimeMs };
+    expect(fixture.run(["setup", "hooks", "--scope", scope]).status).toBe(0);
+    expect({ content: readFileSync(path, "utf8"), modified: statSync(path).mtimeMs }).toEqual(before);
+  } finally { fixture.cleanup(); }
+});
+
+test.each(["features = false\n", "[features\n"])("setup leaves unusable Codex configuration unchanged: %j", (content) => {
+  const fixture = hookFixture();
+  try {
+    mkdirSync(join(fixture.home, ".codex"));
+    const path = join(fixture.home, ".codex/config.toml");
+    writeFileSync(path, content);
+    const result = fixture.run(["setup", "hooks"]);
+    expect(result.status).toBe(1);
+    expect(decode(result.stdout)).toMatchObject({ error: expect.anything() });
+    expect(readFileSync(path, "utf8")).toBe(content);
   } finally { fixture.cleanup(); }
 });
 

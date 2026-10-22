@@ -1,25 +1,36 @@
-import { computeCodexConfigUpdate, computeSessionStartHookUpdate, extractNpmShimScriptPath, resolvePortableHookCommand } from "axi-sdk-js";
-import { existsSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { computeSessionStartHookUpdate, extractNpmShimScriptPath } from "axi-sdk-js";
+import { accessSync, constants, existsSync, mkdirSync, readFileSync, realpathSync, statSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
+import { parse, stringify, type TomlTable } from "smol-toml";
+
+function portableHookCommand(execPath: string, name: string): string {
+  const extensions = process.platform === "win32" ? ["", ...(process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";")] : [""];
+  for (const directory of (process.env.PATH ?? process.env.Path ?? "").split(delimiter)) {
+    for (const extension of extensions) {
+      const candidate = resolve(directory || ".", `${name}${extension}`);
+      try {
+        if (!statSync(candidate).isFile()) continue;
+        accessSync(candidate, constants.X_OK);
+      } catch { continue; }
+      try {
+        if (realpathSync(candidate) === execPath) return name;
+        if (process.platform === "win32") {
+          const target = extractNpmShimScriptPath(readFileSync(candidate, "utf8"));
+          if (target && realpathSync(resolve(dirname(candidate), target)) === execPath) return name;
+        }
+      } catch { return execPath; }
+      return execPath;
+    }
+  }
+  return execPath;
+}
 
 export function installHooks(execPath: string, scope: "user" | "project", onError: (message: string) => void): void {
   const marker = "tenable-axi-hook";
   const home = homedir();
   const root = scope === "project" ? process.cwd() : home;
-  const command = resolvePortableHookCommand(execPath, [marker], marker, {
-    pathEntries: (process.env.PATH ?? process.env.Path ?? "").split(delimiter),
-    pathExtensions: process.platform === "win32" ? ["", ...(process.env.PATHEXT ?? ".COM;.EXE;.BAT;.CMD").split(";")] : [""],
-    resolveRealPath: (path) => {
-      try { return statSync(path).isFile() ? realpathSync(path) : undefined; } catch { return undefined; }
-    },
-    resolveShimTarget: (path) => {
-      try {
-        const target = extractNpmShimScriptPath(readFileSync(path, "utf8"));
-        return target ? realpathSync(resolve(dirname(path), target)) : undefined;
-      } catch { return undefined; }
-    },
-  });
+  const command = portableHookCommand(execPath, marker);
   const shellCommand = command === marker ? command : `'${command.replaceAll("'", "'\\''")}'`;
   const update = (path: string, transform: (content: string) => string) => {
     try {
@@ -37,7 +48,18 @@ export function installHooks(execPath: string, scope: "user" | "project", onErro
       return changed ? `${JSON.stringify(next, null, 2)}\n` : current;
     });
   }
-  update(join(home, ".codex/config.toml"), (current) => computeCodexConfigUpdate(current)[0]);
+  update(join(home, ".codex/config.toml"), (current) => {
+    const config = parse(current, { integersAsBigInt: true });
+    const features = config.features ?? {};
+    if (typeof features !== "object" || features === null || Array.isArray(features) || features instanceof Date) {
+      throw new Error("Codex features must be a TOML table");
+    }
+    const table = features as TomlTable;
+    if (table.hooks === true) return current;
+    table.hooks = true;
+    config.features = table;
+    return stringify(config);
+  });
   const managedMarker = `axi-sdk-js managed opencode plugin: ${marker}`;
   update(join(scope === "project" ? join(root, ".opencode") : join(home, ".config/opencode"), "plugins/axi-tenable-axi-hook.js"), (current) => {
     if (current && !current.includes(managedMarker)) throw new Error("refusing to overwrite unmanaged OpenCode plugin");
