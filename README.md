@@ -62,12 +62,13 @@ tenable-axi setup hooks
 
 This explicit opt-in installs or repairs Claude Code and Codex SessionStart hooks and an OpenCode managed plugin.
 Ordinary commands never install integrations.
-Setup verifies a matching binary on PATH, otherwise retaining the absolute executable path; rerun after relocating the installation.
+POSIX SessionStart hooks use the first executable on PATH only if it matches this installation, otherwise retaining the absolute hook path.
+Windows SessionStart hooks and the OpenCode plugin invoke Node with the absolute hook script path; rerun setup after relocating Node or the installation.
 Repeated setup preserves unrelated integrations and makes no changes when already current.
 Restart the agent session after setup.
 The hook prints local profile/origin/write posture, resolves no secrets, and never contacts Tenable.
 It follows the session's `TENABLE_AXI_PROFILE` and `TENABLE_AXI_CONFIG`, so select those explicitly when working with multiple tenants.
-Use `tenable-axi setup hooks --scope project` for integrations confined to the current project directory.
+Use `tenable-axi setup hooks --scope project` for project-local hook entries and the OpenCode plugin.
 User setup honors `CLAUDE_CONFIG_DIR` (default `~/.claude`), `CODEX_HOME` (default `~/.codex`), and `$XDG_CONFIG_HOME/opencode` (default `~/.config/opencode`).
 Project hook destinations remain `.claude`, `.codex`, and `.opencode` under the working directory.
 Both scopes enable Codex's shared user-level hooks feature in the active `CODEX_HOME/config.toml`.
@@ -317,7 +318,7 @@ See [verification](CONTRIBUTING.md#verification) for offline isolation and test 
 The [capability map](docs/design.md#capability-map) defines planned v1 scope; the generated [inventory](inventory/capabilities.json) records every pinned operation's classification and does not enable execution.
 After catalogue changes, rebuild and run `corepack pnpm run docs:generate` to regenerate the README table, command reference and skill.
 Tests and manual CLI checks use temporary HOME/XDG directories and synthetic fixtures, with no live tenant or real credentials.
-Pull requests are validated locally; no hosted test workflow is configured.
+Pull requests are validated locally; hosted checks run only during [release publication](#releases).
 
 ## Releases
 

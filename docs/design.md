@@ -374,12 +374,12 @@ Before release, perform real Windows `auth status` and protected config-write ch
 ### Release and session integration
 
 T12 adds explicit `setup hooks` opt-in for Claude Code, Codex, and OpenCode.
-Install/repair a PATH-verified executable name or absolute fallback, idempotently, with directory/profile-scoped context.
+See [README's agent setup guidance](../README.md#use-with-your-agent) for executable selection, active configuration directories, scopes, and removal.
 Use SessionStart where supported and an equivalent managed plugin for OpenCode.
 Ordinary commands never install hooks.
 Generate the installable skill from static home/discovery metadata, remove live state, and use `npx -y @knowttl/tenable-axi` examples.
-Document hooks first and skill as complementary discovery; CI checks both reference and skill freshness.
-Release-please owns versions, tags, release notes, and changelog; publishing verifies the package and uses npm provenance.
+Document hooks first and skill as complementary discovery; the [development checks](../README.md#development-and-testing) verify reference and skill freshness.
+See [README releases](../README.md#releases) for release ownership, publication checks, and npm provenance.
 
 ### artium-axi integration contract
 
