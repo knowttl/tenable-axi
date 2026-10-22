@@ -47,6 +47,12 @@ See the [command reference](https://github.com/knowttl/tenable-axi/blob/main/doc
 | `npx -y @knowttl/tenable-axi auth status` | Check local credentials and file security without contacting Tenable |
 | `npx -y @knowttl/tenable-axi card list` | List exposure view cards |
 | `npx -y @knowttl/tenable-axi card show` | Show an exposure card and its scores, trends and SLA details |
+| `npx -y @knowttl/tenable-axi combination create` | Preview or create combination |
+| `npx -y @knowttl/tenable-axi combination delete` | Preview or delete combination |
+| `npx -y @knowttl/tenable-axi combination filters` | List allowed combination query properties and operators |
+| `npx -y @knowttl/tenable-axi combination list` | list combinations |
+| `npx -y @knowttl/tenable-axi combination show` | show combination |
+| `npx -y @knowttl/tenable-axi combination update` | Preview or update combination |
 | `npx -y @knowttl/tenable-axi config path` | Show selected config and state paths without reading files |
 | `npx -y @knowttl/tenable-axi connector logs` | Read connector sync logs; the API has no server paging parameters |
 | `npx -y @knowttl/tenable-axi doctor` | Check local security and one tag-properties read without retries |
@@ -66,6 +72,11 @@ See the [command reference](https://github.com/knowttl/tenable-axi/blob/main/doc
 | `npx -y @knowttl/tenable-axi finding show` | Find one finding by exact ID search |
 | `npx -y @knowttl/tenable-axi home` | Show profile state and up to five live exposure cards |
 | `npx -y @knowttl/tenable-axi hook` | Show compact local profile context without resolving secrets or HTTP |
+| `npx -y @knowttl/tenable-axi initiative create` | Preview or create initiative |
+| `npx -y @knowttl/tenable-axi initiative delete` | Preview or delete initiative |
+| `npx -y @knowttl/tenable-axi initiative list` | list initiatives |
+| `npx -y @knowttl/tenable-axi initiative show` | show initiative |
+| `npx -y @knowttl/tenable-axi initiative update` | Preview or update initiative |
 | `npx -y @knowttl/tenable-axi profile list` | List configured profiles without resolving secrets or contacting Tenable |
 | `npx -y @knowttl/tenable-axi setup hooks` | Explicitly install or repair local agent session integrations |
 | `npx -y @knowttl/tenable-axi software list` | Search software; the pinned API exposes no stable software ID |

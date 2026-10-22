@@ -122,6 +122,12 @@ Bare `--version`, `-v` and `-V` print only the package version.
 | `tenable-axi auth status` | Check local credentials and file security without contacting Tenable |
 | `tenable-axi card list` | List exposure view cards |
 | `tenable-axi card show` | Show an exposure card and its scores, trends and SLA details |
+| `tenable-axi combination create` | Preview or create combination |
+| `tenable-axi combination delete` | Preview or delete combination |
+| `tenable-axi combination filters` | List allowed combination query properties and operators |
+| `tenable-axi combination list` | list combinations |
+| `tenable-axi combination show` | show combination |
+| `tenable-axi combination update` | Preview or update combination |
 | `tenable-axi config path` | Show selected config and state paths without reading files |
 | `tenable-axi connector logs` | Read connector sync logs; the API has no server paging parameters |
 | `tenable-axi doctor` | Check local security and one tag-properties read without retries |
@@ -141,6 +147,11 @@ Bare `--version`, `-v` and `-V` print only the package version.
 | `tenable-axi finding show` | Find one finding by exact ID search |
 | `tenable-axi home` | Show profile state and up to five live exposure cards |
 | `tenable-axi hook` | Show compact local profile context without resolving secrets or HTTP |
+| `tenable-axi initiative create` | Preview or create initiative |
+| `tenable-axi initiative delete` | Preview or delete initiative |
+| `tenable-axi initiative list` | list initiatives |
+| `tenable-axi initiative show` | show initiative |
+| `tenable-axi initiative update` | Preview or update initiative |
 | `tenable-axi profile list` | List configured profiles without resolving secrets or contacting Tenable |
 | `tenable-axi setup hooks` | Explicitly install or repair local agent session integrations |
 | `tenable-axi software list` | Search software; the pinned API exposes no stable software ID |

@@ -199,6 +199,141 @@ tenable-axi card show --id <id>
 tenable-axi card show --id <id> --include-trend-events true
 ```
 
+## combination create
+
+Preview or create combination
+
+Operation: `combinations-create`.
+
+| Flag | Meaning |
+|---|---|
+| `--config` | Config path; default credential precedence |
+| `--profile` | Profile name; default credential precedence |
+| `--fields` | Comma-separated fields; default compact view |
+| `--full` | Full text; default false |
+| `--help` | Show help |
+| `--execute` | Send once; default preview |
+| `--dry-run` | Preview only; excludes --execute |
+| `--confirm` | Exact preview confirmation; required to execute |
+| `--body-file` | Required strict JSON, at most 1 MiB; '-' reads stdin |
+
+```sh
+tenable-axi combination create --body-file body.json
+tenable-axi combination create --help
+```
+
+## combination delete
+
+Preview or delete combination
+
+Operation: `combinations-delete`.
+
+| Flag | Meaning |
+|---|---|
+| `--config` | Config path; default credential precedence |
+| `--profile` | Profile name; default credential precedence |
+| `--fields` | Comma-separated fields; default compact view |
+| `--full` | Full text; default false |
+| `--help` | Show help |
+| `--id` | Required exact UUID |
+| `--execute` | Send once; default preview |
+| `--dry-run` | Preview only; excludes --execute |
+| `--confirm` | Exact preview confirmation; required to execute |
+
+```sh
+tenable-axi combination delete --id <id>
+tenable-axi combination delete --help
+```
+
+## combination filters
+
+List allowed combination query properties and operators
+
+Operation: `combinations-filters-list`.
+
+| Flag | Meaning |
+|---|---|
+| `--config` | Config path; default credential precedence |
+| `--profile` | Profile name; default credential precedence |
+| `--fields` | Comma-separated fields; default compact view |
+| `--full` | Full text; default false |
+| `--help` | Show help |
+| `--limit` | Output rows; default 100, maximum 10000 |
+| `--all` | Up to 10000 rows; excludes --limit |
+| `--cursor` | Re-fetch and resume an unchanged unpaged collection; requires original selectors |
+
+```sh
+tenable-axi combination filters
+tenable-axi combination filters --fields property,operators,type
+```
+
+## combination list
+
+list combinations
+
+Operation: `combinations-list`.
+
+| Flag | Meaning |
+|---|---|
+| `--config` | Config path; default credential precedence |
+| `--profile` | Profile name; default credential precedence |
+| `--fields` | Comma-separated fields; default compact view |
+| `--full` | Full text; default false |
+| `--help` | Show help |
+| `--limit` | Output rows; default 100, maximum 10000 |
+| `--all` | Up to 10000 rows; excludes --limit |
+| `--cursor` | Re-fetch and resume an unchanged unpaged collection; requires original selectors |
+| `--type` | private, shared or tenable; default all accessible |
+
+```sh
+tenable-axi combination list
+tenable-axi combination list --help
+```
+
+## combination show
+
+show combination
+
+Operation: `combinations-details`.
+
+| Flag | Meaning |
+|---|---|
+| `--config` | Config path; default credential precedence |
+| `--profile` | Profile name; default credential precedence |
+| `--fields` | Comma-separated fields; default compact view |
+| `--full` | Full text; default false |
+| `--help` | Show help |
+| `--id` | Required exact UUID |
+
+```sh
+tenable-axi combination show --id <id>
+tenable-axi combination show --help
+```
+
+## combination update
+
+Preview or update combination
+
+Operation: `combinations-update`.
+
+| Flag | Meaning |
+|---|---|
+| `--config` | Config path; default credential precedence |
+| `--profile` | Profile name; default credential precedence |
+| `--fields` | Comma-separated fields; default compact view |
+| `--full` | Full text; default false |
+| `--help` | Show help |
+| `--id` | Required exact UUID |
+| `--execute` | Send once; default preview |
+| `--dry-run` | Preview only; excludes --execute |
+| `--confirm` | Exact preview confirmation; required to execute |
+| `--body-file` | Required strict JSON, at most 1 MiB; '-' reads stdin |
+
+```sh
+tenable-axi combination update --id <id> --body-file body.json
+tenable-axi combination update --help
+```
+
 ## config path
 
 Show selected config and state paths without reading files
@@ -617,6 +752,118 @@ Show compact local profile context without resolving secrets or HTTP
 ```sh
 tenable-axi hook
 tenable-axi hook --profile example
+```
+
+## initiative create
+
+Preview or create initiative
+
+Operation: `initiatives-create`.
+
+| Flag | Meaning |
+|---|---|
+| `--config` | Config path; default credential precedence |
+| `--profile` | Profile name; default credential precedence |
+| `--fields` | Comma-separated fields; default compact view |
+| `--full` | Full text; default false |
+| `--help` | Show help |
+| `--execute` | Send once; default preview |
+| `--dry-run` | Preview only; excludes --execute |
+| `--confirm` | Exact preview confirmation; required to execute |
+| `--body-file` | Required strict JSON, at most 1 MiB; '-' reads stdin |
+
+```sh
+tenable-axi initiative create --body-file body.json
+tenable-axi initiative create --help
+```
+
+## initiative delete
+
+Preview or delete initiative
+
+Operation: `initiatives-delete`.
+
+| Flag | Meaning |
+|---|---|
+| `--config` | Config path; default credential precedence |
+| `--profile` | Profile name; default credential precedence |
+| `--fields` | Comma-separated fields; default compact view |
+| `--full` | Full text; default false |
+| `--help` | Show help |
+| `--id` | Required exact UUID |
+| `--execute` | Send once; default preview |
+| `--dry-run` | Preview only; excludes --execute |
+| `--confirm` | Exact preview confirmation; required to execute |
+
+```sh
+tenable-axi initiative delete --id <id>
+tenable-axi initiative delete --help
+```
+
+## initiative list
+
+list initiatives
+
+Operation: `initiatives-list`.
+
+| Flag | Meaning |
+|---|---|
+| `--config` | Config path; default credential precedence |
+| `--profile` | Profile name; default credential precedence |
+| `--fields` | Comma-separated fields; default compact view |
+| `--full` | Full text; default false |
+| `--help` | Show help |
+| `--limit` | Output rows; default 100, maximum 10000 |
+| `--all` | Up to 10000 rows; excludes --limit |
+| `--cursor` | Re-fetch and resume an unchanged unpaged collection; requires original selectors |
+
+```sh
+tenable-axi initiative list
+tenable-axi initiative list --help
+```
+
+## initiative show
+
+show initiative
+
+Operation: `initiatives-details`.
+
+| Flag | Meaning |
+|---|---|
+| `--config` | Config path; default credential precedence |
+| `--profile` | Profile name; default credential precedence |
+| `--fields` | Comma-separated fields; default compact view |
+| `--full` | Full text; default false |
+| `--help` | Show help |
+| `--id` | Required exact UUID |
+
+```sh
+tenable-axi initiative show --id <id>
+tenable-axi initiative show --help
+```
+
+## initiative update
+
+Preview or update initiative
+
+Operation: `initiatives-update`.
+
+| Flag | Meaning |
+|---|---|
+| `--config` | Config path; default credential precedence |
+| `--profile` | Profile name; default credential precedence |
+| `--fields` | Comma-separated fields; default compact view |
+| `--full` | Full text; default false |
+| `--help` | Show help |
+| `--id` | Required exact UUID |
+| `--execute` | Send once; default preview |
+| `--dry-run` | Preview only; excludes --execute |
+| `--confirm` | Exact preview confirmation; required to execute |
+| `--body-file` | Required strict JSON, at most 1 MiB; '-' reads stdin |
+
+```sh
+tenable-axi initiative update --id <id> --body-file body.json
+tenable-axi initiative update --help
 ```
 
 ## profile list
