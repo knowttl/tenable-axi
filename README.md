@@ -71,13 +71,16 @@ Log `timestamp` is the sync start time; use `--fields connectorId,status,sync_lo
 Unpaged log collections retain unreturned rows for bounded local resume; if the upstream total exceeds the available collection, output reports that limitation and suggests narrowing the selectors.
 Connector log denial explains Administrator or the documented connector-read privilege without recommending Administrator for inventory access.
 
-Use `export attack-path start`, `export attack-technique start` or `export mitre-heatmap start` with a strict JSON `--body-file` containing `file_format: "JSON"` or `"CSV"` and the operation's documented options.
+Use `export attack-path start`, `export attack-technique start` or `export mitre-heatmap start` with a strict JSON `--body-file`, for example `{"file_format":"JSON"}`, using `"JSON"` or `"CSV"` and the operation's options from the [pinned specification](specs/exposure-management.json).
+The body is limited to 1 MiB; `--body-file -` reads stdin.
 Export filter logical operators use lowercase `and`/`or`, including attack path exports.
 Select a configured profile with `--profile`; its `writes.allowWrites` must be true and `writes.operations` must include the exact operation ID (`apa-export-attack-path`, `apa-export-attack-technique` or `apa-export-mitre-heatmap`), even for previews.
 Environment profiles cannot enable writes, and `TENABLE_AXI_READ_ONLY=true` blocks all creation.
 Preview first, then pass `--execute --confirm '<exact-preview-confirmation>'` to create one job and return immediately.
 Exports require `EXPOSURE_MANAGEMENT.ATTACK_PATH.ATTACK_PATH.WRITE` and the corresponding upstream entitlement.
 Use `export attack status --id <id>` for a single status read, or add `--wait` to poll within the shared deadline and request budgets.
+If a polling budget expires after a validated pending response, `--wait` returns the last validated job with `complete:false` and `reason:POLL_BUDGET_EXCEEDED`, including when retries exhaust the request budget or an in-flight poll reaches the deadline.
+Without a validated status, budget exhaustion remains an error; other polling failures remain errors.
 Use `export attack download --id <id> --output <new-file>` to download JSON or CSV, including gzip-encoded files, with format-aware secret redaction and a 128-MiB ceiling before atomic publication.
 Downloads refuse overwrite and print file metadata only.
 Attack and inventory job namespaces are separate; these commands never address inventory export jobs.

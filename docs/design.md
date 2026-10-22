@@ -1,7 +1,7 @@
 # tenable-axi design
 
 Planning baseline prepared on 2026-10-22.
-This document defines intended behavior; T1 ships the scaffold, pinned specifications, generated types, complete inventory and local home/help/version commands, T5 ships the six inventory search and properties reads, T6 ships tags, exposure cards, home and doctor, T7 ships attack searches and connector logs, and T8 ships inventory export creation, job lists, status and chunk downloads.
+This document defines intended behavior; see [README](../README.md) for shipped commands.
 Remaining endpoint commands and safety boundaries below remain commitments for later slices.
 
 ## Purpose and scope
@@ -206,7 +206,8 @@ This table defines selectors, extra flags, and compact projections; display fiel
 | `export inventory status` | `--id`. | id, state, availableChunks |
 | `export inventory download` | `--id`, `--chunk`, `--output`. | id, chunk, output, bytes, format, compressed |
 | `export attack-path start`, `export attack-technique start`, `export mitre-heatmap start` | Strict `--body-file` for format/filter options; write flags. | id, state |
-| `export attack status/download` | `--id`; download requires `--output`. | id, state |
+| `export attack status` | `--id`; optional `--wait`, with budget-stop behavior described in [README](../README.md). | id, state |
+| `export attack download` | `--id`, `--output`. | id, output, bytes, format |
 | `tag category list/show/create/update/delete` | Show/update/delete: `--id`; create/update: `--name`, optional `--description`; list: repeatable `--filter`, `--filter-type and\|or`, `--sort`. | id, name, reserved |
 | `tag value list/show/create/update/delete/bulk-delete` | Show/update/delete: `--id`; create/update: `--body-file`; bulk-delete: `--ids-file`; list: filter/type/sort, `--with`, `--with-filter` for `w`/`wf`. | id, category, value, type |
 | `tag assignment list/add/remove` | List: `--asset-id`; add/remove: `--asset-ids-file`, `--tag-ids-file`. | assetId, tagId, value |
@@ -277,9 +278,9 @@ Export start creates one job and returns immediately; status is a separate read 
 Inventory status exposes available chunks; download addresses one explicit chunk ID.
 Attack exports use separate status/download commands so IDs cannot accidentally select the wrong API family.
 Downloads require an explicit new output file, use a bounded temporary file and atomic completion, refuse overwrite, and print metadata only.
-T8/T9 define format-aware JSON/CSV secret scanning and redaction before enabling downloads, with synthetic fixtures and a hard byte ceiling.
+Downloads require format-aware JSON/CSV secret scanning and redaction, with synthetic fixtures and a hard byte ceiling.
 Download invocations use a separate 128-MiB encoded and decoded file ceiling so the documented inventory chunk sizes up to 100 MiB are supported; ordinary JSON responses retain the 20-MiB budget.
-Compressed exports are decoded within that ceiling for format validation/redaction and re-encoded as requested; decompression exceeding the ceiling aborts without publishing a partial file.
+Gzip exports are decoded within that ceiling for format validation/redaction and re-encoded as gzip; decompression exceeding the ceiling aborts without publishing a partial file.
 Never journal export contents or follow an unvalidated download URL.
 Downloads remain read-class despite the explicit local output effect; the host maps it through a controlled artifact boundary.
 
