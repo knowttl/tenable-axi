@@ -87,6 +87,8 @@ for (const kind of ["initiative", "combination"] as const) {
           const targetId = id ?? existing!.id as string;
           existing = (await transport.request(`${plural}-details`, { pathParams: { [`${kind}_id`]: targetId } })).body as Record<string, unknown>;
           if (existing.id !== targetId) fail("RESPONSE_INVALID", "Details returned a different target", operation);
+          if (kind === "combination" && (verb !== "delete" || existing.query !== undefined)
+            && !responseBodies.combination.shape.query.safeParse(existing.query).success) fail("RESPONSE_INVALID", "Existing combination has an invalid query", operation);
           existing = normalize(existing);
         }
         const combinations: unknown[] = [];
@@ -99,7 +101,7 @@ for (const kind of ["initiative", "combination"] as const) {
             for (const combinationId of ids) {
               const matches = listed.combinations.filter((row) => row.id === combinationId);
               if (!matches.length) fail("NOT_FOUND", "A selected combination is unavailable; check explicit IDs and read privileges", operation);
-              if (matches.length !== 1 || !query.safeParse(matches[0]!.query).success) fail("RESPONSE_INVALID", "Selected combination has an invalid or ambiguous query", operation);
+              if (matches.length !== 1 || !responseBodies.combination.shape.query.safeParse(matches[0]!.query).success) fail("RESPONSE_INVALID", "Selected combination has an invalid or ambiguous query", operation);
               count += queryCount(matches[0]!.query);
               combinations.push(matches[0]);
             }

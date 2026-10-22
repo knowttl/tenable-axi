@@ -1,6 +1,7 @@
 import { afterEach, expect, test } from "vitest";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { execFileSync } from "node:child_process";
 import { decode } from "@toon-format/toon";
 import { main } from "../src/cli.js";
 import { mutationOperations, transportBindings } from "../src/catalogue.js";
@@ -38,6 +39,103 @@ function fixture(kind = "combination", verb = "create", body: unknown = kind ===
   return { ...local, run, args, file, journal: join(local.home, "state/tenable-axi/writes.log") };
 }
 afterEach(() => { for (const f of fixtures.splice(0)) f.cleanup(); });
+
+function shellArgs(command: string): string[] {
+  return execFileSync("sh", ["-c", `set -- ${command}; printf '%s\\0' "$@"`], { encoding: "utf8" }).split("\0").slice(0, -1);
+}
+
+test.each(["show", "list"])("%s redacts secrets before truncating nested and plain text", async (verb) => {
+  const f = fixture("combination", verb);
+  const secret = "sensitive-boundary-".repeat(2);
+  f.env.TENABLE_AXI_SECRET_KEY = secret;
+  const text = "a".repeat(969) + secret + "z".repeat(100);
+  const row = { id, ...combination, description: text, query: { ...query, value: text } };
+  const result = await f.run([...f.args, "--fields", "description,query"], [
+    { body: verb === "show" ? row : { combinations: [row] } },
+  ]);
+  expect(result.code).toBe(0);
+  expect(result.stdout).not.toContain(secret.slice(0, 31));
+  expect(result.stdout).toContain("***redacted***");
+  expect(result.stdout).toContain("truncated");
+});
+
+test("generated hints preserve shell-sensitive selectors and body paths literally", async () => {
+  const f = fixture("combination", "update", { ...combination, description: "a".repeat(1001) });
+  const special = "literal '$HOME `printf expanded` $(printf expanded)";
+  const path = join(f.home, special + ".json");
+  writeFileSync(path, readFileSync(f.file));
+  const config = join(f.home, special + "-config.json");
+  writeFileSync(config, JSON.stringify({ version: 1, profiles: { [special]: { writes: { allowWrites: true, operations: ["combinations-update"] } } } }));
+  const args = ["combination", "update", "--id", id, "--body-file", path, "--config", config, "--profile", special];
+  const old = { body: { id, ...combination, name: "Old" } };
+  const preview = await f.run(args, [old]);
+  expect(preview.code).toBe(0);
+  const full = shellArgs((preview.data.help as string[])[0]!.slice(4, -" to read complete text".length));
+  const followed = await f.run(full.slice(1), [old]);
+  expect(followed.code).toBe(0);
+  expect(followed.data).toMatchObject({ kind: "dry-run", preview: { proposed: { body: { description: "a".repeat(1001) } } } });
+  const listArgs = ["combination", "list", "--config", config, "--profile", special, "--limit", "1"];
+  const first = await f.run(listArgs, [{ body: { combinations: [{ id, ...combination }, { id: other, ...combination }] } }]);
+  expect(first.code).toBe(0);
+  const hints = first.data.help as string[];
+  const show = shellArgs(hints[0]!.slice(4).replace("<id>", id));
+  expect((await f.run(show.slice(1), [{ body: { id, ...combination } }])).code).toBe(0);
+  const resume = shellArgs(hints[1]!.slice(4, -" to resume the saved unpaged collection".length).replace("<cursor>", first.data.cursor as string));
+  const resumed = await f.run(resume.slice(1));
+  expect(resumed.code).toBe(0);
+  expect(resumed.data).toMatchObject({ combinations: [{ id: other }], complete: true });
+  expect(resumed.requests).toHaveLength(0);
+});
+
+test.each([null, { property: "cve.id", operator: "eq" }, { and: [{ or: [null] }] }, { or: [] }])(
+  "malformed combination query %j fails across reads, continuation and write state", async (invalid) => {
+    const f = fixture("combination", "update");
+    const row = { id, ...combination, query: invalid };
+    const show = await f.run(["combination", "show", "--id", id], [{ body: row }]);
+    expect(show.code).toBe(1);
+    expect(show.data).toMatchObject({ error: { code: "RESPONSE_INVALID" } });
+    const args = ["combination", "list", "--fields", "id,query"];
+    const first = await f.run([...args, "--limit", "1"], [{ body: { combinations: [{ id: other, ...combination }, row] } }]);
+    expect(first.code).toBe(0);
+    const resumed = await f.run([...args, "--cursor", first.data.cursor as string]);
+    expect(resumed.code).toBe(1);
+    expect(resumed.data).toMatchObject({ error: { code: "RESPONSE_INVALID" } });
+    const listed = await f.run(args, [{ body: { combinations: [row] } }]);
+    expect(listed.code).toBe(1);
+    const update = await f.run(f.args, [{ body: row }]);
+    expect(update.code).toBe(1);
+    expect(update.data).toMatchObject({ error: { code: "RESPONSE_INVALID" } });
+    expect(update.requests).toHaveLength(1);
+    expect(existsSync(f.journal)).toBe(false);
+  },
+);
+
+test.each(["create", "delete"])("combination %s refuses malformed existing query state", async (verb) => {
+  const f = fixture("combination", verb);
+  const result = await f.run(f.args, [{ body: { combinations: [{ id, name: combination.name }] } },
+    { body: { id, ...combination, query: null } }]);
+  expect(result.code).toBe(1);
+  expect(result.data).toMatchObject({ error: { code: "RESPONSE_INVALID" } });
+  expect(result.requests.every((request) => request.init.method === "GET")).toBe(true);
+  expect(existsSync(f.journal)).toBe(false);
+});
+
+test("initiative preview refuses malformed referenced queries", async () => {
+  const f = fixture("initiative", "create", { ...initiative, combination_ids: [other] });
+  const result = await f.run(f.args, [{ body: { initiatives: [] } },
+    { body: { combinations: [{ id: other, ...combination, query: { and: [null] } }] } }]);
+  expect(result.code).toBe(1);
+  expect(result.data).toMatchObject({ error: { code: "RESPONSE_INVALID" } });
+  expect(existsSync(f.journal)).toBe(false);
+});
+
+test("combination reads preserve valid recursive and existence queries", async () => {
+  const f = fixture("combination", "show");
+  const nested = { and: [query, { or: [{ property: "cve.id", operator: "exists" }, { ...query, value: [7, 9] }] }] };
+  const result = await f.run(f.args, [{ body: { id, ...combination, query: nested } }]);
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ combination: { query: nested } });
+});
 
 test.each(["initiative", "combination"])("%s lists resume locally without invented server parameters", async (kind) => {
   const f = fixture(kind, "list");
@@ -240,8 +338,7 @@ test.each(["initiative", "combination"].flatMap((kind) =>
   expect(executed.code).toBe(0);
   expect(executed.data).toMatchObject({ kind: "success" });
   const hint = (executed.data.help as string[])[0]!;
-  const tokens = hint.slice("Run tenable-axi ".length, -" to read complete text".length)
-    .match(/"(?:\\.|[^"\\])*"|\S+/g)!.map((token) => token.startsWith('"') ? JSON.parse(token) as string : token);
+  const tokens = shellArgs(hint.slice("Run tenable-axi ".length, -" to read complete text".length));
   expect(tokens).not.toContain("--execute");
   expect(tokens).not.toContain("--confirm");
   expect(tokens).toContain("--full");

@@ -41,7 +41,7 @@ const trending = z.array(z.object({ date_generated: z.string(), remediated_count
 }).partial().passthrough());
 const fields: Record<string, z.ZodType> = { id: z.string().uuid(), name: z.string(), description: z.string(), owner: z.string().uuid(),
   sla_in_days: z.number().int(), scope: z.array(z.string().uuid()), combination_ids: z.array(z.string().uuid()), tenable_ids: z.array(z.string().uuid()),
-  query: z.json(), is_public: z.boolean(), read_only: z.boolean().nullable(), last_updated_at: z.string(), modified_at: z.string(),
+  query: responseBodies.combination.shape.query, is_public: z.boolean(), read_only: z.boolean().nullable(), last_updated_at: z.string(), modified_at: z.string(),
   product: z.string(), used_in_initiative: z.boolean(), used_in_non_owned_initiative: z.boolean(), operators: z.array(z.string()),
   type: z.union([z.string(), z.record(z.string(), z.string()), z.null()]), selectMultiValue: z.boolean(), allowedValues: z.array(z.string()), total_assets: z.number(), total_findings: z.number(),
   remediated_findings: z.number(), average_vuln_age: z.number(), average_remediation_time: z.number(), total_cves: z.number(),
@@ -91,6 +91,7 @@ export async function responseCommand(argv: string[], store: ReturnType<typeof c
   }
   let truncated = false;
   const preview = (value: unknown): unknown => {
+    if (typeof value === "string") value = store.redactor.payload(value);
     if (typeof value === "string" && value.length > 1000 && !get("full")) {
       truncated = true;
       return `${value.slice(0, 1000)}... (truncated, ${value.length} chars total)`;
@@ -99,8 +100,9 @@ export async function responseCommand(argv: string[], store: ReturnType<typeof c
     if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([key, child]) => [key, preview(child)]));
     return value;
   };
+  const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
   const command = (exclude: string[] = []) => ["tenable-axi", name, ...[...flags].flatMap(([flag, value]) => exclude.includes(flag) ? []
-    : [flag, ...(["--help", "--full", "--all", "--execute", "--dry-run"].includes(flag) ? [] : [JSON.stringify(value)])])].join(" ");
+    : [flag, ...(["--help", "--full", "--all", "--execute", "--dry-run"].includes(flag) ? [] : [quote(value)])])].join(" ");
   const fullHelp = () => truncated ? [`Run ${command(["--full", "--execute", "--confirm"])} --full to read complete text`] : [];
   const project = (row: Record<string, unknown>) => Object.fromEntries(selected.flatMap((field) => {
     const wire = alias[field] ?? field;
@@ -163,7 +165,7 @@ export async function responseCommand(argv: string[], store: ReturnType<typeof c
     row[field] === undefined ? [] : [[field, row[field]]]))));
   const resume = complete ? undefined : Buffer.from(JSON.stringify({ version: 1, scope, pending })).toString("base64url");
   if (resume && resume.length > maxCursor) throw new TransportError({ code: "RESPONSE_INVALID", message: "Continuation exceeds its byte bound; narrow selected fields", operation });
-  const help = [...fullHelp(), ...(verb === "list" ? [`Run tenable-axi ${kind} show --id <id>${get("config") ? ` --config ${JSON.stringify(get("config"))}` : ""} --profile ${profile.name}`] : [])];
+  const help = [...fullHelp(), ...(verb === "list" ? [`Run tenable-axi ${kind} show --id <id>${get("config") ? ` --config ${quote(get("config")!)}` : ""} --profile ${quote(profile.name)}`] : [])];
   if (!complete) help.push(`Run ${command(["--cursor"])} --cursor <cursor> to resume the saved unpaged collection`);
   return { [key]: data, count: data.length, total: null, complete,
     ...(!data.length ? { message: `0 ${key} matched the selected filters` } : {}),
