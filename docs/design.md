@@ -1,8 +1,8 @@
 # tenable-axi design
 
 Planning baseline prepared on 2026-10-22.
-This document defines intended behavior; T1 ships the scaffold, pinned specifications, generated types, complete inventory and local home/help/version commands.
-Endpoint commands and safety boundaries below remain commitments for later slices.
+This document defines intended behavior; T1 ships the scaffold, pinned specifications, generated types, complete inventory and local home/help/version commands, and T5 ships the six inventory search and properties reads.
+Remaining endpoint commands and safety boundaries below remain commitments for later slices.
 
 ## Purpose and scope
 
