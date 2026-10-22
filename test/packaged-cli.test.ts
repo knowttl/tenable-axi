@@ -3,8 +3,10 @@ import { mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSy
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
+import { pathToFileURL } from "node:url";
 import { decode } from "@toon-format/toon";
 import { afterAll, beforeAll, expect, test } from "vitest";
+import { fakeHttpsTenable, syntheticKeys } from "./support/fake-tenable.js";
 
 let directory: string;
 let entry: string;
@@ -41,7 +43,7 @@ test("packaged version aliases work without the command graph", () => {
   }
 });
 
-test("packaged help describes only executable scaffold commands offline", () => {
+test("packaged help describes executable commands offline", () => {
   const result = cli("--help");
   expect(result.status, result.stderr).toBe(0);
   expect(result.stderr).toBe("");
@@ -64,7 +66,33 @@ test("packaged credentials report sources locally and ship the host schema", () 
   expect(schema.properties).toMatchObject({ accessKey: { "x-secret": true }, secretKey: { "x-secret": true } });
 });
 
-test.each([["asset", "list"], ["home", "--unknown"], ["home", "--help", "--help"]])(
+test("packaged CLI resumes an inventory read through the closed HTTPS transport", async () => {
+  const { main } = await import(pathToFileURL(join(directory, "package/dist/src/cli.js")).href);
+  const { transportBindings } = await import(pathToFileURL(join(directory, "package/dist/src/catalogue.js")).href);
+  const fake = await fakeHttpsTenable([
+    { body: { data: [{ id: "asset-1" }], pagination: { offset: 0, limit: 1, total: 2 } } },
+    { body: { data: [{ id: "asset-2" }], pagination: { offset: 1, limit: 1, total: 2 } } },
+  ]);
+  const invoke = async (args: string[]) => {
+    let stdout = "";
+    await main(args, { credentials: { home: directory, env: { TENABLE_AXI_ACCESS_KEY: syntheticKeys.accessKey,
+      TENABLE_AXI_SECRET_KEY: syntheticKeys.secretKey } }, transportFactory: () => fake.transport(transportBindings),
+    stdout: { write: (chunk: string) => { stdout += chunk; } } });
+    expect(stdout).not.toContain(syntheticKeys.secretKey);
+    return decode(stdout) as Record<string, unknown>;
+  };
+  try {
+    const first = await invoke(["asset", "list", "--fields", "id", "--limit", "1"]);
+    expect(first).toMatchObject({ assets: [{ id: "asset-1" }], total: 2, complete: false, cursor: expect.any(String) });
+    const resumed = await invoke(["asset", "list", "--fields", "id", "--limit", "1", "--cursor", first.cursor as string]);
+    expect(resumed).toMatchObject({ assets: [{ id: "asset-2" }], total: 2, complete: true });
+    expect(fake.requests.map((request) => request.url)).toEqual([
+      "/api/v1/t1/inventory/assets/search?offset=0&limit=1", "/api/v1/t1/inventory/assets/search?offset=1&limit=1",
+    ]);
+  } finally { await fake.close(); }
+});
+
+test.each([["unknown", "list"], ["home", "--unknown"], ["home", "--help", "--help"]])(
   "rejects unsupported invocation %j with actionable usage output", (...args) => {
     const result = cli(...args);
     expect(result.status).toBe(2);

@@ -50,7 +50,7 @@ test.each(["", "key; injected=value", "key=value", "key\r\nother", "key\u0000", 
 );
 
 test("inventory evidence cannot execute an unbound operation", async () => {
-  await expect(createTransport({ keys: syntheticKeys }).request("inventory-assets-search"))
+  await expect(createTransport({ keys: syntheticKeys }).request("inventory-export-assets"))
     .rejects.toMatchObject({ error: { code: "OPERATION_BLOCKED" } });
 });
 

@@ -2,7 +2,7 @@
 
 An AXI command-line tool for Tenable One, under construction.
 The scaffold uses TypeScript on Node.js 22.12 or later and will be published as `@knowttl/tenable-axi`.
-Local home, help, version, `auth status`, `profile list` and `config path` commands work offline; no Tenable endpoint commands are implemented yet and no npm release is available.
+Local home, help, version, `auth status`, `profile list` and `config path` commands work offline; inventory reads are implemented, and no npm release is available.
 
 Credentials use the strict versioned config and SecretRefs described in [profiles and authentication](docs/design.md#profiles-and-authentication).
 Run `tenable-axi config path` to find the platform config path, or set both `TENABLE_AXI_ACCESS_KEY` and `TENABLE_AXI_SECRET_KEY` for an environment profile.
@@ -13,7 +13,7 @@ The internal transport enforces the exact commercial origin, reviewed catalogue 
 One transport instance represents one invocation, sharing a 20-second deadline, 20-request ceiling and 20-MiB decoded response ceiling across pages and retries.
 Read operations may retry 429/502/503/504 twice; writes require coordinator authorization and never replay automatically.
 Transport errors carry a stable code, operation, optional HTTP status and `retryAfter` in milliseconds, plus bounded redacted guidance.
-Production currently has no executable endpoint bindings; offline tests construct synthetic bindings and a CA-verified loopback HTTPS fake through the internal construction seam.
+Production binds the six reviewed inventory search and properties operations; offline tests use synthetic fixtures and a CA-verified loopback HTTPS fake through the internal construction seam.
 No flag or environment variable enables that seam in the CLI.
 
 The internal write coordinator is ready for named endpoint slices; it ships no write command or executable write binding yet.
@@ -21,6 +21,14 @@ It enforces immutable configured scope, redacted previews, exact confirmation, o
 Unknown outcomes include an audit ID and read-back guidance and are never replayed.
 Later slices register strict mutation definitions alongside transport bindings in the catalogue and call `createWriteCoordinator().run(operationId, input, options)` from their named commands.
 State readers establish no-ops and include concurrency fields in the compared state; operation definitions own documented payload validation and read-back guidance.
+
+Use `asset list/show/properties`, `finding list/show/properties`, and `software list/properties` with `--help` for their flags and examples.
+Lists default to 100 rows, expose upstream totals when supplied, and return a cursor when more rows remain.
+`--all` remains bounded by 10,000 rows and the shared transport budgets; resume with the returned `--cursor` and original selectors, filters, sort, and fields.
+Offset paging does not provide snapshot isolation.
+`--fields` selects display or wire properties and automatically requests extra properties; `--full` removes the 1,000-character text preview while retaining invocation bounds.
+Simple filters use `--filter 'severity = ["HIGH"]'`; `--filter-file` accepts a flat JSON array of `{property, operator, value: string[]}` and rejects nested boolean expressions.
+Software defaults to name, version, and publisher because the pinned API exposes no stable software ID.
 
 See the [design](docs/design.md) for v1 scope, credentials, write policy, verification, and implementation slices.
 See [contributing](CONTRIBUTING.md) for development conventions.
