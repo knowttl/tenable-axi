@@ -2,7 +2,7 @@
 
 Use Node.js 22.12 or later and pnpm through Corepack.
 The authoritative commands are in `package.json`: `corepack pnpm run build`, `corepack pnpm run lint`, `corepack pnpm test`, and `corepack pnpm run spec:check`.
-`.no-mistakes.yaml` separates preparation, testing and linting and declares no hosted CI.
+`.no-mistakes.yaml` separates preparation, testing and linting; see [README releases](README.md#releases) for hosted publication checks.
 Do not add a hosted test workflow.
 
 ## Testing
