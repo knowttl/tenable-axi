@@ -41,11 +41,18 @@ test("packaged version aliases work without the command graph", () => {
   }
 });
 
-test("packaged help describes only executable scaffold commands offline", () => {
+test("packaged help describes executable commands offline", () => {
   const result = cli("--help");
   expect(result.status, result.stderr).toBe(0);
   expect(result.stderr).toBe("");
-  expect(decode(result.stdout)).toMatchObject({ commands: { home: "Show scaffold status without contacting Tenable" } });
+  expect(decode(result.stdout)).toMatchObject({ commands: { home: "Show profile state and up to five live exposure cards", "card list": "List exposure view cards" } });
+});
+
+test("packaged unconfigured home provides setup guidance offline", () => {
+  const result = cli("home");
+  expect(result.status, result.stderr).toBe(0);
+  expect(decode(result.stdout)).toMatchObject({ status: "not configured", bin: expect.stringContaining("tenable-axi.js"), help: expect.arrayContaining([expect.stringContaining("config path")]) });
+  expect(result.stderr).toBe("");
 });
 
 test("packaged credentials report sources locally and ship the host schema", () => {
@@ -69,7 +76,7 @@ test.each([["asset", "list"], ["home", "--unknown"], ["home", "--help", "--help"
     const result = cli(...args);
     expect(result.status).toBe(2);
     expect(decode(result.stdout)).toMatchObject({ error: expect.anything() });
-    expect(result.stdout).toContain("Valid command: home; valid flag: --help");
+    expect(result.stdout).toMatch(/Valid (commands|flags)/);
     expect(result.stderr).toBe("");
   },
 );
