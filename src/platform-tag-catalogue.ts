@@ -46,7 +46,7 @@ const definitions = [
   ["tags-update-tag-value", "PUT", "/tags/values/{tag_value_uuid}", "write", [], detail, "Scan Operator [24] or PS.ACCT_MGMT.TAGS.EDIT"],
   ["tags-delete-tag-value", "DELETE", "/tags/values/{tag_value_uuid}", "write", [], record, "Scan Operator [24] or PS.ACCT_MGMT.TAGS.DELETE; edit permission on the value"],
   ["tags-delete-tag-values-bulk", "POST", "/tags/values/delete-requests", "write", [], record, "Scan Operator [24] or PS.ACCT_MGMT.TAGS.DELETE"],
-  ["tags-assign-asset-tags", "POST", "/tags/assets/assignments", "write", [], z.object({ job_uuid: uuid }), "Basic [16]"],
+  ["tags-assign-asset-tags", "POST", "/tags/assets/assignments", "write", [], z.object({ job_uuid: z.string().min(1) }), "Basic [16]"],
   ["tags-list-asset-tags", "GET", "/tags/assets/{asset_uuid}/assignments", "read", [], z.object({ tags: z.array(z.object({ asset_uuid: uuid, value_uuid: uuid }).passthrough()) }), "Basic [16] or PS.ACCT_MGMT.TAGS.READ"],
   ["tags-list-exclusions", "GET", "/tags/values/{tag_value_uuid}/exclusions", "read", ["target_type", "limit", "offset"], list("excluded_targets"), "Basic [16] or PS.ACCT_MGMT.TAGS.READ"],
   ["tags-list-asset-filters", "GET", "/tags/assets/filters", "read", [], z.object({ filters: z.array(record) }), "Basic [16] or PS.ACCT_MGMT.TAGS.READ"],
@@ -59,9 +59,17 @@ type TagInput = { id?: string; body?: Record<string, unknown> };
 function sameBody(state: Record<string, unknown>, body: Record<string, unknown>): boolean {
   const normalized = { ...state };
   if (body.filters && state.filters) {
-    const asset = (state.filters as { asset?: unknown }).asset;
+    let asset = (state.filters as { asset?: unknown }).asset;
     if (typeof asset === "string") {
-      try { normalized.filters = { asset: JSON.parse(asset) as unknown }; } catch { return false; }
+      try { asset = JSON.parse(asset) as unknown; } catch { return false; }
+    }
+    if (asset && typeof asset === "object" && !Array.isArray(asset)) {
+      normalized.filters = { ...state.filters as Record<string, unknown>, asset: Object.fromEntries(Object.entries(asset).map(([key, rules]) =>
+        [key, ["and", "or"].includes(key) && Array.isArray(rules) ? rules.map((item: unknown) => {
+          if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+          const { field, ...rest } = item as Record<string, unknown>;
+          return typeof field === "string" && !Object.hasOwn(rest, "property") ? { ...rest, property: field } : item;
+        }) : rules])) };
     }
   }
   return Object.entries(body).filter(([key]) => !["version", "category_uuid", "category_name", "category_description"].includes(key))

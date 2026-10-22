@@ -302,6 +302,22 @@ test("identical dynamic value update compares the documented JSON-string respons
   expect(result.requests).toHaveLength(1);
 });
 
+test.each([
+  ["create", "and", true], ["create", "or", true], ["update", "and", true], ["update", "or", true],
+  ["create", "and", false], ["create", "or", false], ["update", "and", false], ["update", "or", false],
+] as const)("identical dynamic value %s with %s response fields is a no-op (serialized: %s)", async (verb, direction, serialized) => {
+  const f = fixture();
+  const asset = { [direction]: [{ field: "operating_system", operator: "match", value: "FreeBSD" }] };
+  const current = { ...value, type: "dynamic", filters: { asset: serialized ? JSON.stringify(asset) : asset } };
+  const body = { filters: { asset: { [direction]: [{ property: "operating_system", operator: "match", value: "FreeBSD" }] } },
+    ...(verb === "create" ? { category_uuid: other, value: "West" } : { version: 3 }) };
+  const result = await f.run(["value", verb, ...(verb === "update" ? ["--id", id] : []), "--body-file", f.file("tag.json", body), "--execute"],
+    [...(verb === "create" ? [{ body: page("values", [current]) }] : []), { body: current }]);
+  expect(result.code).toBe(0);
+  expect(result.data.kind).toBe("noop");
+  expect(result.requests.every((request) => request.init.method === "GET")).toBe(true);
+});
+
 test("existing create is a no-op only when the exact category and state match", async () => {
   const f = fixture();
   const args = ["value", "create", "--body-file", f.file("tag.json", { category_uuid: other, value: "West" }), "--execute"];
@@ -364,9 +380,10 @@ test.each(["add", "remove"])("assignment %s confirms both complete sets and retu
   const changed = await f.run(["assignment", action, "--asset-ids-file", f.file("changed-assets.json", [third]), "--tag-ids-file", f.file("tags.json", [id]), "--execute", "--confirm", preview.data.preview.confirm],
     [{ body: { tags: action === "add" ? [] : [{ ...assigned, asset_uuid: third }] } }]);
   expect(changed.data.error.code).toBe("CONFIRM_MISMATCH");
-  const result = await f.run([...args, "--execute", "--confirm", preview.data.preview.confirm], [state, state, { status: 202, body: { job_uuid: third } }]);
+  const jobId = "62210d02a7056d0297f50a8ddfbd549eaef1d0bc94e1ea3fad09";
+  const result = await f.run([...args, "--execute", "--confirm", preview.data.preview.confirm], [state, state, { status: 202, body: { job_uuid: jobId } }]);
   expect(result.code).toBe(0);
-  expect(result.data.job).toEqual({ id: third, state: "ACCEPTED" });
+  expect(result.data.job).toEqual({ id: jobId, state: "ACCEPTED" });
   expect(result.requests).toHaveLength(3);
   expect(new URL(result.requests[2]!.url).pathname).toBe("/tags/assets/assignments");
   expect(JSON.parse(result.requests[2]!.init.body as string)).toEqual({ action, assets: [other], tags: [id] });
