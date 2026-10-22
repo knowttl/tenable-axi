@@ -105,7 +105,7 @@ test("generated hints preserve shell-sensitive selectors and body paths literall
   const path = join(f.home, special + ".json");
   writeFileSync(path, readFileSync(f.file));
   const config = join(f.home, special + "-config.json");
-  writeFileSync(config, JSON.stringify({ version: 1, profiles: { example: { writes: { allowWrites: true, operations: ["combinations-update"] } } } }));
+  writeFileSync(config, JSON.stringify({ version: 1, profiles: { example: { writes: { allowWrites: true, operations: ["combinations-update"] } } } }), { mode: 0o600 });
   const args = ["combination", "update", "--id", id, "--body-file", path, "--config", config, "--profile", "example"];
   const old = { body: { id, ...combination, name: "Old" } };
   const preview = await f.run(args, [old]);
