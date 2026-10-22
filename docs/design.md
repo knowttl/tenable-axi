@@ -322,6 +322,10 @@ The journal is an audit aid, not tamper-proof or a server-side exactly-once guar
 ## Change recipe and tests
 
 Add an endpoint by updating evidence/effect, binding a named command, writing its projection/decoder, and testing outcomes through its real public interface.
+T1 configures `.no-mistakes.yaml` following vectra-axi's separated prepare/test/lint command pattern.
+The test command runs only tests affected by the change plus a small fixed baseline.
+Require practical observable behavior through the CLI and transport against the fake Tenable upstream.
+Do not add tautological mock-echo checks, checks already covered by the compiler, or implementation snapshots.
 Use our own fake transport and synthetic fixtures for populated, empty, denied, malformed, beta-extra-field, and partial cases.
 Install a network-denying guard before imports, including subprocesses, allowing only the explicitly constructed fake HTTPS Tenable.
 Packaged-CLI fixtures inject a test-only transport construction seam to send logical requests to loopback with synthetic keys and a test CA.
@@ -345,7 +349,7 @@ The order below is the delivery order even when dependencies allow independent p
 
 | Slice | Dependencies | Scope | Verify |
 |---|---|---|---|
-| T1 | Design | Scaffold; pinned specs/hashes; generated types; complete inventory; catalogue skeleton; version fast path. | Offline build/lint, `spec:check`, 360 classifications, version output/startup-floor test. |
+| T1 | Design | Scaffold; `.no-mistakes.yaml` with vectra-axi's separated prepare/test/lint commands; pinned specs/hashes; generated types; complete inventory; catalogue skeleton; version fast path. | Offline build/lint, affected tests plus a small fixed baseline, `spec:check`, 360 classifications, version output/startup-floor test. |
 | T2 | T1 | Profiles, SecretRefs, private files, redaction, credential schema, local auth/profile/config commands. | Both platform branches, precedence, partial env, sentinels, no network. |
 | T3 | T1 | Closed transport, origin/header policy, bounded retry/errors, network guard, fake transport/HTTPS Tenable. | Every error family, redirects, continuations, retry/deadline bounds. |
 | T4 | T2, T3 | Write coordinator, immutable scope, preview, confirmation, durable journal, unknown outcome. | Default/forced read-only, allowlist, no-op, journal failures, send once. |
