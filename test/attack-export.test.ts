@@ -186,6 +186,34 @@ test.each(["QUEUED", "PROCESSING"])("explicit wait preserves the last %s status 
   expect(vi.getTimerCount()).toBe(0);
 });
 
+test.each(["QUEUED", "PROCESSING"])("explicit wait preserves the last %s status when an in-flight poll reaches the deadline", async (status) => {
+  vi.useFakeTimers();
+  const f = fixture();
+  const submittedAt = "2026-01-01T00:00:00Z", lastRefreshedAt = "2026-01-01T00:00:01Z";
+  const resultPromise = f.run([...f.status, "--wait", "--fields", "id,state,submittedAt,lastRefreshedAt"], [
+    { body: { export_id: id, status, submitted_at: submittedAt, last_refreshed_at: lastRefreshedAt } }, "hang",
+  ]);
+  await vi.advanceTimersByTimeAsync(20000);
+  const result = await resultPromise;
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ job: { id, state: status, submittedAt, lastRefreshedAt }, complete: false, reason: "POLL_BUDGET_EXCEEDED" });
+  expect(result.requests).toHaveLength(2);
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+test.each([false, true])("status fails on deadline without a validated status with wait=%s", async (wait) => {
+  vi.useFakeTimers();
+  const f = fixture();
+  const resultPromise = f.run([...f.status, ...(wait ? ["--wait"] : [])], ["hang"]);
+  await vi.advanceTimersByTimeAsync(20000);
+  const result = await resultPromise;
+  expect(result.code).toBe(1);
+  expect(result.data).toMatchObject({ error: { code: "DEADLINE_EXCEEDED" } });
+  expect(result.data).not.toHaveProperty("job");
+  expect(result.requests).toHaveLength(1);
+  expect(vi.getTimerCount()).toBe(0);
+});
+
 test.each(["status", "download"])("unknown attack job on %s is an error rather than empty success", async (verb) => {
   const f = fixture();
   const result = await f.run(verb === "status" ? f.status : f.download, [{ status: 404, body: { message: "Request not found", status: 404 } }]);

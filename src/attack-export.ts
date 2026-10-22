@@ -104,7 +104,7 @@ export async function attackExportCommand(argv: string[], store: ReturnType<type
     let response;
     try { response = await transport.request(operation, request); }
     catch (error) {
-      if (get("wait") && status && error instanceof TransportError && error.error.code === "REQUEST_BUDGET_EXCEEDED") break;
+      if (get("wait") && status && error instanceof TransportError && ["REQUEST_BUDGET_EXCEEDED", "DEADLINE_EXCEEDED"].includes(error.error.code)) break;
       throw error;
     }
     status = attackExportStatus.parse(response.body);
