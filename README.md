@@ -7,6 +7,7 @@ Attack path, attack technique and MITRE heatmap exports support guarded creation
 `tag list`, `tag properties`, `card list` and `card show` provide bounded Exposure Management reads.
 Platform tag categories, values, assignments, exclusions and dynamic filter definitions are implemented, including guarded mutations.
 Home shows up to five exposure cards when configured and setup guidance offline otherwise.
+Exposure response initiatives and combinations support reads and guarded writes, including allowed combination filters.
 `hook` reports local profile context without resolving secrets or contacting Tenable.
 Help, version, `auth status`, `profile list` and `config path` remain local; no npm release is available.
 
@@ -27,6 +28,24 @@ It enforces immutable configured scope, redacted previews, exact confirmation, o
 Unknown outcomes include an audit ID and read-back guidance and are never replayed.
 Named write commands register strict mutation definitions alongside transport bindings in the catalogue and call `createWriteCoordinator().run(operationId, input, options)`.
 State readers establish no-ops and include concurrency fields in the compared state; operation definitions own documented payload validation and read-back guidance.
+
+Use `initiative list/show/create/update/delete`, `combination list/show/create/update/delete` and `combination filters` for Exposure Response.
+Show, update and delete require `--id <uuid>`; create and update require a strict JSON `--body-file` (or `-` for stdin, at most 1 MiB).
+Initiative bodies contain `name`, `scope`, `combination_ids`, `tenable_ids`, `owner`, `sla_in_days` and optional `description`.
+Scope and each combination-ID array accept at most ten UUIDs; owner is an explicit UUID and SLA is a signed 32-bit integer as documented by the pinned schema.
+Previews read the selected combinations and enforce the seventeen-query initiative limit without discovering users or changing tags.
+Combination bodies contain `name`, `query`, `is_public` and optional `description`; queries use a single `{property, operator, value}` filter or nested `and`/`or` arrays with at most six conditions.
+`exists` and `nexists` allow an omitted value; `combination filters` reports supported properties, operators and value metadata.
+The preview explicitly describes public or private visibility, owner and scope effects.
+Each write requires a file profile with `writes.allowWrites: true` and the exact `initiatives-create/update/delete` or `combinations-create/update/delete` operation IDs in `writes.operations`, including for preview.
+Run again with `--execute --confirm '<exact preview confirmation>'` to send once through the existing journal and read-only guards.
+Updates re-read the selected resource before sending and refuse changed state; identical updates/creates and verified absent deletes are no-ops.
+The API does not document conditional writes, so re-reading narrows the race without guaranteeing atomic comparison.
+Lists and allowed filters are unpaged upstream; `--limit` defaults to 100 and `--all` caps output at 10,000 rows.
+Their scoped cursors preserve unreturned selected fields in redacted continuation data bounded at 28 MiB, resuming without another request or invented server paging parameters.
+`combination list --type private|shared|tenable` scopes the upstream request; the displayed type uses that selector or the returned `is_public` value, and stays null when neither establishes it.
+No upstream total is supplied, so `total` remains null.
+Use `--fields` for documented wire fields or compact aliases (`slaInDays`, filter `property`); `--full` removes text truncation while retaining invocation bounds.
 
 Use `export asset start` or `export finding start` to preview the filters, properties, format and compression for a tenant-side job.
 The selected file profile must configure `writes.allowWrites: true` and allow the exact `inventory-export-assets` or `inventory-export-findings` operation, including for previews.

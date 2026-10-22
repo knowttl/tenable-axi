@@ -6,12 +6,13 @@ import { attackBindings, attackCatalogue } from "./attack-catalogue.js";
 import { attackExportBindings, attackExportCatalogue, attackExportMutations } from "./attack-export-catalogue.js";
 import { inventoryExportBindings, inventoryExportCatalogue, inventoryExportMutations } from "./inventory-export-catalogue.js";
 import { platformTagBindings, platformTagCatalogue, platformTagMutations } from "./platform-tag-catalogue.js";
+import { responseBindings, responseCatalogue, responseMutations } from "./response-catalogue.js";
 
 export const DESCRIPTION = "Agent-friendly CLI for Tenable One, under construction";
 
 // Endpoint slices add reviewed executable bindings alongside their commands.
-export const transportBindings: Readonly<Record<string, OperationBinding>> = Object.freeze({ ...inventoryBindings, ...exposureBindings, ...attackBindings, ...inventoryExportBindings, ...attackExportBindings, ...platformTagBindings });
-export const mutationOperations: Readonly<Record<string, MutationOperation>> = Object.freeze({ ...inventoryExportMutations, ...attackExportMutations, ...platformTagMutations });
+export const transportBindings: Readonly<Record<string, OperationBinding>> = Object.freeze({ ...inventoryBindings, ...exposureBindings, ...attackBindings, ...inventoryExportBindings, ...attackExportBindings, ...platformTagBindings, ...responseBindings });
+export const mutationOperations: Readonly<Record<string, MutationOperation>> = Object.freeze({ ...inventoryExportMutations, ...attackExportMutations, ...platformTagMutations, ...responseMutations });
 
 // Evidence and planned commands never enable execution. Endpoint slices add explicit bindings here.
 export const catalogue = {
@@ -20,6 +21,7 @@ export const catalogue = {
   ...inventoryExportCatalogue,
   ...attackExportCatalogue,
   ...platformTagCatalogue,
+  ...responseCatalogue,
   home: {
     description: "Show profile state and up to five live exposure cards",
     flags: { config: "Config path; default platform path", profile: "Profile name; default credential precedence", fields: "Card fields; default id,name,score", full: "Full text; default false", help: "Show help; default false" },
