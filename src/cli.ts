@@ -6,6 +6,7 @@ import { localCommand } from "./local-commands.js";
 import { inventoryCommand } from "./inventory.js";
 import { exposureCommand, type TransportFactory } from "./exposure.js";
 import { TransportError } from "./transport.js";
+import { attackCommand } from "./attack.js";
 
 export async function main(argv = process.argv.slice(2), options: { credentials?: CredentialContext; stdout?: { write: (chunk: string) => unknown }; transportFactory?: TransportFactory } = {}): Promise<void> {
   const store = credentialStore(options.credentials);
@@ -22,6 +23,11 @@ export async function main(argv = process.argv.slice(2), options: { credentials?
     }),
     commands: {
       scaffold: async () => {
+        if (["attack-path", "attack-technique", "connector"].includes(argv[0] ?? "")) {
+          const result = await attackCommand(argv, store, options.transportFactory);
+          if (result.error) process.exitCode = 1;
+          return store.redactor.value(result) as Record<string, unknown>;
+        }
         if (["asset", "finding", "software"].includes(argv[0] ?? "")) {
           const result = await inventoryCommand(argv, store, options.transportFactory);
           if (result.error) process.exitCode = 1;

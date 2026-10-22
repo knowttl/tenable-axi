@@ -2,7 +2,7 @@
 
 An AXI command-line tool for Tenable One, under construction.
 It uses TypeScript on Node.js 22.12 or later and will be published as `@knowttl/tenable-axi`.
-Inventory reads are implemented.
+Inventory reads, attack searches and connector logs are implemented.
 `tag list`, `tag properties`, `card list` and `card show` provide bounded Exposure Management reads.
 Home shows up to five exposure cards when configured and setup guidance offline otherwise.
 `hook` reports local profile context without resolving secrets or contacting Tenable.
@@ -17,7 +17,7 @@ The internal transport enforces the exact commercial origin, reviewed catalogue 
 One transport instance represents one invocation, sharing a 20-second deadline, 20-request ceiling and 20-MiB decoded response ceiling across pages and retries.
 Read operations may retry 429/502/503/504 twice; writes require coordinator authorization and never replay automatically.
 Transport errors carry a stable code, operation, optional HTTP status and `retryAfter` in milliseconds, plus bounded redacted guidance.
-Production binds the six reviewed inventory search and properties operations and four reviewed Exposure Management tag and card reads; offline tests use synthetic fixtures and a CA-verified loopback HTTPS fake through the internal construction seam.
+Production binds reviewed inventory search/properties, Exposure Management tag and card reads, attack searches and connector logs; offline tests use synthetic fixtures and a CA-verified loopback HTTPS fake through the internal construction seam.
 No flag or environment variable enables that seam in the CLI.
 
 The internal write coordinator is ready for named endpoint slices; it ships no write command or executable write binding yet.
@@ -44,6 +44,19 @@ Offset pagination does not promise snapshot isolation.
 Tag `value` maps to the documented `name`; `category` requests `tag_category_name` through extra properties and remains null when unavailable.
 Tag filter files contain the pinned API's strict array of `{property, operator, value}` filters, with string arrays for `value`; this endpoint does not define nested boolean filters.
 Use `--help` on each leaf for selectors and defaults.
+
+Use `attack-path list`, `attack-technique list`, and `connector logs` with `--help` for their flags and examples.
+Attack paths use the published `/api/v1/t1/apa/top-attack-paths/search` route; the pyTenable route disagreement remains a live-acceptance check in the design.
+AI summarization defaults to false; explicitly enable it with `--run-ai-summarization true`.
+`--include-resolved` includes resolved paths or archived/resolved techniques.
+Attack filters accept `--filter 'priority gte 8'` or a `--filter-file` containing the documented single or nested filter object.
+Path logical operators use `AND`/`OR`; technique logical operators use `and`/`or`, with at most two logical levels in either case.
+Attack searches send at least 100 wire rows even for a smaller output limit, retaining excess selected fields in a bounded redacted cursor for resume.
+Technique `id` maps to `serial_id`, and `affectedAssets` counts the returned `assets_ids` array.
+Connector logs accept connector ID, sync status, and paired date boundaries (inclusive start, exclusive end), without invented server paging parameters.
+Log `timestamp` is the sync start time; use `--fields connectorId,status,sync_logs --full` for event details.
+Unpaged log collections retain unreturned rows for bounded local resume; if the upstream total exceeds the available collection, output reports that limitation and suggests narrowing the selectors.
+Connector log denial explains Administrator or the documented connector-read privilege without recommending Administrator for inventory access.
 
 See the [design](docs/design.md) for v1 scope, credentials, write policy, verification, and implementation slices.
 See [contributing](CONTRIBUTING.md) for development conventions.
