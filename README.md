@@ -1,7 +1,169 @@
 # tenable-axi
 
-An AXI command-line tool for Tenable One, under construction.
-It uses TypeScript on Node.js 22.12 or later and will be published as `@knowttl/tenable-axi`.
+Investigate Tenable One exposure through compact TOON output and explicitly guarded business writes.
+It uses TypeScript on Node.js 22.12 or later and is packaged as `@knowttl/tenable-axi`.
+This is the pre-release source; publication follows separate live acceptance and release approval.
+
+## Quickstart
+
+Install the released package globally, or use `npx -y @knowttl/tenable-axi` in place of `tenable-axi` once published.
+Until then, use the [local development commands](#development-and-testing).
+
+```sh
+npm install --global @knowttl/tenable-axi
+tenable-axi config path
+tenable-axi profile list
+```
+
+Save this configuration at the reported config path and supply the two environment variables through your secret manager.
+Secret values never belong in arguments, chat, or configuration JSON.
+
+```json
+{
+  "version": 1,
+  "defaultProfile": "example",
+  "profiles": {
+    "example": {
+      "origin": "https://cloud.tenable.com",
+      "accessKey": { "env": "TENABLE_AXI_ACCESS_KEY" },
+      "secretKey": { "env": "TENABLE_AXI_SECRET_KEY" },
+      "writes": { "allowWrites": false, "operations": [] }
+    }
+  }
+}
+```
+
+Config files must be owned regular files without group/other write access; use `chmod 600 <config-path>` on Unix.
+SecretRefs also accept `{"file":"/absolute/path"}` to a protected secret file with no group/other permission bits.
+Windows uses protected DACLs; UNC and device paths are refused.
+No login command, credential minting, arbitrary HTTP, alternate origin or TLS bypass is available.
+
+```sh
+tenable-axi auth status --profile example
+tenable-axi doctor --profile example
+tenable-axi asset list --profile example --limit 10
+tenable-axi finding list --profile example --filter 'severity = ["HIGH"]'
+```
+
+`auth status` is local; `doctor` makes one bounded tag-properties read and does not prove other module permissions.
+Configured home reads up to five live exposure cards; unconfigured home stays offline.
+Only `https://cloud.tenable.com` is supported.
+Upstream licensing and the user's per-operation permissions still apply.
+Inventory needs `EXPOSURE_MANAGEMENT.INVENTORY.INVENTORY.READ`; inventory exports need its `EXPORT` privilege and attack exports need `EXPOSURE_MANAGEMENT.ATTACK_PATH.ATTACK_PATH.WRITE`.
+Connector logs have elevated permissions; their denial does not imply ordinary inventory users need Administrator.
+
+## Use with your agent
+
+Install optional hooks for ambient local context after installing the binary in a stable location:
+
+```sh
+tenable-axi setup hooks
+```
+
+This explicit opt-in installs or repairs Claude Code and Codex SessionStart hooks and an OpenCode managed plugin.
+Ordinary commands never install integrations.
+Setup verifies a matching binary on PATH, otherwise retaining the absolute executable path; rerun after relocating the installation.
+Repeated setup preserves unrelated integrations and makes no changes when already current.
+Restart the agent session after setup.
+The hook prints local profile/origin/write posture, resolves no secrets, and never contacts Tenable.
+It follows the session's `TENABLE_AXI_PROFILE` and `TENABLE_AXI_CONFIG`, so select those explicitly when working with multiple tenants.
+Use `tenable-axi setup hooks --scope project` for integrations confined to the current project directory.
+Project setup still enables Codex's shared user-level hooks feature.
+No repository-local Tenable configuration is discovered automatically.
+To remove hooks, remove only entries containing `tenable-axi-hook` from `~/.claude/settings.json` and `~/.codex/hooks.json`, and the managed `~/.config/opencode/plugins/axi-tenable-axi-hook.js` plugin.
+For project scope, remove the corresponding `.claude/settings.json`, `.codex/hooks.json` entries and `.opencode/plugins/axi-tenable-axi-hook.js` under that project.
+Keep unrelated entries and Codex's shared hooks feature enabled for other tools.
+
+The generated skill provides discovery on demand, with no session hook required:
+
+```sh
+npx skills add knowttl/tenable-axi --skill tenable-axi
+```
+
+Hooks and skill work independently or together.
+The skill uses non-interactive `npx -y @knowttl/tenable-axi` examples and ships inside the npm tarball.
+
+## Configuration and safety
+
+Linux/macOS configuration uses absolute `$XDG_CONFIG_HOME/tenable-axi/config.json`, otherwise `~/.config/tenable-axi/config.json`.
+State uses absolute `$XDG_STATE_HOME/tenable-axi`, otherwise `~/.local/state/tenable-axi`.
+Windows uses `%APPDATA%\tenable-axi` for config and `%LOCALAPPDATA%\tenable-axi` for state, ignoring XDG.
+`--config` overrides `TENABLE_AXI_CONFIG`; `--profile` overrides `TENABLE_AXI_PROFILE`, then a complete environment profile, configured default, or sole profile is selected.
+A complete environment profile requires both `TENABLE_AXI_ACCESS_KEY` and `TENABLE_AXI_SECRET_KEY`; partial values fail rather than mixing credentials.
+Explicit file-selected profiles ignore environment profile fields.
+Environment profiles cannot enable writes.
+`TENABLE_AXI_READ_ONLY=1` or `true` forces read-only; `0`, `false`, or unset permits the configured policy, and other values fail closed.
+`TENABLE_AXI_WRITE_LOG` selects a private journal instead of the default state-directory `writes.log`.
+
+Writes require a file profile with `writes.allowWrites: true` and exact upstream operation IDs in `writes.operations`, including for previews.
+For example, allow only `inventory-export-assets` to preview or create asset exports.
+Run a write without `--execute` to inspect its redacted preview, then supply `--execute --confirm '<exact preview confirmation>'` after reviewing the target and effect.
+`--dry-run` is explicit preview and excludes `--execute`.
+The durable redacted journal records intent before sending once; ambiguous outcomes include audit IDs and must be reconciled before retrying.
+Credential, user, role and access-control administration stays blocked, including nested security fields in otherwise allowed payloads.
+
+## Command reference
+
+The [generated reference](docs/commands.md) includes flags, defaults and examples from the executable catalogue.
+Use each leaf's `--help` for concise help; unknown flags and invalid combinations fail before credentials or HTTP.
+Bare `--version`, `-v` and `-V` print only the package version.
+
+<!-- command-registry:start -->
+| Command | Purpose |
+|---|---|
+| `tenable-axi asset list` | Search assets |
+| `tenable-axi asset properties` | Discover asset properties and supported operators |
+| `tenable-axi asset show` | Find one asset by exact ID search |
+| `tenable-axi attack-path list` | Search top attack paths using the published specification route |
+| `tenable-axi attack-technique list` | Search top attack techniques; affectedAssets counts assets_ids |
+| `tenable-axi auth status` | Check local credentials and file security without contacting Tenable |
+| `tenable-axi card list` | List exposure view cards |
+| `tenable-axi card show` | Show an exposure card and its scores, trends and SLA details |
+| `tenable-axi config path` | Show selected config and state paths without reading files |
+| `tenable-axi connector logs` | Read connector sync logs; the API has no server paging parameters |
+| `tenable-axi doctor` | Check local security and one tag-properties read without retries |
+| `tenable-axi export asset jobs` | List recent inventory asset export jobs |
+| `tenable-axi export asset start` | Preview or create an inventory asset export job |
+| `tenable-axi export attack download` | Download an attack export to a new file, redacting JSON/CSV within 128 MiB |
+| `tenable-axi export attack status` | Read an attack export job; no polling by default |
+| `tenable-axi export attack-path start` | Preview or start one attack-path export; requires configured write scope and ATTACK_PATH.WRITE |
+| `tenable-axi export attack-technique start` | Preview or start one attack-technique export; requires configured write scope and ATTACK_PATH.WRITE |
+| `tenable-axi export finding jobs` | List recent inventory finding export jobs |
+| `tenable-axi export finding start` | Preview or create an inventory finding export job |
+| `tenable-axi export inventory download` | Download one inventory chunk to a new redacted file |
+| `tenable-axi export inventory status` | Read one inventory export status without polling |
+| `tenable-axi export mitre-heatmap start` | Preview or start one mitre-heatmap export; requires configured write scope and ATTACK_PATH.WRITE |
+| `tenable-axi finding list` | Search findings |
+| `tenable-axi finding properties` | Discover finding properties and supported operators |
+| `tenable-axi finding show` | Find one finding by exact ID search |
+| `tenable-axi home` | Show profile state and up to five live exposure cards |
+| `tenable-axi hook` | Show compact local profile context without resolving secrets or HTTP |
+| `tenable-axi profile list` | List configured profiles without resolving secrets or contacting Tenable |
+| `tenable-axi setup hooks` | Explicitly install or repair local agent session integrations |
+| `tenable-axi software list` | Search software; the pinned API exposes no stable software ID |
+| `tenable-axi software properties` | Discover software properties and supported operators |
+| `tenable-axi tag asset-filter list` | List documented dynamic tag filter definitions |
+| `tenable-axi tag assignment add` | add tags for the exact asset set |
+| `tenable-axi tag assignment list` | List tags assigned to one asset |
+| `tenable-axi tag assignment remove` | remove tags for the exact asset set |
+| `tenable-axi tag category create` | Create platform tag category |
+| `tenable-axi tag category delete` | Delete platform tag category |
+| `tenable-axi tag category list` | List platform tag category |
+| `tenable-axi tag category show` | Show platform tag category |
+| `tenable-axi tag category update` | Update platform tag category |
+| `tenable-axi tag exclusion list` | List assets excluded from a dynamic tag |
+| `tenable-axi tag list` | Search Exposure Management tags |
+| `tenable-axi tag properties` | List available tag properties and operators |
+| `tenable-axi tag value bulk-delete` | Preview or delete the exact tag value set |
+| `tenable-axi tag value create` | Create platform tag value |
+| `tenable-axi tag value delete` | Delete platform tag value |
+| `tenable-axi tag value list` | List platform tag value |
+| `tenable-axi tag value show` | Show platform tag value |
+| `tenable-axi tag value update` | Update platform tag value |
+<!-- command-registry:end -->
+
+## Shipped behavior
+
 Inventory reads and exports, attack searches and connector logs are implemented.
 Attack path, attack technique and MITRE heatmap exports support guarded creation, status and redacted file downloads.
 `tag list`, `tag properties`, `card list` and `card show` provide bounded Exposure Management reads.
@@ -9,7 +171,7 @@ Platform tag categories, values, assignments, exclusions and dynamic filter defi
 Home shows up to five exposure cards when configured and setup guidance offline otherwise.
 Exposure response initiatives and combinations support reads and guarded writes, including allowed combination filters.
 `hook` reports local profile context without resolving secrets or contacting Tenable.
-Help, version, `auth status`, `profile list` and `config path` remain local; no npm release is available.
+Help, version, `auth status`, `profile list` and `config path` remain local.
 
 Credentials use the strict versioned config and SecretRefs described in [profiles and authentication](docs/design.md#profiles-and-authentication).
 Run `tenable-axi config path` to find the platform config path, or set both `TENABLE_AXI_ACCESS_KEY` and `TENABLE_AXI_SECRET_KEY` for an environment profile.
@@ -136,17 +298,31 @@ Attack and inventory job namespaces are separate; these commands never address i
 See the [design](docs/design.md) for v1 scope, credentials, write policy, verification, and implementation slices.
 See [contributing](CONTRIBUTING.md) for development conventions.
 
+## Development and testing
+
 ```sh
 corepack pnpm install --frozen-lockfile --ignore-scripts --config.confirm-modules-purge=false
 corepack pnpm run build
-node bin/tenable-axi.js --help
-node bin/tenable-axi.js --version
+node scripts/isolated.mjs node bin/tenable-axi.js --help
+node scripts/isolated.mjs node bin/tenable-axi.js --version
 corepack pnpm test
 corepack pnpm run lint
 corepack pnpm run spec:check
+corepack pnpm run docs:check
 ```
 
 See [verification](CONTRIBUTING.md#verification) for offline isolation and test selection.
 The [capability map](docs/design.md#capability-map) defines planned v1 scope; the generated [inventory](inventory/capabilities.json) records every pinned operation's classification and does not enable execution.
+After catalogue changes, rebuild and run `corepack pnpm run docs:generate` to regenerate the README table, command reference and skill.
+Tests and manual CLI checks use temporary HOME/XDG directories and synthetic fixtures, with no live tenant or real credentials.
+Pull requests are validated locally; no hosted test workflow is configured.
+
+## Releases
+
+Release-please owns versions, tags, release notes and changelog updates.
+The release workflow publishes only when release-please creates a release, after build, lint, offline fake tarball tests, spec and documentation checks.
+It publishes the verified tarball with npm provenance through OIDC trusted publishing, with no stored npm token.
+Before the first release, configure npm's trusted publisher for `knowttl/tenable-axi` and `.github/workflows/release-please.yml`, and complete the separate live acceptance in the design.
+This change does not publish a package or run that workflow.
 
 Licensed under the [MIT License](LICENSE).

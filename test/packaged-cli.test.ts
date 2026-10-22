@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, renameSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, realpathSync, renameSync, rmSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { performance } from "node:perf_hooks";
@@ -10,6 +10,7 @@ import { fakeHttpsTenable, syntheticKeys } from "./support/fake-tenable.js";
 
 let directory: string;
 let entry: string;
+let packageRoot: string;
 let version: string;
 beforeAll(() => {
   directory = mkdtempSync(join(tmpdir(), "tenable-axi-package-"));
@@ -17,10 +18,22 @@ beforeAll(() => {
   expect(packed.status, packed.stderr).toBe(0);
   const [metadata] = JSON.parse(packed.stdout) as { filename: string; version: string }[];
   version = metadata!.version;
-  const extracted = spawnSync("tar", ["-xzf", join(directory, metadata!.filename), "-C", directory], { encoding: "utf8" });
-  expect(extracted.status, extracted.stderr).toBe(0);
-  symlinkSync(resolve("node_modules"), join(directory, "package/node_modules"), "junction");
-  entry = join(directory, "package/bin/tenable-axi.js");
+  // Supply real dependency tarballs locally so npm installation needs no registry.
+  const tarballs = [join(directory, metadata!.filename)];
+  for (const dependency of ["axi-sdk-js", "@toon-format/toon", "zod"]) {
+    // Break pnpm store hardlinks before repacking: npm extraction omits linked entries.
+    const source = join(directory, "dependencies", dependency);
+    cpSync(realpathSync(resolve("node_modules", dependency)), source, { recursive: true });
+    const dependencyPack = spawnSync("npm", ["pack", "--ignore-scripts", "--json", "--pack-destination", directory], {
+      cwd: source, encoding: "utf8",
+    });
+    expect(dependencyPack.status, dependencyPack.stderr).toBe(0);
+    tarballs.push(join(directory, JSON.parse(dependencyPack.stdout)[0].filename));
+  }
+  const installed = spawnSync("npm", ["install", "--offline", "--ignore-scripts", "--no-audit", "--no-fund", "--prefix", join(directory, "install"), ...tarballs], { encoding: "utf8" });
+  expect(installed.status, installed.stderr).toBe(0);
+  packageRoot = join(directory, "install/node_modules/@knowttl/tenable-axi");
+  entry = join(packageRoot, "bin/tenable-axi.js");
 }, 30_000);
 afterAll(() => rmSync(directory, { recursive: true, force: true }));
 
@@ -28,8 +41,107 @@ function cli(...args: string[]) {
   return spawnSync(process.execPath, [entry, ...args], { encoding: "utf8", cwd: directory, timeout: 10_000 });
 }
 
+function hookFixture() {
+  const home = mkdtempSync(join(tmpdir(), "tenable-axi-hook-"));
+  const env = Object.fromEntries(Object.entries(process.env).filter(([name]) => !name.startsWith("TENABLE_AXI_")));
+  const isolated = { ...env, HOME: home, USERPROFILE: home, XDG_CONFIG_HOME: join(home, ".config"),
+    XDG_STATE_HOME: join(home, "state"), APPDATA: join(home, "AppData/Roaming"), LOCALAPPDATA: join(home, "AppData/Local"),
+    NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --import=${resolve("test/support/deny-network.mjs")}` };
+  const run = (args: string[], extra: NodeJS.ProcessEnv = {}) => spawnSync(process.execPath, [entry, ...args], {
+    cwd: home, env: { ...isolated, ...extra }, encoding: "utf8", timeout: 10_000,
+  });
+  return { home, env: isolated, run, cleanup: () => rmSync(home, { recursive: true, force: true }) };
+}
+
+test("ordinary packaged commands and setup help never install agent integrations", () => {
+  const fixture = hookFixture();
+  try {
+    for (const args of [["home"], ["profile", "list"], ["--help"], ["hook"], ["setup", "hooks", "--help"]]) {
+      expect(fixture.run(args).status).toBe(0);
+    }
+    expect(existsSync(join(fixture.home, ".claude"))).toBe(false);
+    expect(existsSync(join(fixture.home, ".codex"))).toBe(false);
+    expect(existsSync(join(fixture.home, ".config/opencode"))).toBe(false);
+  } finally { fixture.cleanup(); }
+});
+
+test("explicit setup installs executable hooks and preserves unrelated integrations on repeated setup", () => {
+  const fixture = hookFixture();
+  try {
+    mkdirSync(join(fixture.home, ".claude"));
+    const settings = join(fixture.home, ".claude/settings.json");
+    const unrelated = { matcher: "startup", hooks: [{ type: "command", command: "other-tool hook" }] };
+    writeFileSync(settings, JSON.stringify({ permissions: { allow: [] }, hooks: { SessionStart: [unrelated] } }));
+    const result = fixture.run(["setup", "hooks"]);
+    expect(result.status, result.stdout + result.stderr).toBe(0);
+    expect(decode(result.stdout)).toMatchObject({ hooks: { status: "installed", scope: "user" } });
+    const claude = JSON.parse(readFileSync(settings, "utf8"));
+    expect(claude.permissions).toEqual({ allow: [] });
+    expect(claude.hooks.SessionStart).toContainEqual(unrelated);
+    const hook = claude.hooks.SessionStart.flatMap((group: { hooks: { command: string }[] }) => group.hooks)
+      .find((item: { command: string }) => item.command.includes("tenable-axi-hook"));
+    const ambient = spawnSync(hook.command, [], { env: fixture.env, cwd: fixture.home, encoding: "utf8" });
+    expect(ambient.status, ambient.stderr).toBe(0);
+    expect(decode(ambient.stdout)).toMatchObject({ status: "not configured" });
+    const paths = [settings, join(fixture.home, ".codex/hooks.json"), join(fixture.home, ".codex/config.toml"),
+      join(fixture.home, ".config/opencode/plugins/axi-tenable-axi-hook.js")];
+    const before = paths.map((path) => ({ path, content: readFileSync(path, "utf8"), modified: statSync(path).mtimeMs }));
+    expect(fixture.run(["setup", "hooks"]).status).toBe(0);
+    expect(before.map(({ path }) => ({ path, content: readFileSync(path, "utf8"), modified: statSync(path).mtimeMs }))).toEqual(before);
+    const codex = JSON.parse(readFileSync(paths[1]!, "utf8"));
+    expect(codex.hooks.SessionStart.flatMap((group: { hooks: unknown[] }) => group.hooks)).toEqual([hook]);
+  } finally { fixture.cleanup(); }
+});
+
+test("setup repairs a stale hook path using the verified installed binary on PATH", () => {
+  const fixture = hookFixture();
+  try {
+    mkdirSync(join(fixture.home, ".claude"));
+    const settings = join(fixture.home, ".claude/settings.json");
+    writeFileSync(settings, JSON.stringify({ hooks: { SessionStart: [{ hooks: [{ type: "command", command: "/old/tenable-axi-hook" }] }] } }));
+    symlinkSync(join(packageRoot, "bin/tenable-axi-hook.js"), join(fixture.home, "tenable-axi-hook"));
+    const result = fixture.run(["setup", "hooks"], { PATH: `${fixture.home}:${process.env.PATH}` });
+    expect(result.status, result.stdout).toBe(0);
+    const installed = JSON.parse(readFileSync(settings, "utf8")).hooks.SessionStart;
+    expect(installed.flatMap((group: { hooks: unknown[] }) => group.hooks)).toEqual([
+      { type: "command", command: "tenable-axi-hook", timeout: 10 },
+    ]);
+  } finally { fixture.cleanup(); }
+});
+
+test("project setup confines integrations to the working directory and enables Codex user hooks", () => {
+  const fixture = hookFixture();
+  const project = join(fixture.home, "project");
+  try {
+    mkdirSync(project);
+    const result = spawnSync(process.execPath, [entry, "setup", "hooks", "--scope", "project"], {
+      cwd: project, env: fixture.env, encoding: "utf8",
+    });
+    expect(result.status, result.stdout).toBe(0);
+    expect(existsSync(join(project, ".claude/settings.json"))).toBe(true);
+    expect(existsSync(join(project, ".codex/hooks.json"))).toBe(true);
+    expect(existsSync(join(project, ".opencode/plugins/axi-tenable-axi-hook.js"))).toBe(true);
+    expect(existsSync(join(fixture.home, ".claude/settings.json"))).toBe(false);
+    expect(readFileSync(join(fixture.home, ".codex/config.toml"), "utf8")).toContain("hooks = true");
+  } finally { fixture.cleanup(); }
+});
+
+test("ambient hook reports the selected local profile without resolving its secret files", () => {
+  const fixture = hookFixture();
+  try {
+    const config = join(fixture.home, "config.json");
+    writeFileSync(config, JSON.stringify({ version: 1, profiles: { example: { accessKey: { file: join(fixture.home, "absent-access") },
+      secretKey: { file: join(fixture.home, "absent-secret") } } } }), { mode: 0o600 });
+    const result = spawnSync(process.execPath, [join(packageRoot, "bin/tenable-axi-hook.js")], {
+      env: { ...fixture.env, TENABLE_AXI_CONFIG: config, TENABLE_AXI_PROFILE: "example" }, cwd: fixture.home, encoding: "utf8",
+    });
+    expect(result.status, result.stderr).toBe(0);
+    expect(decode(result.stdout)).toEqual({ profile: "example", origin: "https://cloud.tenable.com", readOnly: true });
+  } finally { fixture.cleanup(); }
+});
+
 test("packaged version aliases work without the command graph", () => {
-  const graph = join(directory, "package/dist");
+  const graph = join(packageRoot, "dist");
   renameSync(graph, `${graph}.hidden`);
   try {
     for (const flag of ["--version", "-v", "-V"]) {
@@ -69,13 +181,13 @@ test("packaged credentials report sources locally and ship the host schema", () 
   expect(result.stderr).toBe("");
   expect(decode(result.stdout)).toMatchObject({ profile: "example", accessKey: { env: "TENABLE_AXI_ACCESS_KEY" }, secretKey: { env: "TENABLE_AXI_SECRET_KEY" }, readOnly: true });
   expect(result.stdout).not.toContain("synthetic-packaged");
-  const schema = JSON.parse(readFileSync(join(directory, "package/axi-credential.schema.json"), "utf8"));
+  const schema = JSON.parse(readFileSync(join(packageRoot, "axi-credential.schema.json"), "utf8"));
   expect(schema.properties).toMatchObject({ accessKey: { "x-secret": true }, secretKey: { "x-secret": true } });
 });
 
 test("packaged CLI resumes an inventory read through the closed HTTPS transport", async () => {
-  const { main } = await import(pathToFileURL(join(directory, "package/dist/src/cli.js")).href);
-  const { transportBindings } = await import(pathToFileURL(join(directory, "package/dist/src/catalogue.js")).href);
+  const { main } = await import(pathToFileURL(join(packageRoot, "dist/src/cli.js")).href);
+  const { transportBindings } = await import(pathToFileURL(join(packageRoot, "dist/src/catalogue.js")).href);
   const fake = await fakeHttpsTenable([
     { body: { data: [{ id: "asset-1" }], pagination: { offset: 0, limit: 1, total: 2 } } },
     { body: { data: [{ id: "asset-2" }], pagination: { offset: 1, limit: 1, total: 2 } } },
@@ -100,9 +212,9 @@ test("packaged CLI resumes an inventory read through the closed HTTPS transport"
 });
 
 test("packaged export previews, creates once and downloads a redacted chunk over HTTPS", async () => {
-  const { main } = await import(pathToFileURL(join(directory, "package/dist/src/cli.js")).href);
-  const { transportBindings, mutationOperations } = await import(pathToFileURL(join(directory, "package/dist/src/catalogue.js")).href);
-  const { constructWriteCoordinator } = await import(pathToFileURL(join(directory, "package/dist/src/writes-core.js")).href);
+  const { main } = await import(pathToFileURL(join(packageRoot, "dist/src/cli.js")).href);
+  const { transportBindings, mutationOperations } = await import(pathToFileURL(join(packageRoot, "dist/src/catalogue.js")).href);
+  const { constructWriteCoordinator } = await import(pathToFileURL(join(packageRoot, "dist/src/writes-core.js")).href);
   const id = "00000000-0000-4000-8000-000000000001";
   const config = join(directory, "export-config.json");
   writeFileSync(config, JSON.stringify({ version: 1, profiles: { example: { writes: {
@@ -171,9 +283,9 @@ test("version startup stays close to the same-machine Node startup floor", () =>
 });
 
 test("packaged CLI guards an attack export then downloads redacted JSON through HTTPS", async () => {
-  const { main } = await import(pathToFileURL(join(directory, "package/dist/src/cli.js")).href);
-  const { transportBindings, mutationOperations } = await import(pathToFileURL(join(directory, "package/dist/src/catalogue.js")).href);
-  const { constructWriteCoordinator } = await import(pathToFileURL(join(directory, "package/dist/src/writes-core.js")).href);
+  const { main } = await import(pathToFileURL(join(packageRoot, "dist/src/cli.js")).href);
+  const { transportBindings, mutationOperations } = await import(pathToFileURL(join(packageRoot, "dist/src/catalogue.js")).href);
+  const { constructWriteCoordinator } = await import(pathToFileURL(join(packageRoot, "dist/src/writes-core.js")).href);
   const id = "00000000-0000-4000-8000-000000000001";
   const fake = await fakeHttpsTenable([
     { status: 202, body: { export_id: id } },

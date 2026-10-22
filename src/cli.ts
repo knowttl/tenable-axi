@@ -12,6 +12,7 @@ import { inventoryExportCommand, type WriteCoordinatorFactory } from "./inventor
 import { createWriteCoordinator } from "./writes.js";
 import { platformTagCommand } from "./platform-tag.js";
 import { responseCommand } from "./response.js";
+import { setupHooks } from "./setup.js";
 
 export async function main(argv = process.argv.slice(2), options: { credentials?: CredentialContext; stdout?: { write: (chunk: string) => unknown }; transportFactory?: TransportFactory; writeCoordinatorFactory?: WriteCoordinatorFactory } = {}): Promise<void> {
   const store = credentialStore(options.credentials);
@@ -28,6 +29,7 @@ export async function main(argv = process.argv.slice(2), options: { credentials?
     }),
     commands: {
       scaffold: async () => {
+        if (argv[0] === "setup") return setupHooks(argv);
         if (argv[0] === "tag" && !["list", "properties"].includes(argv[1] ?? "")) return store.redactor.payload(await platformTagCommand(argv, store, options.transportFactory,
           options.writeCoordinatorFactory ?? ((flags) => createWriteCoordinator(flags, options.credentials)))) as Record<string, unknown>;
         if (["initiative", "combination"].includes(argv[0] ?? "")) {

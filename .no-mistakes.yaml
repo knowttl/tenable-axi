@@ -2,7 +2,7 @@ agent: codex
 no_ci: true
 commands:
   prepare: 'node scripts/isolated.mjs corepack pnpm install --frozen-lockfile --ignore-scripts --config.confirm-modules-purge=false'
-  test: 'corepack pnpm test && corepack pnpm run spec:check'
+  test: 'corepack pnpm test && corepack pnpm run spec:check && corepack pnpm run docs:check'
   lint: 'node scripts/isolated.mjs corepack pnpm run lint'
 document:
   instructions: |

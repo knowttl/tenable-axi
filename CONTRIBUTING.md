@@ -33,7 +33,8 @@ Package, lockfile, TypeScript/Vitest configuration, test support, scripts, pinne
 The selector prints its mode and fails if it cannot compute the merge base or find the required CLI baseline.
 No hosted test CI is configured; `.no-mistakes.yaml` declares `no_ci: true`.
 Run the development commands in [README](README.md) before review.
-T12 adds generated documentation and skill checks.
+After catalogue changes, rebuild and run `corepack pnpm run docs:generate` to regenerate the README command table, reference and installable skill.
+`corepack pnpm run docs:check` verifies their freshness alongside the offline specification checks.
 Repeat changed async, clock, and I/O tests to detect leaks and order dependence.
 Live acceptance is a separate, explicitly authorized manual activity described in T13.
 
