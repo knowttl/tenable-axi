@@ -40,6 +40,9 @@ const canonical = (value: unknown): string => JSON.stringify(value && typeof val
     : Object.fromEntries(Object.entries(value).sort(([a], [b]) => a.localeCompare(b)).map(([key, child]) => [key, JSON.parse(canonical(child))])) : value);
 
 for (const kind of ["initiative", "combination"] as const) {
+  const normalize = (value: Record<string, unknown>) => kind === "initiative"
+    ? Object.fromEntries(Object.entries(value).map(([key, child]) => [key,
+      ["scope", "combination_ids", "tenable_ids"].includes(key) && Array.isArray(child) ? [...child].sort() : child])) : value;
   const plural = `${kind}s`;
   const path = `/exposure-response/${plural}`;
   for (const verb of ["list", "show", "create", "update", "delete"] as const) {
@@ -84,6 +87,7 @@ for (const kind of ["initiative", "combination"] as const) {
           const targetId = id ?? existing!.id as string;
           existing = (await transport.request(`${plural}-details`, { pathParams: { [`${kind}_id`]: targetId } })).body as Record<string, unknown>;
           if (existing.id !== targetId) fail("RESPONSE_INVALID", "Details returned a different target", operation);
+          existing = normalize(existing);
         }
         const combinations: unknown[] = [];
         if (kind === "initiative" && body) {
@@ -104,7 +108,7 @@ for (const kind of ["initiative", "combination"] as const) {
         }
         let identical = false;
         if (existing && body) {
-          const proposed = { description: "", ...body };
+          const proposed = normalize({ description: "", ...body });
           const current = Object.fromEntries(Object.keys(proposed).map((key) => [key, key === "description" ? existing![key] ?? "" : existing![key]]));
           identical = Object.values(current).every((value) => value !== undefined) && canonical(current) === canonical(proposed);
           if (verb === "create" && !identical) fail("CONFLICT", "The proposed name already exists with different or unverified state", operation);

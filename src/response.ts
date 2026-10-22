@@ -104,6 +104,7 @@ export async function responseCommand(argv: string[], store: ReturnType<typeof c
   const fullHelp = () => truncated ? [`Run ${command(["--full"])} --full to read complete text`] : [];
   const project = (row: Record<string, unknown>) => Object.fromEntries(selected.flatMap((field) => {
     const wire = alias[field] ?? field;
+    if (verb === "filters" && ["selectMultiValue", "allowedValues"].includes(wire) && row[wire] === undefined) return [];
     if (!get("fields") && field === "description" && row[wire] === undefined) return [];
     const value = field === "type" && kind === "combination" && verb !== "filters"
       ? get("type") ?? (row.is_public === true ? "shared" : row.is_public === false ? "private" : null) : row[wire];

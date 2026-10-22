@@ -98,6 +98,39 @@ test("combination filters map the documented property name and retain operator m
   expect(result.requests[0]!.url).toBe("https://cloud.tenable.com/exposure-response/combinations/allowed/filters");
 });
 
+test("optional filter metadata stays absent through continuation", async () => {
+  const f = fixture();
+  const args = ["combination", "filters", "--fields", "property,operators,allowedValues,selectMultiValue"];
+  const first = await f.run([...args, "--limit", "1"], [{ body: { filters: [
+    { name: "cve.category", operators: ["eq"], allowedValues: ["ransomware"], selectMultiValue: true },
+    { name: "cve.vulnerability_names", operators: ["eq", "exists"] },
+    { name: "cve.zero_day", operators: ["eq"], allowedValues: [], selectMultiValue: false },
+  ] } }]);
+  expect(first.code).toBe(0);
+  expect(first.data).toMatchObject({ filters: [{ property: "cve.category", allowedValues: ["ransomware"], selectMultiValue: true }], complete: false });
+  const resumed = await f.run([...args, "--cursor", first.data.cursor as string]);
+  expect(resumed.code).toBe(0);
+  expect(resumed.data).toMatchObject({ filters: [
+    { property: "cve.vulnerability_names", operators: ["eq", "exists"] },
+    { property: "cve.zero_day", operators: ["eq"], allowedValues: [], selectMultiValue: false },
+  ], complete: true });
+  expect((resumed.data.filters as object[])[0]).not.toHaveProperty("allowedValues");
+  expect((resumed.data.filters as object[])[0]).not.toHaveProperty("selectMultiValue");
+  expect(resumed.requests).toHaveLength(0);
+});
+
+test.each([
+  { field: "allowedValues", value: null }, { field: "allowedValues", value: [1] },
+  { field: "selectMultiValue", value: null }, { field: "selectMultiValue", value: "true" },
+])("malformed present $field metadata fails", async ({ field, value }) => {
+  const f = fixture();
+  const result = await f.run(["combination", "filters", "--fields", `property,${field}`], [
+    { body: { filters: [{ name: "cve.category", operators: ["eq"], [field]: value }] } },
+  ]);
+  expect(result.code).toBe(1);
+  expect(result.data).toMatchObject({ error: { code: "RESPONSE_INVALID" } });
+});
+
 test("initiative detail metrics preserve missing values and reject malformed counters", async () => {
   const f = fixture("initiative", "show");
   const metrics = { statistics: { total_assets: 0, total_findings: 2, beta: true }, trending: [{ date_generated: "2026-01-01", active_count: 2 }] };
@@ -175,6 +208,50 @@ test.each(["initiative", "combination"])("identical %s updates are no-ops", asyn
   const result = await f.run([...f.args, "--execute"], [{ body: { id, ...(kind === "initiative" ? initiative : combination), beta: true } }]);
   expect(result.code).toBe(0); expect(result.data).toMatchObject({ kind: "noop" });
   expect(result.requests).toHaveLength(1); expect(existsSync(f.journal)).toBe(false);
+});
+
+test.each(["scope", "combination_ids", "tenable_ids"].flatMap((field) =>
+  ["create", "update"].map((verb) => ({ field, verb }))))("initiative $verb ignores $field order", async ({ field, verb }) => {
+  const body = { ...initiative, [field]: [other, third] };
+  const f = fixture("initiative", verb, body);
+  const result = await f.run([...f.args, "--execute"], [
+    ...(verb === "create" ? [{ body: { initiatives: [{ id, name: body.name }] } }] : []),
+    { body: { id, ...body, [field]: [third, other] } },
+    ...(field === "scope" ? [] : [{ body: { combinations: [{ id: other, ...combination }, { id: third, ...combination }] } }]),
+  ]);
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ kind: "noop" });
+  expect(result.requests.every((request) => request.init.method === "GET")).toBe(true);
+  expect(existsSync(f.journal)).toBe(false);
+});
+
+test.each(["scope", "combination_ids", "tenable_ids"])("initiative update detects changed %s membership", async (field) => {
+  const f = fixture("initiative", "update", { ...initiative, [field]: [other, third] });
+  const result = await f.run(f.args, [
+    { body: { id, ...initiative, [field]: [other] } },
+    ...(field === "scope" ? [] : [{ body: { combinations: [{ id: other, ...combination }, { id: third, ...combination }] } }]),
+  ]);
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ kind: "dry-run", preview: { noop: false } });
+});
+
+test.each(["update", "delete"])("initiative %s tolerates membership reordering between state reads", async (verb) => {
+  const body = { ...initiative, scope: [other, third], combination_ids: [other, third], tenable_ids: [other, third] };
+  const f = fixture("initiative", verb, body);
+  const listed = { body: { initiatives: [{ id, name: body.name }] } };
+  const old = { body: { id, ...body, name: "Old" } };
+  const reordered = { body: { id, ...body, name: "Old", scope: [third, other], combination_ids: [third, other], tenable_ids: [third, other] } };
+  const selected = { body: { combinations: [{ id: other, ...combination }, { id: third, ...combination }] } };
+  const initial = verb === "delete" ? [listed, old] : [old, selected];
+  const fresh = verb === "delete" ? [listed, reordered] : [reordered, selected];
+  const preview = await f.run(f.args, initial);
+  expect(preview.code).toBe(0);
+  const result = await f.run([...f.args, "--execute", "--confirm", (preview.data.preview as { confirm: string }).confirm], [
+    ...initial, ...fresh, { body: verb === "delete" ? {} : { id, ...body } },
+  ]);
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ kind: "success" });
+  expect(result.requests.at(-1)!.init.method).toBe(verb === "delete" ? "DELETE" : "PUT");
 });
 
 test("identical existing creates are no-ops but duplicate names with different state conflict", async () => {
