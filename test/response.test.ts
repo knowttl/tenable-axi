@@ -65,8 +65,8 @@ test("generated hints preserve shell-sensitive selectors and body paths literall
   const path = join(f.home, special + ".json");
   writeFileSync(path, readFileSync(f.file));
   const config = join(f.home, special + "-config.json");
-  writeFileSync(config, JSON.stringify({ version: 1, profiles: { [special]: { writes: { allowWrites: true, operations: ["combinations-update"] } } } }));
-  const args = ["combination", "update", "--id", id, "--body-file", path, "--config", config, "--profile", special];
+  writeFileSync(config, JSON.stringify({ version: 1, profiles: { example: { writes: { allowWrites: true, operations: ["combinations-update"] } } } }));
+  const args = ["combination", "update", "--id", id, "--body-file", path, "--config", config, "--profile", "example"];
   const old = { body: { id, ...combination, name: "Old" } };
   const preview = await f.run(args, [old]);
   expect(preview.code).toBe(0);
@@ -74,7 +74,7 @@ test("generated hints preserve shell-sensitive selectors and body paths literall
   const followed = await f.run(full.slice(1), [old]);
   expect(followed.code).toBe(0);
   expect(followed.data).toMatchObject({ kind: "dry-run", preview: { proposed: { body: { description: "a".repeat(1001) } } } });
-  const listArgs = ["combination", "list", "--config", config, "--profile", special, "--limit", "1"];
+  const listArgs = ["combination", "list", "--config", config, "--profile", "example", "--limit", "1"];
   const first = await f.run(listArgs, [{ body: { combinations: [{ id, ...combination }, { id: other, ...combination }] } }]);
   expect(first.code).toBe(0);
   const hints = first.data.help as string[];
