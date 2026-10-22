@@ -211,7 +211,7 @@ export function constructTransport(options: TransportOptions, dependencies: {
           return { status: response!.status, body: file! };
         }
         let decoded: unknown;
-        try { decoded = file ?? (text! ? JSON.parse(text!) : undefined); }
+        try { decoded = text! ? JSON.parse(text!) : undefined; }
         catch { fail("RESPONSE_INVALID", "Tenable response is not valid JSON", operation, [], { status: response!.status }); }
         const result = record.decoder.safeParse(decoded);
         if (!result.success) fail("RESPONSE_INVALID", "Tenable response does not match the selected view", operation,
