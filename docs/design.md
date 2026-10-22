@@ -106,6 +106,7 @@ Only the sink composes `X-ApiKeys: accessKey=<accessKey>; secretKey=<secretKey>`
 Reject key values containing header delimiters or control characters.
 
 Default invocation budgets are 20 seconds, 20 requests, and 20 MiB of decoded responses, including retries and pages.
+File downloads use the separate byte ceilings in [Collections, jobs, and bounded reads](#collections-jobs-and-bounded-reads), retaining the same deadline and request ceiling.
 Each request is cancellable with only the remaining deadline.
 Reads, including reviewed search POSTs, may retry 429 and reviewed transient 502/503/504 responses at most twice within those budgets.
 Honor valid `retry-after` seconds or HTTP dates first; return `RATE_LIMITED` immediately with `retryAfter` if the delay exceeds the remaining budget.
@@ -200,9 +201,10 @@ This table defines selectors, extra flags, and compact projections; display fiel
 | `attack-path list` | Documented filters/sort and `--include-resolved`; AI summarization off by default. | id, name, priority |
 | `attack-technique list` | Documented filters/sort and `--include-resolved`. | id, name, affectedAssets |
 | `connector logs` | Documented connector/time selectors and bounded limit. | connectorId, status, timestamp |
-| `export asset start`, `export finding start` | Strict `--body-file` for documented filters/options; write flags. | id, state |
-| `export asset jobs`, `export finding jobs` | Documented filters and pagination. | id, state, createdAt |
-| `export inventory status/download` | `--id`; download requires `--chunk`, `--output`. | id, state, availableChunks |
+| `export asset start`, `export finding start` | Optional strict `--body-file` for query/filters; query-option and write flags. | id, state |
+| `export asset jobs`, `export finding jobs` | `--status`, `--limit`; see [README export usage](../README.md) for history limits. | id, state, createdAt |
+| `export inventory status` | `--id`. | id, state, availableChunks |
+| `export inventory download` | `--id`, `--chunk`, `--output`. | id, chunk, output, bytes, format, compressed |
 | `export attack-path start`, `export attack-technique start`, `export mitre-heatmap start` | Strict `--body-file` for format/filter options; write flags. | id, state |
 | `export attack status/download` | `--id`; download requires `--output`. | id, state |
 | `tag category list/show/create/update/delete` | Show/update/delete: `--id`; create/update: `--name`, optional `--description`; list: repeatable `--filter`, `--filter-type and\|or`, `--sort`. | id, name, reserved |

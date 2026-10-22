@@ -14,7 +14,7 @@ Run `tenable-axi auth status` to check sources and file security locally; it nev
 The package ships [axi-credential.schema.json](axi-credential.schema.json) for hosts.
 
 The internal transport enforces the exact commercial origin, reviewed catalogue bindings, escaped paths, scoped continuations, and redirect refusal.
-One transport instance represents one invocation, sharing a 20-second deadline, 20-request ceiling and 20-MiB decoded response ceiling across pages and retries.
+One transport instance represents one invocation, sharing the [transport budgets](docs/design.md#transport-contract) across pages and retries.
 Read operations may retry 429/502/503/504 twice; writes require coordinator authorization and never replay automatically.
 Transport errors carry a stable code, operation, optional HTTP status and `retryAfter` in milliseconds, plus bounded redacted guidance.
 Production binds reviewed inventory search/properties and exports, Exposure Management tag and card reads, attack searches and connector logs; offline tests use synthetic fixtures and a CA-verified loopback HTTPS fake through the internal construction seam.
@@ -36,7 +36,7 @@ Run again with `--execute --confirm '<exact preview confirmation>'` to create on
 `export inventory status --id <id>` reads once without polling and reports available chunks.
 `export inventory download --id <id> --chunk <number> --output <new-file>` downloads one explicit chunk and prints file metadata only.
 Files are validated as JSON or CSV, scanned for secrets, redacted and published atomically without overwrite; gzip exports are decoded and re-encoded with the same format.
-Downloads enforce separate 128-MiB encoded and decoded ceilings, supporting inventory chunks above the ordinary 20-MiB JSON response budget.
+See [download bounds](docs/design.md#collections-jobs-and-bounded-reads) for file size and decompression limits.
 
 Use `asset list/show/properties`, `finding list/show/properties`, and `software list/properties` with `--help` for their flags and examples.
 Lists default to 100 rows, expose upstream totals when supplied, and return a cursor when more rows remain.
