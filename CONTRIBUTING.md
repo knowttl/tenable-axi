@@ -19,7 +19,7 @@ Do not edit generated files or changelogs by hand.
 ## Verification
 
 Automated tests must work offline with synthetic credentials and our own fixtures and fakes.
-Deny external network access and isolate HOME, XDG directories, and filesystem state.
+Deny external network access and isolate HOME, XDG directories, `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, and filesystem state.
 Use the fake transport for domain tests and the fake HTTPS Tenable for critical packaged-CLI journeys.
 Mock only real boundaries such as HTTP, clock, randomness, and platform ACL operations.
 Prove practical observable behavior through the CLI and transport against the fake Tenable upstream.
@@ -31,9 +31,10 @@ Run only tests affected by the change plus a small fixed baseline.
 The fixed baseline always includes `test/packaged-cli.test.ts`; `scripts/test-changes.mjs` defines any additional safety baselines.
 Package, lockfile, TypeScript/Vitest configuration, test support, scripts, pinned specifications and `.no-mistakes.yaml` changes run the full suite.
 The selector prints its mode and fails if it cannot compute the merge base or find the required CLI baseline.
-No hosted test CI is configured; `.no-mistakes.yaml` declares `no_ci: true`.
+No hosted pull-request test CI is configured; `.no-mistakes.yaml` declares `no_ci: true`.
+Hosted publication checks are described in [README releases](README.md#releases).
 Run the development commands in [README](README.md) before review.
-T12 adds generated documentation and skill checks.
+After catalogue changes, follow [README's documentation generation commands](README.md#development-and-testing).
 Repeat changed async, clock, and I/O tests to detect leaks and order dependence.
 Live acceptance is a separate, explicitly authorized manual activity described in T13.
 

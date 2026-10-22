@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { closeSync, openSync, readSync } from "node:fs";
 import { homedir } from "node:os";
 import { z } from "zod";
-import { catalogue, DESCRIPTION } from "./catalogue.js";
+import { catalogue, DESCRIPTION, SETUP_GUIDANCE } from "./catalogue.js";
 import { cardDetails, cardRecord, properties, tagRecord, TAG_PRIVILEGE } from "./exposure-contracts.js";
 import { credentialStore } from "./profiles.js";
 import { createTransport, TransportError, type Transport, type TransportOptions } from "./transport.js";
@@ -150,7 +150,7 @@ export async function exposureCommand(argv: string[], store: ReturnType<typeof c
   try { store.readOnly(); profile = store.select(store.load(config, name === "doctor").config, selected); }
   catch (error) {
     if (["home", "hook"].includes(name) && error instanceof AxiError && error.code === "PROFILE_REQUIRED") {
-      return { ...(name === "home" ? identity : {}), status: "not configured", help: ["Run tenable-axi config path; configure a profile with accessKey and secretKey SecretRefs"] };
+      return { ...(name === "home" ? identity : {}), status: "not configured", help: [SETUP_GUIDANCE] };
     }
     throw error;
   }

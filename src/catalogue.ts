@@ -8,7 +8,8 @@ import { inventoryExportBindings, inventoryExportCatalogue, inventoryExportMutat
 import { platformTagBindings, platformTagCatalogue, platformTagMutations } from "./platform-tag-catalogue.js";
 import { responseBindings, responseCatalogue, responseMutations } from "./response-catalogue.js";
 
-export const DESCRIPTION = "Agent-friendly CLI for Tenable One, under construction";
+export const DESCRIPTION = "Investigate Tenable One exposure and run explicitly guarded writes";
+export const SETUP_GUIDANCE = "Run tenable-axi config path; configure a profile with accessKey and secretKey SecretRefs";
 
 // Endpoint slices add reviewed executable bindings alongside their commands.
 export const transportBindings: Readonly<Record<string, OperationBinding>> = Object.freeze({ ...inventoryBindings, ...exposureBindings, ...attackBindings, ...inventoryExportBindings, ...attackExportBindings, ...platformTagBindings, ...responseBindings });
@@ -22,6 +23,11 @@ export const catalogue = {
   ...attackExportCatalogue,
   ...platformTagCatalogue,
   ...responseCatalogue,
+  "setup hooks": {
+    description: "Explicitly install or repair local agent session integrations",
+    flags: { scope: "user or project; default user; project targets the current directory", help: "Show help; default false" },
+    examples: ["tenable-axi setup hooks", "tenable-axi setup hooks --scope project"],
+  },
   home: {
     description: "Show profile state and up to five live exposure cards",
     flags: { config: "Config path; default platform path", profile: "Profile name; default credential precedence", fields: "Card fields; default id,name,score", full: "Full text; default false", help: "Show help; default false" },

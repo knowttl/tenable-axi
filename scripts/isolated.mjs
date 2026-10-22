@@ -10,6 +10,7 @@ try {
   const result = spawnSync(command, args, {
     stdio: "inherit",
     env: { ...env, HOME: home, USERPROFILE: home, APPDATA: join(home, "AppData/Roaming"),
+      CODEX_HOME: join(home, ".codex"), CLAUDE_CONFIG_DIR: join(home, ".claude"),
       LOCALAPPDATA: join(home, "AppData/Local"), XDG_CONFIG_HOME: join(home, ".config"),
       XDG_DATA_HOME: join(home, ".local/share"), XDG_CACHE_HOME: join(home, ".cache"),
       XDG_STATE_HOME: join(home, ".local/state") },
