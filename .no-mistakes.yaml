@@ -1,0 +1,60 @@
+agent: pi
+no_ci: true
+commands:
+  prepare: 'node scripts/isolated.mjs corepack pnpm install --frozen-lockfile --ignore-scripts --config.confirm-modules-purge=false'
+  test: 'corepack pnpm test && corepack pnpm run spec:check'
+  lint: 'node scripts/isolated.mjs corepack pnpm run lint'
+document:
+  instructions: |
+    README.md owns the product introduction, shipped behavior and development commands.
+    CONTRIBUTING.md and AGENTS.md own contribution and practical testing rules.
+    docs/design.md owns architecture, security invariants, operation classifications and implementation slices.
+    inventory/specs.json owns pinned source URLs and byte hashes; specs/ holds the unmodified snapshots.
+    scripts/specs.mjs generates declarations and inventory/capabilities.json from those snapshots and the design ledger.
+    src/catalogue.ts owns executable commands; inventory evidence never enables execution.
+    scripts/test-changes.mjs owns affected-test selection and the fixed safety baseline.
+review:
+  path_instructions:
+    - path: "inventory/**"
+      instructions: |
+        Classify every pinned method/path exactly once with its source hash, reason and slice.
+        Credential minting, users, roles and access-control operations stay blocked.
+        Planned inventory commands never imply runtime support.
+    - path: "src/**/credential*"
+      instructions: |
+        Keys accept strict env/file SecretRefs only; never inline secrets or argv credentials.
+        Preserve profile precedence, private-file ownership/ACL checks and stable credential errors from docs/design.md.
+    - path: "src/**/profile*"
+      instructions: |
+        Reject partial env profiles and unknown configuration keys; file profiles never mix env fields.
+        Environment profiles cannot enable writes; origins are exactly https://cloud.tenable.com.
+    - path: "src/**/private*"
+      instructions: |
+        Enforce private regular files without symlinks and protected Windows DACLs before writes.
+        Private writes are atomic and flushed; test platform boundaries offline.
+    - path: "src/**/redact*"
+      instructions: |
+        Redact exact keys and composed headers, raw/escaped/encoded forms, and key-name patterns on all channels.
+        Include errors, previews, downloads and journal metadata; use synthetic sentinels.
+    - path: "src/**/policy*"
+      instructions: |
+        Fail closed on unknown operations and default/forced read-only policy.
+        POST searches are reviewed reads; all export creation operations are writes.
+    - path: "src/**/transport*"
+      instructions: |
+        Keep one HTTPS sink with explicit operation/method/path binding, TLS and redirect:error.
+        Validate origin, continuation and download destinations before attaching keys.
+        Bound bytes, requests, retries and deadlines; never replay writes or leak raw upstream errors.
+    - path: "src/**/session*"
+      instructions: |
+        Preserve the closed transport boundary, operation binding, budgets and runtime decoding in docs/design.md.
+        No caller-controlled URLs or arbitrary HTTP fallback.
+    - path: "src/**/write*"
+      instructions: |
+        Require immutable configured allowlists, preview, explicit execution and exact target confirmation.
+        Durable redacted intent precedes a single send; ambiguous outcomes never replay.
+        Journal failure blocks sends and outcome failure reports possible remote success.
+auto_fix:
+  review: 1
+  test: 3
+  lint: 0

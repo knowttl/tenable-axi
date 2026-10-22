@@ -1,8 +1,8 @@
 # tenable-axi design
 
 Planning baseline prepared on 2026-10-22.
-This document defines intended behavior; this slice ships documentation and repository metadata only.
-Commands, schemas, inventories, generated types, and tests below are commitments for later slices.
+This document defines intended behavior; T1 ships the scaffold, pinned specifications, generated types, complete inventory and local home/help/version commands.
+Endpoint commands and safety boundaries below remain commitments for later slices.
 
 ## Purpose and scope
 
@@ -40,7 +40,7 @@ A generated runtime client would still need replacement auth, errors, retry, ori
 The [API navigation](https://developer.tenable.com/reference/navigate) separates Exposure Management from Platform and Vulnerability Management.
 Downloads on 2026-10-22 identify all three as OpenAPI 3.1.2 with `info.version` 1.0.0.
 Pin the full SHA-256 because that version string does not identify a particular snapshot.
-Downloads are research inputs only in this slice; T1 commits pinned specs and declarations.
+T1 commits these unmodified snapshots, their byte hashes and generated declarations.
 
 | Source | Operations | SHA-256 |
 |---|---:|---|
