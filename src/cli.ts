@@ -10,6 +10,7 @@ import { attackCommand } from "./attack.js";
 import { attackExportCommand } from "./attack-export.js";
 import { inventoryExportCommand, type WriteCoordinatorFactory } from "./inventory-export.js";
 import { createWriteCoordinator } from "./writes.js";
+import { platformTagCommand } from "./platform-tag.js";
 
 export async function main(argv = process.argv.slice(2), options: { credentials?: CredentialContext; stdout?: { write: (chunk: string) => unknown }; transportFactory?: TransportFactory; writeCoordinatorFactory?: WriteCoordinatorFactory } = {}): Promise<void> {
   const store = credentialStore(options.credentials);
@@ -26,6 +27,8 @@ export async function main(argv = process.argv.slice(2), options: { credentials?
     }),
     commands: {
       scaffold: async () => {
+        if (argv[0] === "tag" && !["list", "properties"].includes(argv[1] ?? "")) return store.redactor.payload(await platformTagCommand(argv, store, options.transportFactory,
+          options.writeCoordinatorFactory ?? ((flags) => createWriteCoordinator(flags, options.credentials)))) as Record<string, unknown>;
         if (argv[0] === "export") return store.redactor.payload(await (["attack-path", "attack-technique", "mitre-heatmap", "attack"].includes(argv[1] ?? "") ? attackExportCommand : inventoryExportCommand)(argv, store, options.transportFactory,
           options.writeCoordinatorFactory ?? ((flags) => createWriteCoordinator(flags, options.credentials)))) as Record<string, unknown>;
         if (["attack-path", "attack-technique", "connector"].includes(argv[0] ?? "")) {

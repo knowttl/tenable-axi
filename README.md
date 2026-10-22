@@ -5,6 +5,7 @@ It uses TypeScript on Node.js 22.12 or later and will be published as `@knowttl/
 Inventory reads and exports, attack searches and connector logs are implemented.
 Attack path, attack technique and MITRE heatmap exports support guarded creation, status and redacted file downloads.
 `tag list`, `tag properties`, `card list` and `card show` provide bounded Exposure Management reads.
+Platform tag categories, values, assignments, exclusions and dynamic filter definitions are implemented, including guarded mutations.
 Home shows up to five exposure cards when configured and setup guidance offline otherwise.
 `hook` reports local profile context without resolving secrets or contacting Tenable.
 Help, version, `auth status`, `profile list` and `config path` remain local; no npm release is available.
@@ -18,10 +19,10 @@ The internal transport enforces the exact commercial origin, reviewed catalogue 
 One transport instance represents one invocation, sharing the [transport budgets](docs/design.md#transport-contract) across pages and retries.
 Read operations may retry 429/502/503/504 twice; writes require coordinator authorization and never replay automatically.
 Transport errors carry a stable code, operation, optional HTTP status and `retryAfter` in milliseconds, plus bounded redacted guidance.
-Production binds reviewed inventory search/properties and exports, Exposure Management tag and card reads, attack searches, attack exports and connector logs; offline tests use synthetic fixtures and a CA-verified loopback HTTPS fake through the internal construction seam.
+Production binds reviewed inventory search/properties and exports, Exposure Management tag and card reads, attack searches, attack exports, connector logs and platform tags; offline tests use synthetic fixtures and a CA-verified loopback HTTPS fake through the internal construction seam.
 No flag or environment variable enables that seam in the CLI.
 
-Inventory and attack export creation use the write coordinator and are read-only by default.
+Inventory and attack export creation and platform tag mutations use the write coordinator and are read-only by default.
 It enforces immutable configured scope, redacted previews, exact confirmation, optional host approval, stale-state refusal and a durable private journal before a single authorized send.
 Unknown outcomes include an audit ID and read-back guidance and are never replayed.
 Named write commands register strict mutation definitions alongside transport bindings in the catalogue and call `createWriteCoordinator().run(operationId, input, options)`.
@@ -58,6 +59,28 @@ Offset pagination does not promise snapshot isolation.
 Tag `value` maps to the documented `name`; `category` requests `tag_category_name` through extra properties and remains null when unavailable.
 Tag filter files contain the pinned API's strict array of `{property, operator, value}` filters, with string arrays for `value`; this endpoint does not define nested boolean filters.
 Use `--help` on each leaf for selectors and defaults.
+
+Use `tag category list/show/create/update/delete` and `tag value list/show/create/update/delete/bulk-delete` for platform tags.
+Category creates and updates require `--name`, with optional `--description`; show, update and delete select an exact `--id` UUID.
+Value creates and updates require `--body-file <file>` with only documented non-security fields; show, update and delete select an exact `--id` UUID.
+Creates accept category UUID or name, optional category description, value, description and dynamic filters; a new category name may create a category.
+Updates accept value, description, filters and the documented `version` field; read `tag value show --id <id> --fields id,value,version` before updating.
+Dynamic rules use `filters.asset.and` or `filters.asset.or` arrays of `{property, operator, value}`, where value is a string or string array, with at most 40 rules and 1024 values per rule.
+`tag asset-filter list` exposes available rule properties and operators and explains the resource-tag filters the upstream omits.
+Security fields, including nested `access_control`, are rejected before credentials or HTTP.
+Platform category/value list filters use repeatable `--filter 'field:operator:value'`, `--filter-type and|or` and comma-separated `--sort field:asc|desc`.
+Value wildcard search pairs `--with <text>` and `--with-filter category_name,value,description` with the documented `w` and `wf` parameters.
+`tag assignment list --asset-id <id>` reads one asset's assignments; `tag exclusion list --tag-id <id> --target-type assets` reads dynamic tag exclusions.
+Unpaged assignment/filter collections retain unreturned selected fields in bounded redacted cursors without inventing server paging parameters.
+
+Platform tag writes require `writes.allowWrites: true` and the exact operation ID from the [ledger](docs/design.md#complete-operation-ledger) in `writes.operations`, including for previews.
+They use the same preview, `--execute --confirm '<exact preview confirmation>'`, forced read-only override and private journal as export creation.
+`tag value bulk-delete --ids-file <file>` consumes a JSON array of exact value UUIDs.
+`tag assignment add/remove --asset-ids-file <file> --tag-ids-file <file>` consumes two JSON UUID arrays, confirms both complete sets, and returns one asynchronous job without polling.
+Input files accept `-` for stdin, with only one stdin consumer and a 1 MiB bound per file.
+State reads, including per-target checks for bulk operations, share invocation budgets; narrow large target sets when those budgets are exhausted.
+Identical verified updates/creates and already desired assignments return successful no-ops; an unverified missing-resource response remains an error.
+Deleting a category also deletes its values and assignments; deleting values removes their assignments while retaining the category.
 
 Use `attack-path list`, `attack-technique list`, and `connector logs` with `--help` for their flags and examples.
 Attack paths use the published `/api/v1/t1/apa/top-attack-paths/search` route; the pyTenable route disagreement remains a live-acceptance check in the design.

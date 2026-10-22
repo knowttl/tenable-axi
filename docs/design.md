@@ -217,8 +217,7 @@ This table defines selectors, extra flags, and compact projections; display fiel
 
 `--body-file -` and explicit list files accept stdin; reject competing stdin consumers and enforce input size bounds.
 Payloads are operation-specific, reject unknown/security fields recursively, and cannot select a method/path.
-Tag create supports category UUID or name, category description, value, description, and dynamic filters, excluding `access_control`.
-Tag update supports its version field and filters, excluding `access_control`.
+See [README](../README.md) for shipped platform tag payloads and limits.
 Initiatives validate at most ten scope tags and documented combination/query limits without discovering owners through blocked endpoints.
 
 The following parameter mappings complete the Exposure Management flag contract.
