@@ -355,7 +355,9 @@ test("packaged help describes executable commands offline", () => {
 test("packaged unconfigured home provides setup guidance offline", () => {
   const result = cli("home");
   expect(result.status, result.stderr).toBe(0);
-  expect(decode(result.stdout)).toMatchObject({ status: "not configured", bin: expect.stringContaining("tenable-axi.js"), help: expect.arrayContaining([expect.stringContaining("config path")]) });
+  expect(decode(result.stdout)).toMatchObject({ status: "not configured", help: expect.arrayContaining([expect.stringContaining("config path")]) });
+  expect(decode(result.stdout)).not.toHaveProperty("bin");
+  expect(result.stdout).not.toContain(entry);
   expect(result.stderr).toBe("");
 });
 
@@ -369,7 +371,9 @@ test("packaged credentials report sources locally and ship the host schema", () 
   });
   expect(result.status, result.stderr).toBe(0);
   expect(result.stderr).toBe("");
-  expect(decode(result.stdout)).toMatchObject({ profile: "example", accessKey: { env: "TENABLE_AXI_ACCESS_KEY" }, secretKey: { env: "TENABLE_AXI_SECRET_KEY" }, readOnly: true });
+  expect(decode(result.stdout)).toMatchObject({ profile: "example", accessKey: "env", secretKey: "env", readOnly: true });
+  expect(result.stdout).not.toContain("TENABLE_AXI_ACCESS_KEY");
+  expect(result.stdout).not.toContain("TENABLE_AXI_SECRET_KEY");
   expect(result.stdout).not.toContain("synthetic-packaged");
   const schema = JSON.parse(readFileSync(join(packageRoot, "axi-credential.schema.json"), "utf8"));
   expect(schema.properties).toMatchObject({ accessKey: { "x-secret": true }, secretKey: { "x-secret": true } });

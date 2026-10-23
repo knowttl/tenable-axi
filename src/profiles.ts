@@ -116,7 +116,8 @@ export function credentialStore(options: CredentialContext = {}, redactor = new 
     const profile = select(loaded.config, flag);
     credentials(profile, true);
     return { profile: profile.name, source: profile.source, origin: profile.origin, config: loaded.path,
-      accessKey: profile.accessKey, secretKey: profile.secretKey,
+      // Report only the SecretRef kind: env variable names and secret file paths must not leak into status output.
+      accessKey: "env" in profile.accessKey ? "env" : "file", secretKey: "env" in profile.secretKey ? "env" : "file",
       readOnly: forced || !profile.writes.allowWrites || profile.writes.operations.length === 0 };
   }
   function list(explicit?: string) {

@@ -1,7 +1,6 @@
 import { AxiError } from "axi-sdk-js";
 import { createHash } from "node:crypto";
 import { closeSync, openSync, readSync } from "node:fs";
-import { homedir } from "node:os";
 import { z } from "zod";
 import { catalogue, DESCRIPTION, SETUP_GUIDANCE } from "./catalogue.js";
 import { cardDetails, cardRecord, properties, tagRecord, TAG_PRIVILEGE } from "./exposure-contracts.js";
@@ -63,7 +62,7 @@ export async function exposureCommand(argv: string[], store: ReturnType<typeof c
       : name === "hook" ? ["profile", "origin", "readOnly"] : name === "card show" ? ["id", "name", "score", "ces_scores", "ces_trend", "exposure_classes_details"] : ["id", "name", "score"];
   const available = name === "tag list" ? tagFields : name === "tag properties" ? propertyFields : name === "card show" ? detailFields
     : ["doctor", "hook"].includes(name) ? defaults : cardFields;
-  const fields = flags.get("fields")?.split(",") ?? defaults;
+  const fields = [...(flags.get("fields")?.split(",") ?? defaults)];
   if (fields.some((field) => !available.includes(field) && !(name === "tag list" && /^[a-zA-Z0-9_]+$/.test(field))) || new Set(fields).size !== fields.length) usage("Unknown or duplicate output field");
   const integer = (flag: string, fallback: number, minimum: number, maximum: number): number => {
     const text = flags.get(flag);
@@ -136,6 +135,9 @@ export async function exposureCommand(argv: string[], store: ReturnType<typeof c
     if (extras.some((property) => !/^[a-zA-Z0-9_]+$/.test(property))) usage("Invalid --extra-properties");
     if (fields.includes("category")) extras.push("tag_category_name");
     extras.push(...fields.filter((field) => !tagFields.includes(field)));
+    // Project requested extras even without a matching --fields entry, instead of fetching then silently dropping them.
+    // tag_category_name stays internal: it is rendered through the category field.
+    for (const extra of extras) if (extra !== "tag_category_name" && !fields.includes(extra)) fields.push(extra);
     if (extras.length) query.extra_properties = [...new Set(extras)].join(",");
   } else if (flags.has("query")) query.text_query = flags.get("query")!;
 
@@ -149,7 +151,8 @@ export async function exposureCommand(argv: string[], store: ReturnType<typeof c
     } catch { usage("Cursor does not match this profile, operation, fields or filters"); }
   }
   const config = flags.get("config"), selected = flags.get("profile");
-  const identity = { bin: process.argv[1]?.replace(homedir(), "~"), description: DESCRIPTION };
+  // Never print the executable path: on a hosted server it is an absolute server path.
+  const identity = { description: DESCRIPTION };
   let profile;
   try { store.readOnly(); profile = store.select(store.load(config, name === "doctor").config, selected); }
   catch (error) {

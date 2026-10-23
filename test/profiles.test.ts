@@ -94,7 +94,21 @@ test("reads private BOM and CRLF secret files while reporting only their source"
   const path = join(fixture.home, "key");
   writeFileSync(path, "\uFEFFsynthetic-key\r\n ", { mode: 0o400 });
   fixture.config({ example: { accessKey: { file: path }, secretKey: { file: path } } });
-  expect(await fixture.cli(["auth", "status"])).toMatchObject({ code: 0, data: { accessKey: { file: path }, secretKey: { file: path } } });
+  const result = await fixture.cli(["auth", "status"]);
+  expect(result).toMatchObject({ code: 0, data: { accessKey: "file", secretKey: "file" } });
+  expect(result.stdout).not.toContain(path);
+  expect(result.stdout).not.toContain("synthetic-key");
+});
+
+test("reports env SecretRef kinds without naming their variables", async () => {
+  fixture.config({ example: { accessKey: { env: "CUSTOM_ACCESS" }, secretKey: { env: "CUSTOM_SECRET" } } });
+  Object.assign(fixture.env, { CUSTOM_ACCESS: "synthetic-access", CUSTOM_SECRET: "synthetic-secret" });
+  const result = await fixture.cli(["auth", "status"]);
+  expect(result).toMatchObject({ code: 0, data: { accessKey: "env", secretKey: "env" } });
+  expect(result.stdout).not.toContain("CUSTOM_ACCESS");
+  expect(result.stdout).not.toContain("CUSTOM_SECRET");
+  expect(result.stdout).not.toContain("synthetic-access");
+  expect(result.stdout).not.toContain("synthetic-secret");
 });
 
 test.each(["missing", "empty", "public", "symlink", "directory"])("refuses a %s secret file", async (kind) => {

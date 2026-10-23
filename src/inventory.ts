@@ -79,6 +79,11 @@ export async function inventoryCommand(argv: string[], store: ReturnType<typeof 
     const wire = aliases[kind][field] ?? field;
     if (!Object.hasOwn(wireFields[kind], wire)) extras.add(wire);
   }
+  // Project requested extras even without a matching --fields entry, instead of fetching then silently dropping them.
+  const projection: [string, string][] = fields.map((field) => [field, verb === "properties" ? field : aliases[kind][field] ?? field]);
+  if (verb !== "properties") for (const extra of extras) {
+    if (!fields.includes(extra) && !projection.some(([, wire]) => wire === extra)) projection.push([extra, extra]);
+  }
   const sort = get("sort");
   if (sort !== undefined && !/^[A-Za-z0-9_]+:(asc|desc)$/.test(sort)) usage("--sort must be property:asc or property:desc");
   const classes = get("asset-classes") ? names(get("asset-classes")!) : get("class") ? [get("class")!] : [];
@@ -124,7 +129,7 @@ export async function inventoryCommand(argv: string[], store: ReturnType<typeof 
   const loaded = store.load(get("config"));
   const profile = store.select(loaded.config, get("profile"));
   const scope = createHash("sha256").update(JSON.stringify([profile.origin, profile.name, profile.accessKey, profile.secretKey,
-    loaded.path, operation, body, query, fields])).digest("hex");
+    loaded.path, operation, body, query, projection])).digest("hex");
   if (cursor && cursor.scope !== scope) usage("Cursor belongs to a different profile, operation, filters, sort, or fields");
   const transport = transportFactory({ origin: profile.origin, keys: store.credentials(profile) });
   offset = cursor?.offset ?? offset;
@@ -146,8 +151,7 @@ export async function inventoryCommand(argv: string[], store: ReturnType<typeof 
     return value;
   };
   const invalid = (message: string): never => { throw new TransportError({ code: "RESPONSE_INVALID", message, operation }); };
-  const project = (row: Record<string, unknown>) => Object.fromEntries(fields.map((field) => {
-    const wire = verb === "properties" ? field : aliases[kind][field] ?? field;
+  const project = (row: Record<string, unknown>) => Object.fromEntries(projection.map(([field, wire]) => {
     const native = verb === "properties" || Object.hasOwn(wireFields[kind], wire);
     const extra = z.record(z.string(), z.unknown()).safeParse(row.extra_properties);
     const value = native ? row[wire] : extra.success ? extra.data[wire] : undefined;

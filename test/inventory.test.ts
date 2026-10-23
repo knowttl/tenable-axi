@@ -193,7 +193,21 @@ test("requested extra fields are fetched and truncated with original size and an
     help: [expect.stringContaining("--full")] });
   expect(new URL(preview.requests[0]!.url).searchParams.get("extra_properties")).toBe("description,solution");
   const full = await f.run([...args, "--full"], [{ body }]);
-  expect(full.data).toEqual({ finding: { id: "finding-1", description: "x".repeat(1200) } });
+  expect(full.data).toEqual({ finding: { id: "finding-1", description: "x".repeat(1200), solution: "fix" } });
+});
+
+test("extra properties without selected fields are projected instead of silently dropped", async () => {
+  const result = await fixture().run(["asset", "list", "--extra-properties", "sources"],
+    [{ body: page([{ ...asset, extra_properties: { sources: ["scanner"] } }], 1) }]);
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ assets: [{ id: "asset-1", sources: ["scanner"] }] });
+  expect(new URL(result.requests[0]!.url).searchParams.get("extra_properties")).toBe("sources");
+});
+
+test("projected extra properties must be present in the response", async () => {
+  const result = await fixture().run(["asset", "list", "--extra-properties", "sources"], [{ body: page([asset], 1) }]);
+  expect(result.code).toBe(1);
+  expect(result.data).toMatchObject({ error: { code: "RESPONSE_INVALID" } });
 });
 
 test("selected views require their fields without requiring unrendered fields", async () => {
