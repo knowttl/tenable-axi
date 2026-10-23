@@ -1,15 +1,36 @@
 {
   "name": "@knowttl/tenable-axi",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Investigate Tenable One exposure and run explicitly guarded writes",
   "license": "MIT",
   "type": "module",
-  "bin": { "tenable-axi": "bin/tenable-axi.js", "tenable-axi-hook": "bin/tenable-axi-hook.js" },
-  "exports": { "./catalogue": "./dist/src/catalogue.js", "./inventory": "./inventory/capabilities.json", "./axi-credential.schema.json": "./axi-credential.schema.json" },
-  "files": ["bin", "dist/src", "inventory/capabilities.json", "axi-credential.schema.json", "docs/commands.md", "skills"],
-  "publishConfig": { "access": "public" },
-  "repository": { "type": "git", "url": "git+https://github.com/knowttl/tenable-axi.git" },
-  "engines": { "node": ">=22.12.0" },
+  "bin": {
+    "tenable-axi": "bin/tenable-axi.js",
+    "tenable-axi-hook": "bin/tenable-axi-hook.js"
+  },
+  "exports": {
+    "./catalogue": "./dist/src/catalogue.js",
+    "./inventory": "./inventory/capabilities.json",
+    "./axi-credential.schema.json": "./axi-credential.schema.json"
+  },
+  "files": [
+    "bin",
+    "dist/src",
+    "inventory/capabilities.json",
+    "axi-credential.schema.json",
+    "docs/commands.md",
+    "skills"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/knowttl/tenable-axi.git"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "packageManager": "pnpm@10.34.6",
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -21,6 +42,16 @@
     "spec:generate": "node scripts/specs.mjs --generate",
     "spec:check": "node scripts/specs.mjs --check"
   },
-  "dependencies": { "@toon-format/toon": "2.3.1", "axi-sdk-js": "0.1.13", "zod": "4.3.6", "smol-toml": "1.9.1" },
-  "devDependencies": { "@types/node": "22.20.5", "typescript": "5.9.3", "vitest": "5.0.2", "openapi-typescript": "7.13.0" }
+  "dependencies": {
+    "@toon-format/toon": "2.3.1",
+    "axi-sdk-js": "0.1.13",
+    "zod": "4.3.6",
+    "smol-toml": "1.9.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "typescript": "5.9.3",
+    "vitest": "5.0.2",
+    "openapi-typescript": "7.13.0"
+  }
 }
