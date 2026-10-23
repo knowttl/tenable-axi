@@ -71,6 +71,39 @@ test.each([
   expect(result.requests).toHaveLength(0);
 });
 
+test("finding list help documents filter form, display fields, sensor_type and offset paging", async () => {
+  const result = await fixture().run(["finding", "list", "--help"]);
+  expect(result.code).toBe(0);
+  expect(result.data.flags).toMatchObject({
+    filter: expect.stringContaining('severity = ["HIGH"]'),
+    fields: expect.stringContaining("display names: id, name, severity, state"),
+  });
+  expect(result.data.examples).toEqual(expect.arrayContaining([
+    `tenable-axi finding list --filter 'severity = ["HIGH"]'`,
+    `tenable-axi finding list --filter 'sensor_type = ["NESSUS"]'`,
+    "tenable-axi finding list --limit 10000 --offset 10000 --sort finding_id:asc",
+  ]));
+});
+
+test("inventory help lists the accepted display field names for each kind", async () => {
+  expect((await fixture().run(["asset", "list", "--help"])).data.flags)
+    .toMatchObject({ fields: expect.stringContaining("display names: id, name, class, exposureScore") });
+  expect((await fixture().run(["software", "list", "--help"])).data.flags)
+    .toMatchObject({ fields: expect.stringContaining("display names: name, version, publisher") });
+  expect((await fixture().run(["finding", "properties", "--help"])).data.flags)
+    .toMatchObject({ fields: expect.stringContaining("accepted: key, readable_name, operators, sortable, filterable, control, description") });
+});
+
+test.each(['severity=HIGH', 'severity = "HIGH"', 'severity matches ["HIGH"]'])(
+  "wrong-form --filter names the correct form before credentials or HTTP: %s", async (filter) => {
+    const f = fixture();
+    delete f.env.TENABLE_AXI_SECRET_KEY;
+    const result = await f.run(["finding", "list", "--filter", filter]);
+    expect(result.code).toBe(2);
+    expect(result.data).toMatchObject({ error: { message: expect.stringContaining(`--filter 'severity = ["HIGH"]'`) } });
+    expect(result.requests).toHaveLength(0);
+  });
+
 test("search sends query, repeated filters, sort and class as documented server parameters", async () => {
   const result = await fixture().run(["asset", "list", "--query", "example", "--filter", 'aes >= ["500"]',
     "--filter", 'name not contains ["old"]', "--class", "DEVICE", "--sort", "aes:desc", "--offset", "5", "--limit", "2"],
