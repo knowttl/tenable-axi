@@ -86,6 +86,17 @@ test("changing export format invalidates the full payload confirmation", async (
   expect(result.requests).toHaveLength(0);
 });
 
+test.each(["asset", "finding"])("denied %s export explains licensing and the inventory privilege", async (kind) => {
+  const f = fixture();
+  const args = [kind, "start"];
+  const preview = await f.run(args);
+  const result = await f.run([...args, "--execute", "--confirm", preview.data.preview.confirm], [{ status: 403, body: { message: "Denied" } }]);
+  expect(result.code).toBe(1);
+  expect(result.data).toMatchObject({ error: { code: "PERMISSION_DENIED", status: 403, message: "Not licensed or not permitted for this key" } });
+  expect(result.stdout).toContain("EXPOSURE_MANAGEMENT.INVENTORY.INVENTORY.EXPORT");
+  expect(result.requests).toHaveLength(1);
+});
+
 test("long export previews truncate text without changing the confirmation scope", async () => {
   const f = fixture();
   const body = join(f.home, "scope.json");
