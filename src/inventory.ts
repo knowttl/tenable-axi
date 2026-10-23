@@ -165,7 +165,7 @@ export async function inventoryCommand(argv: string[], store: ReturnType<typeof 
       let data: Record<string, unknown>[];
       let exhausted: boolean;
       if (verb === "properties") {
-        data = (response.body as Record<string, Record<string, unknown>[]>)[kind === "asset" ? "properties" : "data"]!;
+        data = (response.body as { data: Record<string, unknown>[] }).data;
         exhausted = true;
       } else {
         const page = inventoryPage.parse(response.body);

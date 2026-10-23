@@ -41,7 +41,7 @@ test.each(["asset", "finding"])("%s start previews the complete scope then creat
   const f = fixture();
   const body = join(f.home, "scope.json");
   writeFileSync(body, JSON.stringify({ query: { mode: "advanced", text: "Assets HAS aes >= 700" }, filters: [{ property: "name", operator: "match", value: ["example"] }] }));
-  const args = [kind, "start", "--body-file", body, "--properties", "asset_id", "--file-format", "CSV", "--compress", "true",
+  const args = [kind, "start", "--body-file", body, "--properties", "id,asset_id", "--file-format", "CSV", "--compress", "true",
     "--use-readable-name", "false", "--max-chunk-file-size", "104857600", "--sort", "name:asc"];
   const preview = await f.run(args);
   expect(preview.code).toBe(0);
@@ -56,6 +56,7 @@ test.each(["asset", "finding"])("%s start previews the complete scope then creat
   expect(created.requests).toHaveLength(1);
   expect(new URL(created.requests[0]!.url).pathname).toBe(`/api/v1/t1/inventory/export/${kind}s`);
   expect(created.requests[0]!.init.method).toBe("POST");
+  expect(new URL(created.requests[0]!.url).searchParams.get("properties")).toBe(`${kind}_id,asset_id`);
   const journal = readFileSync(join(f.home, "state/tenable-axi/writes.log"), "utf8");
   expect(journal).toContain('"result":"SUCCESS"');
   expect(journal).not.toContain("Assets HAS");

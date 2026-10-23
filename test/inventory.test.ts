@@ -126,6 +126,14 @@ test("asset properties sends exploded asset_classes through verified HTTPS", asy
   } finally { await fake.close(); }
 });
 
+test("asset properties normalizes the data envelope", async () => {
+  const result = await fixture().run(["asset", "properties"], [{ body: { data: [
+    { key: "asset_id", readable_name: "Asset ID", operators: ["="], sortable: true, filterable: true },
+  ] } }]);
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ properties: [{ key: "asset_id", readable_name: "Asset ID" }], count: 1, complete: true });
+});
+
 test.each(["asset", "finding"])("%s show uses an exact ID filter", async (kind) => {
   const row = kind === "asset" ? asset : finding;
   const result = await fixture().run([kind, "show", "--id", row.id], [{ body: page([row], 1) }]);

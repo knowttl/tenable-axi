@@ -371,6 +371,32 @@ test("bulk deletion confirms the entire sorted UUID set", async () => {
   expect(changed.data.error.code).toBe("CONFIRM_MISMATCH");
 });
 
+test.each(["delete", "bulk-delete"])("value %s accepts an unconstrained JSON success reply", async (verb) => {
+  const f = fixture();
+  const args = ["value", verb, ...(verb === "delete" ? ["--id", id] : ["--ids-file", f.file("ids.json", [id])])];
+  const current = { body: value };
+  const preview = await f.run(args, [current]);
+  const result = await f.run([...args, "--execute", "--confirm", preview.data.preview.confirm], [current, current, { body: null }]);
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ kind: "success", status: 200, auditId: expect.any(String) });
+  expect(result.requests.map(({ init }) => init.method)).toEqual(["GET", "GET", verb === "delete" ? "DELETE" : "POST"]);
+  const journal = readFileSync(join(f.home, "state/tenable-axi/writes.log"), "utf8").trim().split("\n").map((line) => JSON.parse(line));
+  expect(journal[1]).toMatchObject({ result: "SUCCESS", status: 200 });
+});
+
+test("a tag write with invalid JSON reports success and requires read-back", async () => {
+  const f = fixture();
+  const args = ["value", "delete", "--id", id];
+  const current = { body: value };
+  const preview = await f.run(args, [current]);
+  const result = await f.run([...args, "--execute", "--confirm", preview.data.preview.confirm], [current, current, { text: "not JSON" }]);
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ kind: "success", status: 200, warning: expect.stringContaining("succeeded"), help: [expect.stringContaining("read back")] });
+  expect(result.requests).toHaveLength(3);
+  const journal = readFileSync(join(f.home, "state/tenable-axi/writes.log"), "utf8").trim().split("\n").map((line) => JSON.parse(line));
+  expect(journal[1]).toMatchObject({ result: "SUCCESS", status: 200 });
+});
+
 test.each(["add", "remove"])("assignment %s confirms both complete sets and returns the asynchronous job once", async (action) => {
   const f = fixture();
   const args = ["assignment", action, "--asset-ids-file", f.file("assets.json", [other]), "--tag-ids-file", f.file("tags.json", [id])];

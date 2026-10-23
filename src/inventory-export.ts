@@ -73,6 +73,7 @@ export async function inventoryExportCommand(argv: string[], store: ReturnType<t
         value = raw === "true";
       }
       if (key === "max-chunk-file-size") { if (!/^\d+$/.test(raw)) usage("Invalid chunk size"); value = Number(raw); }
+      if (key === "properties") value = raw.split(",").map((property) => property === "id" ? `${argv[1]}_id` : property).join(",");
       return [[key.replaceAll("-", "_"), value]];
     }));
     const input = exportInput.safeParse({ ...(body === undefined ? {} : { body }), query });
