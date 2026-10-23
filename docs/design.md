@@ -119,7 +119,8 @@ Translate all documented error bodies into `error: {code, message, operation, st
 Handle `{statusCode,error,message}`, `{message,status}`, `{error,message}`, connector `{detail:...}`, Exposure View `{status,message,error:[]}`, and selected Platform/VM variants.
 Handle empty bodies, malformed JSON, schema-less responses, and HTML 429 without emitting raw HTML, dependency output, or stack traces.
 Map 401 to authentication failure, 403 to permission denial with operation-specific advice, 404 to missing resource, and invalid input to actionable validation guidance.
-Malformed successful responses produce `RESPONSE_INVALID`, never plausible empty data.
+Malformed successful responses produce `RESPONSE_INVALID`, never plausible empty data, except for the narrowly scoped [tag value deletion behavior](../README.md#shipped-behavior).
+Category/value create/update, category delete and assignment add/remove retain strict response validation, including mutation identity checks where applicable.
 Redact bounded error text before any channel renders it.
 
 ## Profiles and authentication
@@ -227,7 +228,7 @@ All unspecified API defaults follow the pinned schema, except the CLI's explicit
 | Leaves | Additional mapping |
 |---|---|
 | Inventory and tag searches | `--extra-properties` maps `extra_properties`; `--fields` automatically requests properties needed by the selected projection; `--filter-file` accepts the [pinned spec's](../specs/exposure-management.json) flat array of {property, operator, value: string[]}, mutually exclusive with repeatable simple `--filter`; nested boolean expressions are unsupported. |
-| `asset properties` | `--asset-classes` maps the documented `asset_classes` array; list `--class` is a validated server-side class filter rather than an invented query parameter. |
+| `asset properties` | `--asset-classes` maps the documented `asset_classes` array; upstream `properties` and `data` envelopes normalize to internal `data`; list `--class` is a validated server-side class filter rather than an invented query parameter. |
 | Attack searches | `--filter-file` represents the documented single/nested filter body; `--sort`, offset/limit, and `--include-resolved` map their query fields; attack paths also exposes `--run-ai-summarization true\|false`, default false. |
 | `connector logs` | `--connector-id`, `--status`, `--start-date`, `--end-date` map the four documented query fields; dates use YYYY-MM-DD. |
 | `card list` | `--global true\|false` maps `is_global_card`, `--query` maps `text_query`, and `--sorting-order asc\|desc` maps `sorting_order`. |
