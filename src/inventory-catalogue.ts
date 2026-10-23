@@ -40,7 +40,8 @@ export const inventoryBindings: Readonly<Record<string, OperationBinding>> = Obj
         effect: "read", query: ["offset", "limit", "sort", "extra_properties"], paging: ["offset", "limit"], decoder: inventoryPage }],
       [`inventory-${kind}-properties-list`, { ...advice, method: "GET", path: `/api/v1/t1/inventory/${noun}/properties`,
         effect: "read", query: kind === "asset" ? ["asset_classes"] : [],
-        decoder: kind === "asset" ? z.object({ properties }) : z.object({ data: properties }) }],
+        decoder: kind === "asset" ? z.union([z.object({ properties }).transform(({ properties }) => ({ data: properties })),
+          z.object({ data: properties })]) : z.object({ data: properties }) }],
     ] as [string, OperationBinding][];
   }),
 ));

@@ -42,7 +42,7 @@ type Entry = { description: string; operationId: string; flags: Record<string, s
 export const inventoryExportCatalogue: Record<string, Entry> = {};
 for (const kind of ["asset", "finding"]) {
   inventoryExportCatalogue[`export ${kind} start`] = { description: `Preview or create an inventory ${kind} export job`, operationId: `inventory-export-${kind}s`,
-    flags: { ...common, "body-file": "Optional strict query/filters JSON file, '-' for stdin; maximum 1 MiB", properties: "Comma-separated property names", "use-readable-name": "true|false; API default true",
+    flags: { ...common, "body-file": "Optional strict query/filters JSON file, '-' for stdin; maximum 1 MiB", properties: `Comma-separated names from ${kind} properties; id maps to ${kind}_id`, "use-readable-name": "true|false; API default true",
       "max-chunk-file-size": "5242880-104857600 bytes; API default 20971520", sort: "property:asc|desc", "file-format": "JSON|CSV; API default JSON", compress: "true|false; API default false",
       execute: "Create once; default preview", "dry-run": "Explicit preview; excludes --execute", confirm: "Exact confirmation from preview", "intent-id": "Unique execution intent for replay protection" },
     defaultFields: ["id", "state"], examples: [`tenable-axi export ${kind} start --body-file scope.json`, `tenable-axi export ${kind} start --body-file scope.json --execute --confirm <confirmation>`] };

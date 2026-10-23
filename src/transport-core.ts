@@ -241,7 +241,7 @@ export function constructTransport(options: TransportOptions, dependencies: {
       const hint = status === 401 ? "Check both SecretRefs and run tenable-axi auth status"
         : status === 403 ? record.permissionHelp : status === 404 ? "Check the resource identifier and operation scope"
           : status === 429 ? "Retry after the reported delay; narrow reads to reduce requests" : record.validationHelp;
-      const message = errorMessage(text!) ?? `Tenable returned HTTP ${status}`;
+      const message = status === 403 ? "Not licensed or not permitted for this key" : errorMessage(text!) ?? `Tenable returned HTTP ${status}`;
       fail(code, redact(message), operation, [hint], { status,
         ...(lastRetryAfter === undefined ? {} : { retryAfter: lastRetryAfter }) });
     }

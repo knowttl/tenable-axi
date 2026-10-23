@@ -371,6 +371,73 @@ test("bulk deletion confirms the entire sorted UUID set", async () => {
   expect(changed.data.error.code).toBe("CONFIRM_MISMATCH");
 });
 
+test.each(["delete", "bulk-delete"])("value %s accepts an unconstrained JSON success reply", async (verb) => {
+  const f = fixture();
+  const args = ["value", verb, ...(verb === "delete" ? ["--id", id] : ["--ids-file", f.file("ids.json", [id])])];
+  const current = { body: value };
+  const preview = await f.run(args, [current]);
+  const result = await f.run([...args, "--execute", "--confirm", preview.data.preview.confirm], [current, current, { body: null }]);
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ kind: "success", status: 200, auditId: expect.any(String) });
+  expect(result.requests.map(({ init }) => init.method)).toEqual(["GET", "GET", verb === "delete" ? "DELETE" : "POST"]);
+  const journal = readFileSync(join(f.home, "state/tenable-axi/writes.log"), "utf8").trim().split("\n").map((line) => JSON.parse(line));
+  expect(journal[1]).toMatchObject({ result: "SUCCESS", status: 200 });
+});
+
+test.each(["delete", "bulk-delete"])("value %s with invalid JSON reports success and requires read-back", async (verb) => {
+  const f = fixture();
+  const args = ["value", verb, ...(verb === "delete" ? ["--id", id] : ["--ids-file", f.file("ids.json", [id])])];
+  const current = { body: value };
+  const preview = await f.run(args, [current]);
+  const result = await f.run([...args, "--execute", "--confirm", preview.data.preview.confirm], [current, current, { text: "not JSON" }]);
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ kind: "success", status: 200, warning: expect.stringContaining("succeeded"), help: [expect.stringContaining("read back")] });
+  expect(result.requests).toHaveLength(3);
+  const journal = readFileSync(join(f.home, "state/tenable-axi/writes.log"), "utf8").trim().split("\n").map((line) => JSON.parse(line));
+  expect(journal[1]).toMatchObject({ result: "SUCCESS", status: 200 });
+});
+
+test.each([
+  ["category", "create"], ["category", "update"], ["category", "delete"],
+  ["value", "create"], ["value", "update"], ["assignment", "add"], ["assignment", "remove"],
+])("%s %s rejects invalid JSON after an accepted write", async (noun, verb) => {
+  const f = fixture();
+  const args = [noun!, verb!];
+  if (noun === "assignment") args.push("--asset-ids-file", f.file("assets.json", [other]), "--tag-ids-file", f.file("tags.json", [id]));
+  else {
+    if (verb !== "create") args.push("--id", id);
+    if (verb !== "delete") args.push(...(noun === "category" ? ["--name", "Region"]
+      : ["--body-file", f.file("tag.json", { value: "East", ...(verb === "create" ? { category_uuid: other } : { version: 3 }) })]));
+  }
+  const current = { body: noun === "assignment" ? { tags: verb === "add" ? [] : [assigned] }
+    : verb === "create" ? page(noun === "category" ? "categories" : "values", []) : noun === "category" ? category : value };
+  const preview = await f.run(args, [current]);
+  const result = await f.run([...args, "--execute", "--confirm", preview.data.preview.confirm], [current, current, { text: "not JSON" }]);
+  expect(result.code).toBe(1);
+  expect(result.data.error).toMatchObject({ code: "RESPONSE_INVALID", status: 200, auditId: expect.any(String) });
+  expect(result.requests).toHaveLength(3);
+  const journal = readFileSync(join(f.home, "state/tenable-axi/writes.log"), "utf8").trim().split("\n").map((line) => JSON.parse(line));
+  expect(journal[1]).toMatchObject({ result: "SUCCESS", status: 200 });
+});
+
+test.each([
+  ["category", "create", "created_at"], ["category", "update", "created_at"],
+  ["value", "create", "created_at"], ["value", "update", "created_at"],
+  ["category", "update", "id"], ["value", "update", "id"],
+])("%s %s rejects an invalid returned %s after an accepted write", async (noun, verb, field) => {
+  const f = fixture();
+  const args = [noun!, verb!, "--fields", field!, ...(verb === "update" ? ["--id", id] : []),
+    ...(noun === "category" ? ["--name", "Region"]
+      : ["--body-file", f.file("tag.json", { value: "East", ...(verb === "create" ? { category_uuid: other } : { version: 3 }) })])];
+  const current = { body: verb === "create" ? page(noun === "category" ? "categories" : "values", []) : noun === "category" ? category : value };
+  const preview = await f.run(args, [current]);
+  const response = { ...(noun === "category" ? category : value), uuid: field === "id" ? other : id };
+  const result = await f.run([...args, "--execute", "--confirm", preview.data.preview.confirm], [current, current, { body: response }]);
+  expect(result.code).toBe(1);
+  expect(result.data.error).toMatchObject({ code: "RESPONSE_INVALID", status: 200, auditId: expect.any(String) });
+  expect(result.requests).toHaveLength(3);
+});
+
 test.each(["add", "remove"])("assignment %s confirms both complete sets and returns the asynchronous job once", async (action) => {
   const f = fixture();
   const args = ["assignment", action, "--asset-ids-file", f.file("assets.json", [other]), "--tag-ids-file", f.file("tags.json", [id])];

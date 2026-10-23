@@ -429,7 +429,7 @@ Operation: `inventory-export-assets`.
 | `--full` | Full output; default false |
 | `--help` | Show help |
 | `--body-file` | Optional strict query/filters JSON file, '-' for stdin; maximum 1 MiB |
-| `--properties` | Comma-separated property names |
+| `--properties` | Comma-separated names from asset properties; id maps to asset_id |
 | `--use-readable-name` | true\|false; API default true |
 | `--max-chunk-file-size` | 5242880-104857600 bytes; API default 20971520 |
 | `--sort` | property:asc\|desc |
@@ -568,7 +568,7 @@ Operation: `inventory-export-findings`.
 | `--full` | Full output; default false |
 | `--help` | Show help |
 | `--body-file` | Optional strict query/filters JSON file, '-' for stdin; maximum 1 MiB |
-| `--properties` | Comma-separated property names |
+| `--properties` | Comma-separated names from finding properties; id maps to finding_id |
 | `--use-readable-name` | true\|false; API default true |
 | `--max-chunk-file-size` | 5242880-104857600 bytes; API default 20971520 |
 | `--sort` | property:asc\|desc |

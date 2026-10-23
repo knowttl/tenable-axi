@@ -41,7 +41,7 @@ test.each(["asset", "finding"])("%s start previews the complete scope then creat
   const f = fixture();
   const body = join(f.home, "scope.json");
   writeFileSync(body, JSON.stringify({ query: { mode: "advanced", text: "Assets HAS aes >= 700" }, filters: [{ property: "name", operator: "match", value: ["example"] }] }));
-  const args = [kind, "start", "--body-file", body, "--properties", "asset_id", "--file-format", "CSV", "--compress", "true",
+  const args = [kind, "start", "--body-file", body, "--properties", "id,asset_id", "--file-format", "CSV", "--compress", "true",
     "--use-readable-name", "false", "--max-chunk-file-size", "104857600", "--sort", "name:asc"];
   const preview = await f.run(args);
   expect(preview.code).toBe(0);
@@ -56,6 +56,7 @@ test.each(["asset", "finding"])("%s start previews the complete scope then creat
   expect(created.requests).toHaveLength(1);
   expect(new URL(created.requests[0]!.url).pathname).toBe(`/api/v1/t1/inventory/export/${kind}s`);
   expect(created.requests[0]!.init.method).toBe("POST");
+  expect(new URL(created.requests[0]!.url).searchParams.get("properties")).toBe(`${kind}_id,asset_id`);
   const journal = readFileSync(join(f.home, "state/tenable-axi/writes.log"), "utf8");
   expect(journal).toContain('"result":"SUCCESS"');
   expect(journal).not.toContain("Assets HAS");
@@ -83,6 +84,17 @@ test("changing export format invalidates the full payload confirmation", async (
   const result = await f.run(["asset", "start", "--file-format", "CSV", "--execute", "--confirm", preview.data.preview.confirm]);
   expect(result.data.error.code).toBe("CONFIRM_MISMATCH");
   expect(result.requests).toHaveLength(0);
+});
+
+test.each(["asset", "finding"])("denied %s export explains licensing and the inventory privilege", async (kind) => {
+  const f = fixture();
+  const args = [kind, "start"];
+  const preview = await f.run(args);
+  const result = await f.run([...args, "--execute", "--confirm", preview.data.preview.confirm], [{ status: 403, body: { message: "Denied" } }]);
+  expect(result.code).toBe(1);
+  expect(result.data).toMatchObject({ error: { code: "PERMISSION_DENIED", status: 403, message: "Not licensed or not permitted for this key" } });
+  expect(result.stdout).toContain("EXPOSURE_MANAGEMENT.INVENTORY.INVENTORY.EXPORT");
+  expect(result.requests).toHaveLength(1);
 });
 
 test("long export previews truncate text without changing the confirmation scope", async () => {

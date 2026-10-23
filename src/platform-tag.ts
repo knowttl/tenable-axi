@@ -102,8 +102,16 @@ export async function platformTagCommand(argv: string[], store: ReturnType<typeo
         : category ? { name: get("name"), ...(get("description") === undefined ? {} : { description: get("description") }) } : files["body-file"];
     const input = platformTagInputs[operation as keyof typeof platformTagInputs].safeParse({ ...(get("id") ? { id: get("id") } : {}), ...(body === undefined ? {} : { body }) });
     if (!input.success) usage("Invalid tag input; use documented fields and UUID arrays, at most 40 dynamic rules and 1024 values per rule; security fields are forbidden");
+    const readBack = "The write succeeded; read back the target before retrying";
     const result = await writeFactory({ config: get("config"), profile: get("profile") }).run(operation, input.data,
-      { execute: !!get("execute"), dryRun: !!get("dry-run"), confirm: get("confirm"), intentId: get("intent-id") });
+      { execute: !!get("execute"), dryRun: !!get("dry-run"), confirm: get("confirm"), intentId: get("intent-id") }).catch((error: unknown) => {
+        if (!value || !["delete", "bulk-delete"].includes(verb)
+          || !(error instanceof TransportError) || error.error.code !== "RESPONSE_INVALID" || !error.error.auditId
+          || error.error.status === undefined || error.error.status < 200 || error.error.status >= 300) throw error;
+        return { kind: "success" as const, auditId: error.error.auditId, status: error.error.status,
+          warning: "Write succeeded, but its response could not be decoded", help: [readBack] };
+      });
+    if ("warning" in result) return result;
     if (result.kind !== "success") {
       const output = preview(result) as Record<string, unknown>;
       return { ...output, ...(truncated ? { help: [`Run ${command(["--full"])} --full to read complete text`] } : {}) };

@@ -72,11 +72,11 @@ test.each([
   expect(existsSync(join(f.home, "state/tenable-axi/writes.log"))).toBe(false);
 });
 
-test("a denied creation explains the attack-path WRITE privilege", async () => {
-  const f = fixture();
+test.each(["attack-path", "attack-technique", "mitre-heatmap"])("denied %s creation explains licensing and the WRITE privilege", async (kind) => {
+  const f = fixture(kind);
   const result = await f.run([...f.start, "--execute", "--confirm", await f.confirm()], [{ status: 403, body: { message: "Denied" } }]);
   expect(result.code).toBe(1);
-  expect(result.data).toMatchObject({ error: { code: "PERMISSION_DENIED", status: 403 } });
+  expect(result.data).toMatchObject({ error: { code: "PERMISSION_DENIED", status: 403, message: "Not licensed or not permitted for this key" } });
   expect(result.stdout).toContain("EXPOSURE_MANAGEMENT.ATTACK_PATH.ATTACK_PATH.WRITE");
   expect(result.requests).toHaveLength(1);
 });

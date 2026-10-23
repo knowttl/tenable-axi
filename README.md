@@ -49,6 +49,7 @@ tenable-axi finding list --profile example --filter 'severity = ["HIGH"]'
 Configured home reads up to five live exposure cards; unconfigured home stays offline.
 Only `https://cloud.tenable.com` is supported.
 Upstream licensing and the user's per-operation permissions still apply.
+HTTP 403 returns `PERMISSION_DENIED` with “Not licensed or not permitted for this key” and advice naming the required privilege where documented.
 Inventory needs `EXPOSURE_MANAGEMENT.INVENTORY.INVENTORY.READ`; inventory exports need its `EXPORT` privilege and attack exports need `EXPOSURE_MANAGEMENT.ATTACK_PATH.ATTACK_PATH.WRITE`.
 Connector logs have elevated permissions; their denial does not imply ordinary inventory users need Administrator.
 
@@ -231,6 +232,7 @@ Use `export asset start` or `export finding start` to preview the filters, prope
 The selected file profile must configure `writes.allowWrites: true` and allow the exact `inventory-export-assets` or `inventory-export-findings` operation, including for previews.
 Optional `--body-file` accepts strict documented query/filters JSON, or `-` for stdin, within 1 MiB.
 Query options use `--properties`, `--use-readable-name true|false`, `--max-chunk-file-size`, `--sort`, `--file-format JSON|CSV` and `--compress true|false`.
+Choose comma-separated `--properties` names from `asset properties` or `finding properties`; `id` maps to `asset_id` or `finding_id` respectively, while other names pass through unchanged.
 Run again with `--execute --confirm '<exact preview confirmation>'` to create once and return immediately; exports have no server dry run or idempotency guarantee.
 `TENABLE_AXI_READ_ONLY=true` overrides every configured write policy.
 `export asset jobs` and `export finding jobs` expose `--status` and `--limit` (default 100, maximum 1000), returning only the last three days without server paging or a claim of complete history.
@@ -282,6 +284,8 @@ Input files accept `-` for stdin, with only one stdin consumer and a 1 MiB bound
 State reads, including per-target checks for bulk operations, share invocation budgets; narrow large target sets when those budgets are exhausted.
 Identical verified updates/creates and already desired assignments return successful no-ops; an unverified missing-resource response remains an error.
 Deleting a category also deletes its values and assignments; deleting values removes their assignments while retaining the category.
+Value delete and bulk-delete accept unconstrained or undecodable HTTP 2xx replies as exit-0 success once the `SUCCESS` journal outcome is durably recorded.
+An undecodable reply includes a warning, audit ID and status; read back the target before retrying.
 
 Use `attack-path list`, `attack-technique list`, and `connector logs` with `--help` for their flags and examples.
 Attack paths use the published `/api/v1/t1/apa/top-attack-paths/search` route; the pyTenable route disagreement remains a live-acceptance check in the design.
