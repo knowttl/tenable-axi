@@ -251,7 +251,9 @@ Software defaults to name, version, and publisher because the pinned API exposes
 `doctor` validates local configuration and file security, then performs exactly one tag-properties read without retries.
 It checks `EXPOSURE_MANAGEMENT.TAG.TAG.READ`, without claiming access to other modules.
 Collections expose returned count, upstream total when known, completeness and a scoped resume cursor.
-Card requests cap each wire page at 25; ordinary lists default to 100 output rows.
+Card lists and home accept upstream pages of up to 25 cards even when fewer are requested, emit only the requested limit, and preserve overflow in a scoped, redacted cursor bounded at 64 KiB.
+Pages above 25 cards or cursors above this bound fail validation rather than dropping cards.
+Ordinary lists default to 100 output rows.
 `--all` remains subject to invocation budgets and the 10,000-row ceiling.
 Resume with `--cursor` and the same profile, fields, filters and sort.
 Offset pagination does not promise snapshot isolation.

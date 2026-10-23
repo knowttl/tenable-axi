@@ -15,6 +15,9 @@ const cardFields = ["id", "name", "score", "card_type", "is_global_card", "tag_c
 const detailFields = [...cardFields.filter((field) => !["sla_percentage", "exposure_class"].includes(field)), "ces_scores", "exposures", "exposure_classes_details"];
 const tagFields = ["id", "category", "value", "name", "product", "asset_count", "weakness_severity_counts", "total_weakness_count", "type", "extra_properties"];
 const propertyFields = ["property", "operators", "readable_name", "control", "sortable", "filterable", "description"];
+const cursorSchema = z.strictObject({ scope: z.string(), offset: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+  pending: z.array(cardRecord).max(24).optional(), total: z.number().int().nonnegative().optional() });
+const cursorMaxLength = 64 * 1024;
 const fieldTypes: Record<string, z.ZodType> = {
   id: z.string(), name: z.string(), value: z.string(), category: z.string(), score: z.number(),
   product: z.string(), type: z.string(), card_type: z.string(), is_global_card: z.boolean(),
@@ -136,12 +139,13 @@ export async function exposureCommand(argv: string[], store: ReturnType<typeof c
     if (extras.length) query.extra_properties = [...new Set(extras)].join(",");
   } else if (flags.has("query")) query.text_query = flags.get("query")!;
 
-  let parsedCursor: { scope: string; offset: number } | undefined;
+  let parsedCursor: z.infer<typeof cursorSchema> | undefined;
   if (flags.has("cursor")) {
     try {
       const text = flags.get("cursor")!;
-      if (text.length > 1024) usage("Invalid cursor");
-      parsedCursor = z.strictObject({ scope: z.string(), offset: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER) }).parse(JSON.parse(Buffer.from(text, "base64url").toString("utf8")));
+      if (text.length > cursorMaxLength) usage("Invalid cursor");
+      parsedCursor = cursorSchema.parse(JSON.parse(Buffer.from(text, "base64url").toString("utf8")));
+      if (parsedCursor.pending && (name !== "card list" && name !== "home" || parsedCursor.pending.length > parsedCursor.offset)) usage("Invalid cursor");
     } catch { usage("Cursor does not match this profile, operation, fields or filters"); }
   }
   const config = flags.get("config"), selected = flags.get("profile");
@@ -208,20 +212,32 @@ export async function exposureCommand(argv: string[], store: ReturnType<typeof c
   }
   const rows: Record<string, unknown>[] = [];
   const pages = new Set<string>();
-  let total: number | undefined, complete = false, reason = "limit", failure: TransportError | undefined;
-  for (let page = 0; page < 20; page++) {
+  let pending = parsedCursor?.pending ?? [];
+  let total = parsedCursor?.total, complete = false, reason = "limit", failure: TransportError | undefined;
+  const buffered = pending.map((record) => project(record));
+  rows.push(...buffered.slice(0, limit));
+  pending = pending.slice(rows.length);
+  complete = !pending.length && total !== undefined && offset >= total;
+  for (let page = 0; page < 20 && !complete && rows.length < limit; page++) {
     const window = Math.min(name === "tag list" ? 1000 : 25, limit - rows.length);
     try {
       const response = (await transport.request(operation, { query: { ...query, limit: window, offset }, ...(body ? { body } : {}) })).body as { data: unknown[]; pagination?: { total?: number; total_record_count?: number } };
-      if (response.data.length > window) throw new TransportError({ code: "RESPONSE_INVALID", message: "Tenable returned more rows than requested", operation });
+      if (response.data.length > (name === "tag list" ? window : 25)) throw new TransportError({ code: "RESPONSE_INVALID", message: "Tenable returned more rows than the page bound", operation });
       const records = response.data.map((record) => project(name === "tag list" ? tagRecord.parse(record) : cardRecord.parse(record)));
       const pageIdentity = JSON.stringify(response.data.map((record) => (record as { id: string }).id));
       if (records.length && pages.has(pageIdentity)) throw new TransportError({ code: "CONTINUATION_REPEATED", message: "Tenable repeated a result page; resume after checking the collection", operation });
       pages.add(pageIdentity);
-      rows.push(...records);
+      const remainder = response.data.slice(window) as z.infer<typeof cardRecord>[];
+      // Redact before encoding: base64 cursors must not bypass output redaction.
+      const nextPending = store.redactor.payload(remainder) as z.infer<typeof cardRecord>[];
+      const nextTotal = response.pagination?.total_record_count ?? response.pagination?.total ?? total;
+      const nextCursor = Buffer.from(JSON.stringify({ scope, offset: offset + records.length, pending: nextPending, total: nextTotal })).toString("base64url");
+      if (nextCursor.length > cursorMaxLength) throw new TransportError({ code: "RESPONSE_INVALID", message: "Card continuation exceeds the cursor byte bound", operation });
+      pending = nextPending;
+      rows.push(...records.slice(0, window));
       offset += records.length;
-      total = response.pagination?.total_record_count ?? response.pagination?.total ?? total;
-      complete = records.length === 0 || total !== undefined && offset >= total;
+      total = nextTotal;
+      complete = !pending.length && (records.length === 0 || total !== undefined && offset >= total);
       if (complete || rows.length >= limit || name === "home") break;
       reason = "request budget";
     } catch (error) {
@@ -235,7 +251,7 @@ export async function exposureCommand(argv: string[], store: ReturnType<typeof c
   const noun = name === "tag list" ? "tags" : "cards";
   const suffix = [config ? `--config ${quote(config)}` : "", selected ? `--profile ${quote(selected)}` : ""].filter(Boolean).join(" ");
   const resumeArgs = argv.slice(start).filter((arg, index, args) => !["--cursor", "--offset"].includes(arg) && !["--cursor", "--offset"].includes(args[index - 1] ?? ""));
-  const cursor = Buffer.from(JSON.stringify({ scope, offset })).toString("base64url");
+  const cursor = Buffer.from(JSON.stringify({ scope, offset, ...(pending.length ? { pending } : {}), ...(total === undefined ? {} : { total }) })).toString("base64url");
   return { ...(name === "home" ? { ...identity, ...context } : {}), [noun]: rows, count: rows.length, ...(total === undefined ? {} : { total }), complete,
     ...(!rows.length ? { message: `0 ${noun} matched the selected filters` } : {}),
     ...(!complete ? { reason, cursor } : {}),
