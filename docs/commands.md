@@ -16,14 +16,14 @@ Operation: `inventory-assets-search`.
 |---|---|
 | `--config` | Config path; default credential precedence |
 | `--profile` | Profile name; default credential precedence |
-| `--fields` | Comma-separated display or wire properties; default compact view |
+| `--fields` | Comma-separated display or wire properties; display names: id, name, class, exposureScore; default compact view |
 | `--full` | Show full text; default false |
 | `--help` | Show help |
 | `--limit` | Maximum emitted rows, 1-10000; default 100 |
 | `--all` | Read up to 10000 rows within invocation budgets; excludes --limit |
 | `--cursor` | Opaque resume cursor; retain the original selectors and filters |
 | `--query` | Simple query text |
-| `--filter` | Repeatable: <property> <operator> <JSON string array> |
+| `--filter` | Repeatable: <property> <operator> <JSON string array>, e.g. asset_class = ["DEVICE"] |
 | `--filter-file` | JSON flat array of {property, operator, value: string[]}; '-' reads stdin; excludes --filter |
 | `--sort` | Wire property:asc\|desc |
 | `--extra-properties` | Comma-separated extra wire properties |
@@ -33,6 +33,7 @@ Operation: `inventory-assets-search`.
 ```sh
 tenable-axi asset list --limit 20
 tenable-axi asset list --query example
+tenable-axi asset list --filter 'asset_class = ["DEVICE"]'
 ```
 
 ## asset properties
@@ -45,7 +46,7 @@ Operation: `inventory-asset-properties-list`.
 |---|---|
 | `--config` | Config path; default credential precedence |
 | `--profile` | Profile name; default credential precedence |
-| `--fields` | Comma-separated display or wire properties; default compact view |
+| `--fields` | Comma-separated output fields; accepted: key, readable_name, operators, sortable, filterable, control, description; default compact view |
 | `--full` | Show full text; default false |
 | `--help` | Show help |
 | `--limit` | Maximum emitted rows, 1-10000; default 100 |
@@ -68,7 +69,7 @@ Operation: `inventory-assets-search`.
 |---|---|
 | `--config` | Config path; default credential precedence |
 | `--profile` | Profile name; default credential precedence |
-| `--fields` | Comma-separated display or wire properties; default compact view |
+| `--fields` | Comma-separated display or wire properties; display names: id, name, class, exposureScore; default compact view |
 | `--full` | Show full text; default false |
 | `--help` | Show help |
 | `--id` | Required exact inventory ID |
@@ -659,14 +660,14 @@ Operation: `inventory-findings-search`.
 |---|---|
 | `--config` | Config path; default credential precedence |
 | `--profile` | Profile name; default credential precedence |
-| `--fields` | Comma-separated display or wire properties; default compact view |
+| `--fields` | Comma-separated display or wire properties; display names: id, name, severity, state; default compact view |
 | `--full` | Show full text; default false |
 | `--help` | Show help |
 | `--limit` | Maximum emitted rows, 1-10000; default 100 |
 | `--all` | Read up to 10000 rows within invocation budgets; excludes --limit |
 | `--cursor` | Opaque resume cursor; retain the original selectors and filters |
 | `--query` | Simple query text |
-| `--filter` | Repeatable: <property> <operator> <JSON string array> |
+| `--filter` | Repeatable: <property> <operator> <JSON string array>, e.g. severity = ["HIGH"] |
 | `--filter-file` | JSON flat array of {property, operator, value: string[]}; '-' reads stdin; excludes --filter |
 | `--sort` | Wire property:asc\|desc |
 | `--extra-properties` | Comma-separated extra wire properties |
@@ -675,6 +676,9 @@ Operation: `inventory-findings-search`.
 ```sh
 tenable-axi finding list --limit 20
 tenable-axi finding list --query example
+tenable-axi finding list --filter 'severity = ["HIGH"]'
+tenable-axi finding list --filter 'sensor_type = ["NESSUS"]'
+tenable-axi finding list --limit 10000 --offset 10000 --sort finding_id:asc
 ```
 
 ## finding properties
@@ -687,7 +691,7 @@ Operation: `inventory-finding-properties-list`.
 |---|---|
 | `--config` | Config path; default credential precedence |
 | `--profile` | Profile name; default credential precedence |
-| `--fields` | Comma-separated display or wire properties; default compact view |
+| `--fields` | Comma-separated output fields; accepted: key, readable_name, operators, sortable, filterable, control, description; default compact view |
 | `--full` | Show full text; default false |
 | `--help` | Show help |
 | `--limit` | Maximum emitted rows, 1-10000; default 100 |
@@ -709,7 +713,7 @@ Operation: `inventory-findings-search`.
 |---|---|
 | `--config` | Config path; default credential precedence |
 | `--profile` | Profile name; default credential precedence |
-| `--fields` | Comma-separated display or wire properties; default compact view |
+| `--fields` | Comma-separated display or wire properties; display names: id, name, severity, state; default compact view |
 | `--full` | Show full text; default false |
 | `--help` | Show help |
 | `--id` | Required exact inventory ID |
@@ -907,14 +911,14 @@ Operation: `inventory-software-search`.
 |---|---|
 | `--config` | Config path; default credential precedence |
 | `--profile` | Profile name; default credential precedence |
-| `--fields` | Comma-separated display or wire properties; default compact view |
+| `--fields` | Comma-separated display or wire properties; display names: name, version, publisher; default compact view |
 | `--full` | Show full text; default false |
 | `--help` | Show help |
 | `--limit` | Maximum emitted rows, 1-10000; default 100 |
 | `--all` | Read up to 10000 rows within invocation budgets; excludes --limit |
 | `--cursor` | Opaque resume cursor; retain the original selectors and filters |
 | `--query` | Simple query text |
-| `--filter` | Repeatable: <property> <operator> <JSON string array> |
+| `--filter` | Repeatable: <property> <operator> <JSON string array>, e.g. application = ["example-app"] |
 | `--filter-file` | JSON flat array of {property, operator, value: string[]}; '-' reads stdin; excludes --filter |
 | `--sort` | Wire property:asc\|desc |
 | `--extra-properties` | Comma-separated extra wire properties |
@@ -923,6 +927,7 @@ Operation: `inventory-software-search`.
 ```sh
 tenable-axi software list --limit 20
 tenable-axi software list --query example
+tenable-axi software list --filter 'application = ["example-app"]'
 ```
 
 ## software properties
@@ -935,7 +940,7 @@ Operation: `inventory-software-properties-list`.
 |---|---|
 | `--config` | Config path; default credential precedence |
 | `--profile` | Profile name; default credential precedence |
-| `--fields` | Comma-separated display or wire properties; default compact view |
+| `--fields` | Comma-separated output fields; accepted: key, readable_name, operators, sortable, filterable, control, description; default compact view |
 | `--full` | Show full text; default false |
 | `--help` | Show help |
 | `--limit` | Maximum emitted rows, 1-10000; default 100 |

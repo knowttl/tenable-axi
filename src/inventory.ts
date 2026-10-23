@@ -2,7 +2,7 @@ import { AxiError } from "axi-sdk-js";
 import { createHash } from "node:crypto";
 import { closeSync, openSync, readSync } from "node:fs";
 import { z } from "zod";
-import { aliases, assetClasses, filterSchema, inventoryCatalogue, inventoryKinds, inventoryPage, propertyFields, wireFields, type InventoryKind } from "./inventory-catalogue.js";
+import { aliases, assetClasses, filterExamples, filterSchema, inventoryCatalogue, inventoryKinds, inventoryPage, propertyFields, wireFields, type InventoryKind } from "./inventory-catalogue.js";
 import { credentialStore } from "./profiles.js";
 import { createTransport, TransportError, type Transport, type TransportOptions } from "./transport.js";
 
@@ -84,21 +84,22 @@ export async function inventoryCommand(argv: string[], store: ReturnType<typeof 
   const classes = get("asset-classes") ? names(get("asset-classes")!) : get("class") ? [get("class")!] : [];
   if (classes.some((value) => !(assetClasses as readonly string[]).includes(value))) usage(`Asset classes: ${assetClasses.join(", ")}`);
   const filters: z.infer<typeof filterSchema>[] = [];
-  const invalidFilters = () => usage("Filters must be a flat array of {property, operator, value: string[]}; nested boolean expressions are unsupported; use a documented operator");
+  const invalidFilterFile = () => usage("Filters must be a flat array of {property, operator, value: string[]}; nested boolean expressions are unsupported; use a documented operator");
+  const invalidFilter = () => usage(`--filter must be '<property> <operator> <JSON string array>' with a documented operator, e.g. --filter '${filterExamples[kind]}'; run tenable-axi ${kind} properties to discover properties and operators, or use --filter-file for a JSON array of {property, operator, value: string[]}`);
   if (get("filter-file")) {
     let value: unknown;
     try { value = filterFile(get("filter-file")!); } catch { usage("Cannot read --filter-file as JSON within the 1 MiB input limit"); }
     const parsed = z.array(filterSchema).safeParse(value);
-    if (!parsed.success) invalidFilters();
+    if (!parsed.success) invalidFilterFile();
     filters.push(...parsed.data!);
   }
   for (const text of flags.get("--filter") ?? []) {
     const match = /^(\S+)\s+(.+?)\s+(\[.*\])$/s.exec(text);
-    if (!match) invalidFilters();
+    if (!match) invalidFilter();
     let value: unknown;
-    try { value = JSON.parse(match![3]!); } catch { invalidFilters(); }
+    try { value = JSON.parse(match![3]!); } catch { invalidFilter(); }
     const parsed = filterSchema.safeParse({ property: match![1], operator: match![2], value });
-    if (!parsed.success) invalidFilters();
+    if (!parsed.success) invalidFilter();
     filters.push(parsed.data!);
   }
   if (get("class")) filters.push({ property: "asset_class", operator: "=", value: classes });

@@ -46,8 +46,14 @@ export const inventoryBindings: Readonly<Record<string, OperationBinding>> = Obj
   }),
 ));
 
-const common = { config: "Config path; default credential precedence", profile: "Profile name; default credential precedence",
-  fields: "Comma-separated display or wire properties; default compact view", full: "Show full text; default false", help: "Show help" };
+export const filterExamples: Record<InventoryKind, string> = {
+  asset: 'asset_class = ["DEVICE"]', finding: 'severity = ["HIGH"]', software: 'application = ["example-app"]',
+};
+const common = (fields: string) => ({ config: "Config path; default credential precedence", profile: "Profile name; default credential precedence",
+  fields, full: "Show full text; default false", help: "Show help" });
+const listFields = (kind: InventoryKind) =>
+  `Comma-separated display or wire properties; display names: ${defaultFields[kind].join(", ")}; default compact view`;
+const propertyFieldsHelp = `Comma-separated output fields; accepted: ${Object.keys(propertyFields).join(", ")}; default compact view`;
 const collection = { limit: "Maximum emitted rows, 1-10000; default 100", all: "Read up to 10000 rows within invocation budgets; excludes --limit",
   cursor: "Opaque resume cursor; retain the original selectors and filters" };
 const search = { query: "Simple query text", filter: "Repeatable: <property> <operator> <JSON string array>",
@@ -57,15 +63,20 @@ const search = { query: "Simple query text", filter: "Repeatable: <property> <op
 export const inventoryCatalogue = Object.fromEntries((Object.keys(inventoryKinds) as InventoryKind[]).flatMap((kind) => [
   [`${kind} list`, { description: `Search ${inventoryKinds[kind]}${kind === "software" ? "; the pinned API exposes no stable software ID" : ""}`,
     operationId: `inventory-${inventoryKinds[kind]}-search`, defaultFields: defaultFields[kind], evidence: "specs/exposure-management.json",
-    flags: { ...common, ...collection, ...search, ...(kind === "asset" ? { class: "Server-side asset class filter" } : {}) },
-    examples: [`tenable-axi ${kind} list --limit 20`, `tenable-axi ${kind} list --query example`] }],
+    flags: { ...common(listFields(kind)), ...collection, ...search,
+      filter: `Repeatable: <property> <operator> <JSON string array>, e.g. ${filterExamples[kind]}`,
+      ...(kind === "asset" ? { class: "Server-side asset class filter" } : {}) },
+    examples: [`tenable-axi ${kind} list --limit 20`, `tenable-axi ${kind} list --query example`,
+      `tenable-axi ${kind} list --filter '${filterExamples[kind]}'`,
+      ...(kind === "finding" ? [`tenable-axi finding list --filter 'sensor_type = ["NESSUS"]'`,
+        "tenable-axi finding list --limit 10000 --offset 10000 --sort finding_id:asc"] : [])] }],
   [`${kind} properties`, { description: `Discover ${kind} properties and supported operators`,
     operationId: `inventory-${kind}-properties-list`, defaultFields: ["key", "readable_name", "operators", "sortable", "filterable"], evidence: "specs/exposure-management.json",
-    flags: { ...common, ...collection, ...(kind === "asset" ? { "asset-classes": "Comma-separated documented asset classes" } : {}) },
+    flags: { ...common(propertyFieldsHelp), ...collection, ...(kind === "asset" ? { "asset-classes": "Comma-separated documented asset classes" } : {}) },
     examples: [`tenable-axi ${kind} properties`, `tenable-axi ${kind} properties --full`] }],
   ...(kind === "software" ? [] : [[`${kind} show`, { description: `Find one ${kind} by exact ID search`,
     operationId: `inventory-${inventoryKinds[kind]}-search`, defaultFields: defaultFields[kind], evidence: "specs/exposure-management.json",
-    flags: { ...common, id: "Required exact inventory ID", "extra-properties": search["extra-properties"] },
+    flags: { ...common(listFields(kind)), id: "Required exact inventory ID", "extra-properties": search["extra-properties"] },
     examples: [`tenable-axi ${kind} show --id <id>`, `tenable-axi ${kind} show --id <id> --fields id,name,description --full`] }]]),
 ])) as Record<string, { description: string; flags: Record<string, string>; examples: string[];
   operationId: string; defaultFields: string[]; evidence: string }>;
