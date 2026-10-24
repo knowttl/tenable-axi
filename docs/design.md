@@ -227,7 +227,7 @@ All unspecified API defaults follow the pinned schema, except the CLI's explicit
 
 | Leaves | Additional mapping |
 |---|---|
-| Inventory and tag searches | `--extra-properties` maps `extra_properties` and each requested extra is projected even without a matching `--fields` entry; `--fields` automatically requests properties needed by the selected projection; `--filter-file` accepts the [pinned spec's](../specs/exposure-management.json) flat array of {property, operator, value: string[]}, mutually exclusive with repeatable simple `--filter`; nested boolean expressions are unsupported. |
+| Inventory and tag searches | `--extra-properties` maps `extra_properties`; see [shipped behavior](../README.md#shipped-behavior) for output projection; `--fields` automatically requests properties needed by the selected projection; `--filter-file` accepts the [pinned spec's](../specs/exposure-management.json) flat array of {property, operator, value: string[]}, mutually exclusive with repeatable simple `--filter`; nested boolean expressions are unsupported. |
 | `asset properties` | `--asset-classes` maps the documented `asset_classes` array; upstream `properties` and `data` envelopes normalize to internal `data`; list `--class` is a validated server-side class filter rather than an invented query parameter. |
 | Attack searches | `--filter-file` represents the documented single/nested filter body; `--sort`, offset/limit, and `--include-resolved` map their query fields; attack paths also exposes `--run-ai-summarization true\|false`, default false. |
 | `connector logs` | `--connector-id`, `--status`, `--start-date`, `--end-date` map the four documented query fields; dates use YYYY-MM-DD. |
@@ -255,11 +255,11 @@ An empty success says, for example, `0 findings matched the selected filters`, w
 Denied, unavailable, and malformed responses are errors rather than empty states.
 Suggestions preserve profile and filters and use placeholders for unknown IDs.
 
-No arguments and `home` print a one-sentence description, profile/origin, effective read-only policy, and up to five live exposure cards when configured, without printing the executable path.
+No arguments and `home` print a one-sentence description, profile/origin, effective read-only policy, and up to five live exposure cards when configured.
 An unconfigured home gives setup state without HTTP.
 The session hook prints a compact local-only profile summary, so session start does not implicitly contact the tenant.
 `auth status`, `profile list`, and `config path` are local and show sources rather than secret values.
-`auth status` reports each secret source only as its kind, `env` or `file`, never the env variable name or secret file path.
+See [shipped behavior](../README.md#shipped-behavior) for home/auth status metadata omissions and secret-source output.
 `doctor` validates config/file security and performs one bounded `inventory-tag-properties-list` read without retries or writes.
 Doctor privilege advice is operation-specific; it cannot prove access to all modules.
 Bare `-v`, `-V`, and `--version` print only the version and exit 0 through `axi-sdk-js/fast-path` before dynamic import of the graph.

@@ -183,14 +183,15 @@ Inventory reads and exports, attack searches and connector logs are implemented.
 Attack path, attack technique and MITRE heatmap exports support guarded creation, status and redacted file downloads.
 `tag list`, `tag properties`, `card list` and `card show` provide bounded Exposure Management reads.
 Platform tag categories, values, assignments, exclusions and dynamic filter definitions are implemented, including guarded mutations.
-Home shows up to five exposure cards when configured and setup guidance offline otherwise.
+Home shows up to five exposure cards when configured and setup guidance offline otherwise, without printing the executable path.
 Exposure response initiatives and combinations support reads and guarded writes, including allowed combination filters.
 `hook` reports local profile context without resolving secrets or contacting Tenable.
 Help, version, `auth status`, `profile list` and `config path` remain local.
 
 Credentials use the strict versioned config and SecretRefs described in [profiles and authentication](docs/design.md#profiles-and-authentication).
 Run `tenable-axi config path` to find the platform config path, or set both `TENABLE_AXI_ACCESS_KEY` and `TENABLE_AXI_SECRET_KEY` for an environment profile.
-Run `tenable-axi auth status` to check sources and file security locally; it never contacts Tenable or prints key values.
+Run `tenable-axi auth status` to check sources and file security locally without printing key values; `accessKey` and `secretKey` report only `env` or `file`.
+Home and auth status omit environment variable names and private configuration/secret paths from output and guidance; auth status no longer exposes a `config` field, including through `--fields`.
 The package ships [axi-credential.schema.json](axi-credential.schema.json) for hosts.
 
 The internal transport enforces the exact commercial origin, reviewed catalogue bindings, escaped paths, scoped continuations, and redirect refusal.
@@ -247,6 +248,7 @@ Lists default to 100 rows, expose upstream totals when supplied, and return a cu
 `--all` remains bounded by 10,000 rows and the shared transport budgets; resume with the returned `--cursor` and original selectors, filters, sort, and fields.
 Offset paging does not provide snapshot isolation.
 `--fields` selects display or wire properties and automatically requests extra properties; `--full` removes the 1,000-character text preview while retaining invocation bounds.
+For inventory reads and `tag list`, `--extra-properties` also adds the requested properties to the output, even when omitted from `--fields`.
 Simple filters use `--filter 'severity = ["HIGH"]'`; `--filter-file` accepts a flat JSON array of `{property, operator, value: string[]}` and rejects nested boolean expressions.
 Software defaults to name, version, and publisher because the pinned API exposes no stable software ID.
 
@@ -260,6 +262,7 @@ Ordinary lists default to 100 output rows.
 Resume with `--cursor` and the same profile, fields, filters and sort.
 Offset pagination does not promise snapshot isolation.
 Tag `value` maps to the documented `name`; `category` requests `tag_category_name` through extra properties and remains null when unavailable.
+Explicit `--extra-properties tag_category_name` adds the `category` output field even when `--fields` omits it.
 Tag filter files contain the pinned API's strict array of `{property, operator, value}` filters, with string arrays for `value`; this endpoint does not define nested boolean filters.
 Use `--help` on each leaf for selectors and defaults.
 
