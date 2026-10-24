@@ -1,6 +1,6 @@
 {
   "name": "@knowttl/tenable-axi",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Investigate Tenable One exposure and run explicitly guarded writes",
   "license": "MIT",
   "type": "module",
