@@ -33,23 +33,23 @@ export type PrivateFileOptions = { platform?: NodeJS.Platform; acl?: WindowsAcl;
 export function privateFiles(options: PrivateFileOptions = {}) {
   const platform = options.platform ?? process.platform;
   const acl = options.acl ?? windowsAcl;
-  const insecure = (path: string): never => { throw new AxiError(`Insecure private file: ${path}`, "CONFIG_INSECURE", [
-    platform === "win32" ? `Apply a protected DACL granting only the current user, SYSTEM and Administrators to ${path}` : `chmod 600 '${path.replaceAll("'", "'\\''")}'`,
+  const insecure = (): never => { throw new AxiError("Insecure private file", "CONFIG_INSECURE", [
+    platform === "win32" ? "Apply a protected DACL granting only the current user, SYSTEM and Administrators to the private file" : "Ensure the private file is regular, owned by the current user and has mode 600",
   ]); };
-  function validate(stat: Stats, path: string, secret: boolean): void {
-    if (!stat.isFile() || stat.isSymbolicLink()) insecure(path);
-    if (platform !== "win32" && (stat.uid !== (options.uid ?? process.getuid!()) || (stat.mode & (secret ? 0o077 : 0o022)) !== 0)) insecure(path);
+  function validate(stat: Stats, secret: boolean): void {
+    if (!stat.isFile() || stat.isSymbolicLink()) insecure();
+    if (platform !== "win32" && (stat.uid !== (options.uid ?? process.getuid!()) || (stat.mode & (secret ? 0o077 : 0o022)) !== 0)) insecure();
   }
   function check(path: string, secret = false, verifyAcl = false): void {
-    validate(lstatSync(path), path, secret);
+    validate(lstatSync(path), secret);
     if (platform === "win32") {
-      try { acl(path, verifyAcl ? "verify" : "check", false); } catch { insecure(path); }
+      try { acl(path, verifyAcl ? "verify" : "check", false); } catch { insecure(); }
     }
   }
   function read(path: string, secret = false, verifyAcl = false): string {
     check(path, secret, verifyAcl);
     const fd = openSync(path, constants.O_RDONLY | (platform === "win32" ? 0 : constants.O_NOFOLLOW));
-    try { validate(fstatSync(fd), path, secret); return readFileSync(fd, "utf8"); } finally { closeSync(fd); }
+    try { validate(fstatSync(fd), secret); return readFileSync(fd, "utf8"); } finally { closeSync(fd); }
   }
   function flushDirectory(path: string): void {
     if (platform === "win32") return;
@@ -61,11 +61,11 @@ export function privateFiles(options: PrivateFileOptions = {}) {
     let current = path;
     for (;;) {
       const stat = lstatSync(current);
-      if (stat.isSymbolicLink() || !stat.isDirectory() || (platform !== "win32" && stat.uid !== (options.uid ?? process.getuid!()))) insecure(current);
+      if (stat.isSymbolicLink() || !stat.isDirectory() || (platform !== "win32" && stat.uid !== (options.uid ?? process.getuid!()))) insecure();
       try {
         if (platform === "win32") acl(current, "restrict", true);
         else chmodSync(current, 0o700);
-      } catch { insecure(current); }
+      } catch { insecure(); }
       if (first) flushDirectory(current);
       if (!first || current === first) break;
       current = dirname(current);
@@ -79,7 +79,7 @@ export function privateFiles(options: PrivateFileOptions = {}) {
     let fd: number | undefined;
     try {
       fd = openSync(temporary, "wx", platform === "win32" ? undefined : 0o600);
-      if (platform === "win32") { try { acl(temporary, "restrict", false); } catch { insecure(temporary); } }
+      if (platform === "win32") { try { acl(temporary, "restrict", false); } catch { insecure(); } }
       writeFileSync(fd, content, "utf8");
       fsyncSync(fd);
       closeSync(fd);

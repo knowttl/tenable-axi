@@ -47,6 +47,16 @@ test("unconfigured home explains setup without HTTP", async () => {
   expect(fixture.requests).toHaveLength(0);
 });
 
+test.each([[], ["home"]])("home omits the config path from continuation and full-text help: %j", async (...args) => {
+  const fixture = setup([{ body: { data: [{ ...card("1"), name: "x".repeat(1200) }], pagination: { total_record_count: 2 } } }]);
+  fixture.config();
+  const result = await fixture.cli([...args, "--config", fixture.path, "--limit", "1"]);
+  expect(result).toMatchObject({ code: 0, data: { complete: false, help: expect.arrayContaining([
+    expect.stringContaining("<config>"), expect.stringContaining("--cursor"), expect.stringContaining("--full"),
+  ]) } });
+  expect(result.stdout).not.toContain(fixture.path);
+});
+
 test("hook context reads profile posture without resolving unavailable secrets or HTTP", async () => {
   const fixture = setup([], false);
   fixture.config({ example: { writes: { allowWrites: true, operations: ["tags-create-tag-value"] } } });
@@ -167,6 +177,13 @@ test("tag extra properties without selected fields are projected instead of sile
   const result = await fixture.cli(["tag", "list", "--extra-properties", "last_updated"]);
   expect(result).toMatchObject({ code: 0, data: { tags: [{ id: "tag-1", category: "Environment", value: "Production", last_updated: "2026-01-01" }], total: 1, complete: true } });
   expect(new URL(fixture.requests[0]!.url).searchParams.get("extra_properties")).toContain("last_updated");
+});
+
+test.each(["id", "id,category", "id,tag_category_name"])("explicit category extra is projected with fields %s", async (fields) => {
+  const fixture = setup([{ body: { data: [{ id: "tag-1", name: "Production", extra_properties: { tag_category_name: "Environment" } }], pagination: { total: 1 } } }]);
+  const result = await fixture.cli(["tag", "list", "--fields", fields, "--extra-properties", "tag_category_name"]);
+  expect(result).toMatchObject({ code: 0, data: { tags: [{ id: "tag-1", category: "Environment" }], complete: true } });
+  expect(new URL(fixture.requests[0]!.url).searchParams.get("extra_properties")).toBe("tag_category_name");
 });
 
 test("tag properties projects discovery names and truncates long descriptions with an escape hatch", async () => {

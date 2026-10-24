@@ -49,7 +49,11 @@ test.each([
   fixture.config({ example: { accessKey: { env: "A" }, secretKey: { env: "S" } } }, { defaultProfile: "example" });
   Object.assign(fixture.env, { A: "synthetic-file-access", S: "synthetic-file-secret" });
   Object.assign(fixture.env, env);
-  expect(await fixture.cli(["auth", "status"])).toMatchObject({ code: 1, data: { error: { code: "CONFIG_INVALID" } } });
+  const result = await fixture.cli(["auth", "status"]);
+  expect(result).toMatchObject({ code: 1, data: { error: { code: "CONFIG_INVALID" } } });
+  expect(result.stdout).not.toContain("TENABLE_AXI");
+  expect(result.stdout).not.toContain("ACCESS_KEY");
+  expect(result.stdout).not.toContain("SECRET_KEY");
 });
 
 test.each([
@@ -80,6 +84,7 @@ test.each([undefined, "false", "0", "TRUE", "1", "FaLsE", "invalid", ""]) ("hand
   if (value !== undefined) fixture.env.TENABLE_AXI_READ_ONLY = value;
   const result = await fixture.cli(["auth", "status"]);
   expect(result).toMatchObject(value === "invalid" || value === "" ? { code: 1, data: { error: { code: "CONFIG_INVALID" } } } : { code: 0, data: { readOnly: true } });
+  expect(result.stdout).not.toContain("TENABLE_AXI_");
 });
 
 test("forced read-only narrows an explicitly configured write policy", async () => {
@@ -96,6 +101,8 @@ test("reads private BOM and CRLF secret files while reporting only their source"
   fixture.config({ example: { accessKey: { file: path }, secretKey: { file: path } } });
   const result = await fixture.cli(["auth", "status"]);
   expect(result).toMatchObject({ code: 0, data: { accessKey: "file", secretKey: "file" } });
+  expect(result.data).not.toHaveProperty("config");
+  expect(result.stdout).not.toContain(fixture.path);
   expect(result.stdout).not.toContain(path);
   expect(result.stdout).not.toContain("synthetic-key");
 });
@@ -111,6 +118,38 @@ test("reports env SecretRef kinds without naming their variables", async () => {
   expect(result.stdout).not.toContain("synthetic-secret");
 });
 
+test("auth status rejects config path projection", async () => {
+  expect(await fixture.cli(["auth", "status", "--fields", "config"])).toMatchObject({ code: 2, data: { error: { code: "VALIDATION_ERROR" } } });
+});
+
+test.each([
+  ["home"], ["auth", "status", "--help"], ["auth", "status"],
+])("omits environment variable names from credential guidance: %j", async (...args) => {
+  const result = await fixture.cli(args);
+  expect(result.stdout).not.toContain("TENABLE_AXI_");
+});
+
+test.each([
+  { args: ["home"], location: "config" },
+  { args: ["auth", "status"], location: "config" },
+  { args: ["home"], location: "accessKey" },
+  { args: ["auth", "status"], location: "accessKey" },
+  { args: ["home"], location: "secretKey" },
+  { args: ["auth", "status"], location: "secretKey" },
+])("omits private paths from $args errors for insecure $location", async ({ args, location }) => {
+  const path = join(fixture.home, "private'key");
+  writeFileSync(path, "synthetic-key", { mode: 0o644 });
+  fixture.config({ example: { accessKey: { env: "CUSTOM_ACCESS" }, secretKey: { env: "CUSTOM_SECRET" },
+    ...(location === "config" ? {} : { [location]: { file: path } }) } });
+  Object.assign(fixture.env, { CUSTOM_ACCESS: "synthetic-access", CUSTOM_SECRET: "synthetic-secret" });
+  if (location === "config") chmodSync(fixture.path, 0o660);
+  const result = await fixture.cli([...args, "--config", fixture.path]);
+  expect(result).toMatchObject({ code: 1, data: { error: { code: "CONFIG_INSECURE" }, help: expect.any(Array) } });
+  expect(result.stdout).not.toContain(fixture.home);
+  expect(result.stdout).not.toContain("CUSTOM_ACCESS");
+  expect(result.stdout).not.toContain("CUSTOM_SECRET");
+});
+
 test.each(["missing", "empty", "public", "symlink", "directory"])("refuses a %s secret file", async (kind) => {
   const path = join(fixture.home, "key");
   if (kind === "directory") mkdirSync(path);
@@ -118,7 +157,9 @@ test.each(["missing", "empty", "public", "symlink", "directory"])("refuses a %s 
   const ref = kind === "symlink" ? `${path}.link` : path;
   if (kind === "symlink") symlinkSync(path, ref);
   fixture.config({ example: { accessKey: { file: ref } } });
-  expect(await fixture.cli(["auth", "status"])).toMatchObject({ code: 1, data: { error: { code: ["missing", "empty"].includes(kind) ? "AUTH_REQUIRED" : "CONFIG_INSECURE" } } });
+  const result = await fixture.cli(["auth", "status"]);
+  expect(result).toMatchObject({ code: 1, data: { error: { code: ["missing", "empty"].includes(kind) ? "AUTH_REQUIRED" : "CONFIG_INSECURE" } } });
+  expect(result.stdout).not.toContain(fixture.home);
 });
 
 test("rejects group-writable configs and configs owned by another uid", async () => {
@@ -155,7 +196,9 @@ test("verifies Windows DACLs in auth status and rejects reparse points on ordina
   const context = { platform: "win32" as const, acl: () => {} };
   expect(await fixture.cli(["auth", "status", "--config", fixture.path, "--profile", "example"], context)).toMatchObject({ code: 0 });
   const rejectAcl = { platform: "win32" as const, acl: (_path: string, action: string) => { if (action === "verify") throw new Error("unprotected DACL"); } };
-  expect(await fixture.cli(["auth", "status", "--config", fixture.path], rejectAcl)).toMatchObject({ code: 1, data: { error: { code: "CONFIG_INSECURE" } } });
+  const rejected = await fixture.cli(["auth", "status", "--config", fixture.path], rejectAcl);
+  expect(rejected).toMatchObject({ code: 1, data: { error: { code: "CONFIG_INSECURE" } } });
+  expect(rejected.stdout).not.toContain(fixture.path);
   expect(await fixture.cli(["profile", "list", "--config", fixture.path], rejectAcl)).toMatchObject({ code: 0 });
   expect(await fixture.cli(["profile", "list", "--config", fixture.path], { platform: "win32", acl: () => { throw new Error("reparse point"); } })).toMatchObject({ code: 1, data: { error: { code: "CONFIG_INSECURE" } } });
 });

@@ -56,7 +56,8 @@ export async function exposureCommand(argv: string[], store: ReturnType<typeof c
   }
   if (flags.has("help")) return { command: name, ...entry };
   const quote = (value: string) => `'${value.replaceAll("'", "'\"'\"'")}'`;
-  const fullCommand = `tenable-axi ${argv.map(quote).join(" ")} --full`;
+  const displayArgs = argv.map((arg, index) => name === "home" && argv[index - 1] === "--config" ? "<config>" : arg);
+  const fullCommand = `tenable-axi ${displayArgs.map(quote).join(" ")} --full`;
   const defaults = name === "tag list" ? ["id", "category", "value"] : name === "tag properties" ? ["property", "operators"]
     : name === "doctor" ? ["profile", "origin", "readOnly", "check", "status", "scope"]
       : name === "hook" ? ["profile", "origin", "readOnly"] : name === "card show" ? ["id", "name", "score", "ces_scores", "ces_trend", "exposure_classes_details"] : ["id", "name", "score"];
@@ -133,11 +134,12 @@ export async function exposureCommand(argv: string[], store: ReturnType<typeof c
     if (parsed.data!.length) body.filters = parsed.data;
     const extras = flags.get("extra-properties")?.split(",") ?? [];
     if (extras.some((property) => !/^[a-zA-Z0-9_]+$/.test(property))) usage("Invalid --extra-properties");
+    for (const extra of extras) {
+      const field = extra === "tag_category_name" ? "category" : extra;
+      if (!fields.includes(field)) fields.push(field);
+    }
     if (fields.includes("category")) extras.push("tag_category_name");
     extras.push(...fields.filter((field) => !tagFields.includes(field)));
-    // Project requested extras even without a matching --fields entry, instead of fetching then silently dropping them.
-    // tag_category_name stays internal: it is rendered through the category field.
-    for (const extra of extras) if (extra !== "tag_category_name" && !fields.includes(extra)) fields.push(extra);
     if (extras.length) query.extra_properties = [...new Set(extras)].join(",");
   } else if (flags.has("query")) query.text_query = flags.get("query")!;
 
@@ -252,8 +254,8 @@ export async function exposureCommand(argv: string[], store: ReturnType<typeof c
   }
   if (failure) process.exitCode = 1;
   const noun = name === "tag list" ? "tags" : "cards";
-  const suffix = [config ? `--config ${quote(config)}` : "", selected ? `--profile ${quote(selected)}` : ""].filter(Boolean).join(" ");
-  const resumeArgs = argv.slice(start).filter((arg, index, args) => !["--cursor", "--offset"].includes(arg) && !["--cursor", "--offset"].includes(args[index - 1] ?? ""));
+  const suffix = [config ? `--config ${quote(name === "home" ? "<config>" : config)}` : "", selected ? `--profile ${quote(selected)}` : ""].filter(Boolean).join(" ");
+  const resumeArgs = displayArgs.slice(start).filter((arg, index, args) => !["--cursor", "--offset"].includes(arg) && !["--cursor", "--offset"].includes(args[index - 1] ?? ""));
   const cursor = Buffer.from(JSON.stringify({ scope, offset, ...(pending.length ? { pending } : {}), ...(total === undefined ? {} : { total }) })).toString("base64url");
   return { ...(name === "home" ? { ...identity, ...context } : {}), [noun]: rows, count: rows.length, ...(total === undefined ? {} : { total }), complete,
     ...(!rows.length ? { message: `0 ${noun} matched the selected filters` } : {}),

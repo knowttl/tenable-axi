@@ -35,7 +35,7 @@ export const catalogue = {
   },
   "auth status": {
     description: "Check local credentials and file security without contacting Tenable",
-    flags: { config: "Config path; default TENABLE_AXI_CONFIG or platform path", profile: "Profile name; default credential precedence", fields: "Comma-separated output fields; default all", full: "Show full text; default false", help: "Show help; default false" },
+    flags: { config: "Config path; default environment override or platform path", profile: "Profile name; default credential precedence", fields: "Comma-separated output fields; default all", full: "Show full text; default false", help: "Show help; default false" },
     examples: ["tenable-axi auth status", "tenable-axi auth status --profile example"],
   },
   "profile list": {
