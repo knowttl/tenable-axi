@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.2](https://github.com/knowttl/tenable-axi/compare/v0.1.1...v0.1.2) (2026-10-24)
+
+
+### Bug Fixes
+
+* clarify inventory filter, fields and finding paging help ([#19](https://github.com/knowttl/tenable-axi/issues/19)) ([aabf457](https://github.com/knowttl/tenable-axi/commit/aabf457adf576bc92f8a0faa7f0411cde1380a6a))
+* hide private status metadata and project requested extra properties ([#21](https://github.com/knowttl/tenable-axi/issues/21)) ([d93d2d8](https://github.com/knowttl/tenable-axi/commit/d93d2d8d8da5de065508ba127cb2b04e518a2eb0))
+
 ## [0.1.1](https://github.com/knowttl/tenable-axi/compare/v0.1.0...v0.1.1) (2026-10-23)
 
 
