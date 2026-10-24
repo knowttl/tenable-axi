@@ -50,7 +50,7 @@ test("unconfigured home explains setup without HTTP", async () => {
 test.each([[], ["home"]])("home omits the config path from continuation and full-text help: %j", async (...args) => {
   const fixture = setup([{ body: { data: [{ ...card("1"), name: "x".repeat(1200) }], pagination: { total_record_count: 2 } } }]);
   fixture.config();
-  const result = await fixture.cli([...args, "--config", fixture.path, "--limit", "1"]);
+  const result = await fixture.cli([...args, "--config", fixture.path]);
   expect(result).toMatchObject({ code: 0, data: { complete: false, help: expect.arrayContaining([
     expect.stringContaining("<config>"), expect.stringContaining("--cursor"), expect.stringContaining("--full"),
   ]) } });
