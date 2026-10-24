@@ -47,7 +47,7 @@ export function credentialStore(options: CredentialContext = {}, redactor = new 
     const value = env.TENABLE_AXI_READ_ONLY?.toLowerCase();
     if (value === undefined || value === "0" || value === "false") return false;
     if (value === "1" || value === "true") return true;
-    return invalid("TENABLE_AXI_READ_ONLY must be 1, true, 0 or false");
+    return invalid("Read-only override must be 1, true, 0 or false");
   }
   function load(explicit?: string, verifyAcl = false) {
     const path = configPath(explicit);
@@ -80,7 +80,7 @@ export function credentialStore(options: CredentialContext = {}, redactor = new 
     if (selected !== undefined && !profileName.safeParse(selected).success) invalid("Invalid selected profile name");
     if (selected === undefined && ["TENABLE_AXI_ACCESS_KEY", "TENABLE_AXI_SECRET_KEY", "TENABLE_AXI_ORIGIN"].some((name) => env[name] !== undefined)) {
       if (!env.TENABLE_AXI_ACCESS_KEY?.trim() || !env.TENABLE_AXI_SECRET_KEY?.trim() || (env.TENABLE_AXI_ORIGIN !== undefined && env.TENABLE_AXI_ORIGIN !== ORIGIN)) {
-        return invalid("Incomplete or invalid TENABLE_AXI env profile; set both ACCESS_KEY and SECRET_KEY and use the allowed ORIGIN");
+        return invalid("Incomplete or invalid env profile; set both credential sources and use the allowed origin");
       }
       return { origin: ORIGIN, accessKey: { env: "TENABLE_AXI_ACCESS_KEY" }, secretKey: { env: "TENABLE_AXI_SECRET_KEY" },
         writes: { allowWrites: false, operations: [] }, name: "env", source: "env-profile" };
@@ -88,7 +88,7 @@ export function credentialStore(options: CredentialContext = {}, redactor = new 
     const names = Object.keys(config.profiles);
     const name = selected ?? config.defaultProfile ?? (names.length === 1 ? names[0] : undefined);
     if (name === undefined) throw new AxiError(names.length ? "Select one of the configured profiles" : "No profiles are configured",
-      names.length ? "PROFILE_AMBIGUOUS" : "PROFILE_REQUIRED", ["Pass --profile <name>, set TENABLE_AXI_PROFILE, or configure defaultProfile; run tenable-axi config path"]);
+      names.length ? "PROFILE_AMBIGUOUS" : "PROFILE_REQUIRED", ["Pass --profile <name> or configure defaultProfile; run tenable-axi config path"]);
     if (!Object.hasOwn(config.profiles, name)) throw new AxiError("Selected profile is not configured", "PROFILE_NOT_FOUND", ["Run tenable-axi profile list"]);
     return { ...config.profiles[name]!, name, source: flag !== undefined ? "flag" : env.TENABLE_AXI_PROFILE !== undefined ? "env" : config.defaultProfile !== undefined ? "config-default" : "sole" };
   }
@@ -115,8 +115,9 @@ export function credentialStore(options: CredentialContext = {}, redactor = new 
     const loaded = load(explicit, true);
     const profile = select(loaded.config, flag);
     credentials(profile, true);
-    return { profile: profile.name, source: profile.source, origin: profile.origin, config: loaded.path,
-      accessKey: profile.accessKey, secretKey: profile.secretKey,
+    return { profile: profile.name, source: profile.source, origin: profile.origin,
+      // Report only the SecretRef kind: env variable names and secret file paths must not leak into status output.
+      accessKey: "env" in profile.accessKey ? "env" : "file", secretKey: "env" in profile.secretKey ? "env" : "file",
       readOnly: forced || !profile.writes.allowWrites || profile.writes.operations.length === 0 };
   }
   function list(explicit?: string) {

@@ -22,7 +22,7 @@ export function localCommand(argv: string[], store: ReturnType<typeof credential
   }
   if (flags.has("--help")) return { command: name, ...entry };
   // Validation, including output selection, must finish before reading credentials.
-  const available = name === "auth status" ? ["profile", "source", "origin", "config", "accessKey", "secretKey", "readOnly"]
+  const available = name === "auth status" ? ["profile", "source", "origin", "accessKey", "secretKey", "readOnly"]
     : name === "profile list" ? ["profiles", "count", "config"] : ["config", "state"];
   const fields = flags.get("--fields")?.split(",") ?? available;
   if (fields.some((field) => !available.includes(field)) || new Set(fields).size !== fields.length) usage();

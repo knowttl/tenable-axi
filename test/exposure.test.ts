@@ -32,6 +32,8 @@ test("configured home requests five cards once and reports the upstream total", 
   expect(result.code).toBe(0);
   expect(result.data).toMatchObject({ profile: "env", origin: "https://cloud.tenable.com", readOnly: true, count: 5, total: 60, complete: false });
   expect(result.data.cards).toHaveLength(5);
+  expect(result.data).not.toHaveProperty("bin");
+  expect(result.stdout).not.toContain(process.argv[1]!);
   expect(fixture.requests.map((request) => request.url)).toEqual(["https://cloud.tenable.com/api/v1/t1/exposure-view/cards?limit=5&offset=0"]);
 });
 
@@ -40,7 +42,19 @@ test("unconfigured home explains setup without HTTP", async () => {
   const result = await fixture.cli(["home"]);
   expect(result.code).toBe(0);
   expect(result.data).toMatchObject({ status: "not configured", help: expect.arrayContaining([expect.stringContaining("SecretRefs")]) });
+  expect(result.data).not.toHaveProperty("bin");
+  expect(result.stdout).not.toContain(process.argv[1]!);
   expect(fixture.requests).toHaveLength(0);
+});
+
+test.each([[], ["home"]])("home omits the config path from continuation and full-text help: %j", async (...args) => {
+  const fixture = setup([{ body: { data: [{ ...card("1"), name: "x".repeat(1200) }], pagination: { total_record_count: 2 } } }]);
+  fixture.config();
+  const result = await fixture.cli([...args, "--config", fixture.path]);
+  expect(result).toMatchObject({ code: 0, data: { complete: false, help: expect.arrayContaining([
+    expect.stringContaining("<config>"), expect.stringContaining("--cursor"), expect.stringContaining("--full"),
+  ]) } });
+  expect(result.stdout).not.toContain(fixture.path);
 });
 
 test("hook context reads profile posture without resolving unavailable secrets or HTTP", async () => {
@@ -156,6 +170,20 @@ test("tag search requests category and selected extra properties with documented
   expect(request.init.method).toBe("POST");
   expect(JSON.parse(String(request.init.body))).toEqual({ query: { mode: "simple", text: "Production" }, filters: [{ property: "asset_count", operator: ">=", value: ["1"] }] });
   expect(new URL(request.url).searchParams.get("extra_properties")).toBe("tag_category_name,aes_average");
+});
+
+test("tag extra properties without selected fields are projected instead of silently dropped", async () => {
+  const fixture = setup([{ body: { data: [{ id: "tag-1", name: "Production", extra_properties: { tag_category_name: "Environment", last_updated: "2026-01-01" } }], pagination: { total: 1 } } }]);
+  const result = await fixture.cli(["tag", "list", "--extra-properties", "last_updated"]);
+  expect(result).toMatchObject({ code: 0, data: { tags: [{ id: "tag-1", category: "Environment", value: "Production", last_updated: "2026-01-01" }], total: 1, complete: true } });
+  expect(new URL(fixture.requests[0]!.url).searchParams.get("extra_properties")).toContain("last_updated");
+});
+
+test.each(["id", "id,category", "id,tag_category_name"])("explicit category extra is projected with fields %s", async (fields) => {
+  const fixture = setup([{ body: { data: [{ id: "tag-1", name: "Production", extra_properties: { tag_category_name: "Environment" } }], pagination: { total: 1 } } }]);
+  const result = await fixture.cli(["tag", "list", "--fields", fields, "--extra-properties", "tag_category_name"]);
+  expect(result).toMatchObject({ code: 0, data: { tags: [{ id: "tag-1", category: "Environment" }], complete: true } });
+  expect(new URL(fixture.requests[0]!.url).searchParams.get("extra_properties")).toBe("tag_category_name");
 });
 
 test("tag properties projects discovery names and truncates long descriptions with an escape hatch", async () => {
