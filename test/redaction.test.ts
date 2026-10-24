@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { decode } from "@toon-format/toon";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, beforeEach, expect, test } from "vitest";
@@ -22,7 +23,8 @@ test.each(["raw", "json", "url", "header", "header-json", "header-url"])("remove
       TENABLE_AXI_ACCESS_KEY: access, TENABLE_AXI_SECRET_KEY: secret },
   });
   expect(result.status, result.stderr).toBe(0);
-  expect(result.stdout).toContain("***redacted***");
+  expect(decode(result.stdout)).toMatchObject({ accessKey: "env", secretKey: "env" });
+  expect(decode(result.stdout)).not.toHaveProperty("config");
   expect(result.stdout + result.stderr).not.toContain(value);
   expect(result.stdout + result.stderr).not.toContain(access);
   expect(result.stdout + result.stderr).not.toContain(secret);
@@ -38,7 +40,7 @@ test("redacts a resolved secret in an insecure-file error and emits no raw stder
   fixture.config({ example: { accessKey: { env: "A" }, secretKey: { file } } });
   const result = await fixture.cli(["auth", "status"]);
   expect(result).toMatchObject({ code: 1, data: { error: { code: "CONFIG_INSECURE" } } });
-  expect(result.stdout).toContain("***redacted***");
+  expect(result.stdout).not.toContain(fixture.home);
   expect(result.stdout).not.toContain(secret);
 });
 
