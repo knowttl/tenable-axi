@@ -141,7 +141,7 @@ Check local credentials and file security without contacting Tenable
 
 | Flag | Meaning |
 |---|---|
-| `--config` | Config path; default TENABLE_AXI_CONFIG or platform path |
+| `--config` | Config path; default environment override or platform path |
 | `--profile` | Profile name; default credential precedence |
 | `--fields` | Comma-separated output fields; default all |
 | `--full` | Show full text; default false |
