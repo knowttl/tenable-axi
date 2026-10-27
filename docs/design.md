@@ -184,7 +184,7 @@ Keys share the user's rate budget and rotation invalidates the old pair; do not 
 ## CLI and output contract
 
 Use noun/subnoun/verb grammar, named selectors, kebab-case flags, and no prompts.
-`--profile`, `--config`, and `--help` are common flags; declare `--fields` and `--full` on output-bearing leaves.
+`--profile`, `--config`, and `--help` are common flags; leaves with selectable projections declare `--fields` and `--full`.
 Reject unknown flags, unexpected arguments, invalid combinations, and duplicate non-repeatable flags before credentials or HTTP, with exit 2 and valid flags inline.
 Lists expose `--limit` (default 100), `--offset` where supported, `--cursor` for bounded resume, and `--all` mutually exclusive with `--limit`.
 Search leaves expose documented `--query`, repeatable `--filter`, `--sort`, and domain flags only where supported.
@@ -266,7 +266,7 @@ See [shipped behavior](../README.md#shipped-behavior) for inventory defaults, fi
 Inventory sort aliases are separate from response-field aliases and use the pinned properties-route examples in `src/inventory-catalogue.ts`.
 Doctor and finding summary share the existing transport budgets and disable retries for every probe or count request.
 Bare `-v`, `-V`, and `--version` print only the version and exit 0 through `axi-sdk-js/fast-path` before dynamic import of the graph.
-Every leaf has concise `--help` with defaults, required arguments, and two or three complete examples.
+Every leaf has concise `--help` with applicable defaults, required arguments, and complete examples.
 
 ## Collections, jobs, and bounded reads
 
