@@ -45,7 +45,7 @@ tenable-axi asset list --profile example --limit 10
 tenable-axi finding list --profile example --filter 'severity = ["HIGH"]'
 ```
 
-`auth status` is local; `doctor` makes one bounded tag-properties read and does not prove other module permissions.
+`auth status` is local; `doctor` makes one bounded read per module and reports each module's access separately.
 Configured home reads up to five live exposure cards; unconfigured home stays offline.
 Only `https://cloud.tenable.com` is supported.
 Upstream licensing and the user's per-operation permissions still apply.
@@ -130,8 +130,8 @@ Bare `--version`, `-v` and `-V` print only the package version.
 | `tenable-axi combination show` | show combination |
 | `tenable-axi combination update` | Preview or update combination |
 | `tenable-axi config path` | Show selected config and state paths without reading files |
-| `tenable-axi connector logs` | Read connector sync logs; the API has no server paging parameters |
-| `tenable-axi doctor` | Check local security and one tag-properties read without retries |
+| `tenable-axi connector logs` | Read connector sync logs with sync identity, trigger, first FAILED stage and first ERROR summary (falling back to text); the API has no server paging parameters |
+| `tenable-axi doctor` | Check local security and read access to assets, findings, software, attack paths, attack techniques, initiatives, export jobs and connector logs without retries |
 | `tenable-axi export asset jobs` | List recent inventory asset export jobs |
 | `tenable-axi export asset start` | Preview or create an inventory asset export job |
 | `tenable-axi export attack download` | Download an attack export to a new file, redacting JSON/CSV within 128 MiB |
@@ -146,6 +146,7 @@ Bare `--version`, `-v` and `-V` print only the package version.
 | `tenable-axi finding list` | Search findings |
 | `tenable-axi finding properties` | Discover finding properties and supported operators |
 | `tenable-axi finding show` | Find one finding by exact ID search |
+| `tenable-axi finding summary` | Count findings by each published severity and sensor_type value using limit-1 searches; no per-asset grouping |
 | `tenable-axi home` | Show profile state and up to five live exposure cards |
 | `tenable-axi hook` | Show compact local profile context without resolving secrets or HTTP |
 | `tenable-axi initiative create` | Preview or create initiative |
@@ -243,17 +244,28 @@ Files are validated as JSON or CSV, scanned for secrets, redacted and published 
 Inventory JSON chunks must contain arrays of objects.
 See [download bounds](docs/design.md#collections-jobs-and-bounded-reads) for file size and decompression limits.
 
-Use `asset list/show/properties`, `finding list/show/properties`, and `software list/properties` with `--help` for their flags and examples.
+Use `asset list/show/properties`, `finding list/show/properties/summary`, and `software list/properties` with `--help` for their flags and examples.
 Lists default to 100 rows, expose upstream totals when supplied, and return a cursor when more rows remain.
 `--all` remains bounded by 10,000 rows and the shared transport budgets; resume with the returned `--cursor` and original selectors, filters, sort, and fields.
 Offset paging does not provide snapshot isolation.
 `--fields` selects display or wire properties and automatically requests extra properties; `--full` removes the 1,000-character text preview while retaining invocation bounds.
 For inventory reads and `tag list`, `--extra-properties` also adds the requested properties to the output, even when omitted from `--fields`.
+Absent selected inventory properties render as `null`; present malformed values still fail validation.
+Inventory sort accepts display aliases such as `name`, `class` and `exposureScore` and maps them to each kind's documented sortable keys.
+Unknown sort names return the valid choices before making a request.
+`asset show` includes FQDNs and last-observed time; `finding show` includes asset ID, CVEs and sensor type, and `finding list` includes sensor type.
+`--full` removes text truncation without adding fields or rows.
+`finding summary` counts each severity and sensor type published in the pinned properties examples, including deprecated sensor types, using 19 sequential limit-1 searches and `pagination.total` without retries.
+It accepts the same query and flat filters as finding lists, does no per-host grouping, and retains completed counts with `complete: false` if a read fails or the unchanged invocation budget runs out.
+These counts are independent reads rather than a snapshot, and sensor values can overlap; their sum is not a distinct finding total.
 Simple filters use `--filter 'severity = ["HIGH"]'`; `--filter-file` accepts a flat JSON array of `{property, operator, value: string[]}` and rejects nested boolean expressions.
 Software defaults to name, version, and publisher because the pinned API exposes no stable software ID.
 
-`doctor` validates local configuration and file security, then performs exactly one tag-properties read without retries.
-It checks `EXPOSURE_MANAGEMENT.TAG.TAG.READ`, without claiming access to other modules.
+`doctor` validates local configuration and file security, then performs one read each for assets, findings, software, attack paths, attack techniques, initiatives, export jobs and connector logs without retries or writes.
+Each check reports `ok`, `permission-denied` for HTTP 403 with its privilege advice, or `error`; any unsuccessful check exits nonzero while the other modules are still checked within the existing budgets.
+Probes use minimum documented page sizes; initiatives and connector logs have no server paging, so their collection reads remain bounded by the shared byte and deadline limits.
+`connector logs` includes sync UUID, type, trigger reason, first failed stage name and first ERROR message, preferring summarized text over full text.
+Failure details are `null` when no matching stage or log exists, and error text follows the same redaction, preview and `--full` behavior as other text.
 Collections expose returned count, upstream total when known, completeness and a scoped resume cursor.
 Card lists and home accept upstream pages of up to 25 cards even when fewer are requested, emit only the requested limit, and preserve overflow in a scoped, redacted cursor bounded at 64 KiB.
 Pages above 25 cards or cursors above this bound fail validation rather than dropping cards.

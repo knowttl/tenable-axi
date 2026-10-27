@@ -65,7 +65,8 @@ export async function attackCommand(argv: string[], store: ReturnType<typeof cre
   const fields = get("fields")?.split(",") ?? entry!.defaultFields;
   if (fields.some((field) => !/^[A-Za-z][A-Za-z0-9_]*$/.test(field)) || new Set(fields).size !== fields.length) usage("Fields must be unique comma-separated names");
   const schemas = logs ? logFields : technique ? techniqueFields : attackFields;
-  const aliases: Record<string, string> = logs ? { connectorId: "connector_id", timestamp: "sync_timestamp" }
+  const aliases: Record<string, string> = logs ? { connectorId: "connector_id", timestamp: "sync_timestamp", syncUuid: "sync_uuid",
+    triggerReason: "trigger_reason", failedStage: "sync_stages_info", error: "sync_logs" }
     : technique ? { id: "serial_id", affectedAssets: "assets_ids" } : { id: "vector_id" };
   const wire = (field: string) => aliases[field] ?? field;
   if (fields.some((field) => !Object.hasOwn(schemas, wire(field)))) usage(`Available fields: ${[...Object.keys(aliases), ...Object.keys(schemas)].join(", ")}`);
@@ -151,8 +152,15 @@ export async function attackCommand(argv: string[], store: ReturnType<typeof cre
   };
   const project = (row: Record<string, unknown>) => Object.fromEntries(fields.map((field) => {
     let value = row[wire(field)];
+    if (logs && ["failedStage", "error"].includes(field) && value === undefined) return [field, null];
     if (value === undefined || !schemas[wire(field)]!.safeParse(value).success) invalid(`Missing or malformed selected field: ${field}`);
     if (logs && field === "timestamp") value = (value as Record<string, unknown>).start;
+    if (logs && field === "failedStage") value = (value as Record<string, unknown>[]).find((stage) => stage.status === "FAILED")?.name ?? null;
+    if (logs && field === "error") {
+      const entry = (value as Record<string, unknown>[]).find((entry) => entry.level === "ERROR");
+      value = entry?.summarized_text ?? entry?.text ?? null;
+    }
+    if (logs && ["failedStage", "error"].includes(field) && value !== null && typeof value !== "string") invalid(`Malformed selected field: ${field}`);
     if (technique && field === "affectedAssets") value = (value as string[]).length;
     return [field, preview(store.redactor.payload(value))];
   }));

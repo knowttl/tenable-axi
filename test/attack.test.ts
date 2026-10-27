@@ -7,7 +7,8 @@ import { localFixture } from "./support/local-cli.js";
 
 const path = { vector_id: "path-1", name: "Example attack path", priority: 8 };
 const technique = { serial_id: 42, name: "Example technique", assets_ids: ["asset-1", "asset-2"] };
-const log = { connector_id: 7, status: "FAILED", sync_timestamp: { start: "2026-01-05T09:00:00Z" } };
+const log = { connector_id: 7, status: "FAILED", sync_timestamp: { start: "2026-01-05T09:00:00Z" },
+  sync_uuid: "sync-1", type: "FULL", trigger_reason: "SCHEDULE", sync_stages_info: [], sync_logs: [] };
 const page = (data: unknown[], total?: number, offset = 0) => ({ data,
   pagination: { offset, limit: 100, ...(total === undefined ? {} : { total }) } });
 const fixtures: ReturnType<typeof localFixture>[] = [];
@@ -98,6 +99,40 @@ test("denied connector logs explain their own privilege without requiring Admini
   expect(result.data).toMatchObject({ error: { code: "PERMISSION_DENIED", operation: "connectors-logs" } });
   expect(result.data).not.toHaveProperty("logs");
   expect(JSON.stringify(result.data.help)).toContain("ordinary inventory reads do not require Administrator");
+});
+
+test("failed connector syncs show the first failed stage and first error summary", async () => {
+  const result = await fixture().run(["connector", "logs"], [{ body: { items: [{ ...log,
+    sync_stages_info: [{ name: "read", status: "SUCCEEDED" }, { name: "import", status: "FAILED" }, { name: "finish", status: "FAILED" }],
+    sync_logs: [{ level: "INFO", text: "started" }, { level: "ERROR", summarized_text: "Import failed", text: "full failure" }, { level: "ERROR", text: "later" }],
+  }] } }]);
+  expect(result.code).toBe(0);
+  expect(result.data.logs).toMatchObject([{ syncUuid: "sync-1", type: "FULL", triggerReason: "SCHEDULE", failedStage: "import", error: "Import failed" }]);
+});
+
+test.each([
+  { sync_stages_info: [{ name: "import", status: "SUCCEEDED" }], sync_logs: [{ level: "INFO", text: "done" }] },
+  { sync_stages_info: undefined, sync_logs: undefined },
+])("successful connector syncs show null failure details: %j", async (details) => {
+  const result = await fixture().run(["connector", "logs"], [{ body: { items: [{ ...log, status: "SUCCEEDED",
+    ...details,
+  }] } }]);
+  expect(result.code).toBe(0);
+  expect(result.data.logs).toMatchObject([{ failedStage: null, error: null }]);
+});
+
+test("connector error text falls back to full text and stays redacted through truncation and resume", async () => {
+  const f = fixture();
+  const entry = { ...log, sync_logs: [{ level: "ERROR", text: `${syntheticKeys.secretKey} ${"x".repeat(1200)}` }] };
+  const first = await f.run(["connector", "logs", "--limit", "1"], [{ body: { items: [entry, entry] } }]);
+  expect(first.code).toBe(0);
+  expect(first.data.logs).toMatchObject([{ error: expect.stringContaining("chars total") }]);
+  expect(first.stdout).not.toContain(syntheticKeys.secretKey);
+  const second = await f.run(["connector", "logs", "--full", "--cursor", first.data.cursor as string]);
+  expect(second.code).toBe(0);
+  expect(second.data.logs).toMatchObject([{ error: expect.stringContaining("x".repeat(1200)) }]);
+  expect(second.stdout).not.toContain(syntheticKeys.secretKey);
+  expect(second.requests).toHaveLength(0);
 });
 
 test.each([

@@ -2,7 +2,7 @@ import { AxiError } from "axi-sdk-js";
 import { createHash } from "node:crypto";
 import { closeSync, openSync, readSync } from "node:fs";
 import { z } from "zod";
-import { aliases, assetClasses, filterExamples, filterSchema, inventoryCatalogue, inventoryKinds, inventoryPage, propertyFields, wireFields, type InventoryKind } from "./inventory-catalogue.js";
+import { aliases, assetClasses, filterExamples, filterSchema, findingCountValues, inventoryCatalogue, inventoryKinds, inventoryPage, propertyFields, sortAliases, sortableFields, wireFields, type InventoryKind } from "./inventory-catalogue.js";
 import { credentialStore } from "./profiles.js";
 import { createTransport, TransportError, type Transport, type TransportOptions } from "./transport.js";
 
@@ -34,7 +34,7 @@ export async function inventoryCommand(argv: string[], store: ReturnType<typeof 
   const entry = inventoryCatalogue[name];
   const usage = (message: string): never => { throw new AxiError(message, "VALIDATION_ERROR", [
     entry ? `Valid flags for ${name}: ${Object.keys(entry.flags).map((flag) => `--${flag}`).join(", ")}`
-      : "Valid commands: asset list/show/properties, finding list/show/properties, software list/properties",
+      : "Valid commands: asset list/show/properties, finding list/show/properties/summary, software list/properties",
   ]); };
   if (!entry) usage("Unknown inventory command");
   const kind = argv[0] as InventoryKind;
@@ -50,8 +50,9 @@ export async function inventoryCommand(argv: string[], store: ReturnType<typeof 
     flags.set(flag, [...(flags.get(flag) ?? []), value!]);
   }
   const get = (flag: string) => flags.get(`--${flag}`)?.[0];
+  const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
   const command = (exclude: string[] = []) => ["tenable-axi", name, ...[...flags].flatMap(([flag, values]) =>
-    exclude.includes(flag) ? [] : values.flatMap((value) => [flag, ...(["--all", "--full", "--help"].includes(flag) ? [] : [JSON.stringify(value)])]))].join(" ");
+    exclude.includes(flag) ? [] : values.flatMap((value) => [flag, ...(["--all", "--full", "--help"].includes(flag) ? [] : [quote(value)])]))].join(" ");
   if (get("help")) return { command: name, description: entry!.description, flags: entry!.flags,
     defaultFields: entry!.defaultFields, examples: entry!.examples };
   if (get("all") && get("limit")) usage("--all and --limit are mutually exclusive");
@@ -84,8 +85,14 @@ export async function inventoryCommand(argv: string[], store: ReturnType<typeof 
   if (verb !== "properties") for (const extra of extras) {
     if (!fields.includes(extra) && !projection.some(([, wire]) => wire === extra)) projection.push([extra, extra]);
   }
-  const sort = get("sort");
+  let sort = get("sort");
   if (sort !== undefined && !/^[A-Za-z0-9_]+:(asc|desc)$/.test(sort)) usage("--sort must be property:asc or property:desc");
+  if (sort !== undefined) {
+    const [field, direction] = sort.split(":");
+    const wire = sortAliases[kind][field!] ?? field!;
+    if (!sortableFields[kind].includes(wire)) usage(`Sortable properties: ${[...Object.keys(sortAliases[kind]), ...sortableFields[kind]].join(", ")}`);
+    sort = `${wire}:${direction}`;
+  }
   const classes = get("asset-classes") ? names(get("asset-classes")!) : get("class") ? [get("class")!] : [];
   if (classes.some((value) => !(assetClasses as readonly string[]).includes(value))) usage(`Asset classes: ${assetClasses.join(", ")}`);
   const filters: z.infer<typeof filterSchema>[] = [];
@@ -132,6 +139,22 @@ export async function inventoryCommand(argv: string[], store: ReturnType<typeof 
     loaded.path, operation, body, query, projection])).digest("hex");
   if (cursor && cursor.scope !== scope) usage("Cursor belongs to a different profile, operation, filters, sort, or fields");
   const transport = transportFactory({ origin: profile.origin, keys: store.credentials(profile) });
+  if (verb === "summary") {
+    const counts: Record<string, { value: string; total: number }[]> = { severity: [], sensor_type: [] };
+    try {
+      for (const [property, values] of Object.entries(findingCountValues)) for (const value of values) {
+        const response = await transport.request(operation, { query: { offset: 0, limit: 1 }, retry: false,
+          body: { ...body, filters: [...filters, { property, operator: "=", value: [value] }] } });
+        const page = inventoryPage.parse(response.body);
+        if (page.pagination?.total === undefined) throw new TransportError({ code: "RESPONSE_INVALID", message: "Finding count response is missing pagination.total", operation });
+        counts[property]!.push({ value, total: page.pagination.total });
+      }
+    } catch (error) {
+      if (!(error instanceof TransportError)) throw error;
+      return { ...counts, complete: false, ...error.toJSON() };
+    }
+    return { ...counts, complete: true };
+  }
   offset = cursor?.offset ?? offset;
   let skip = cursor?.skip ?? 0;
   let total: number | null = cursor?.total ?? null;
@@ -157,7 +180,8 @@ export async function inventoryCommand(argv: string[], store: ReturnType<typeof 
     const value = native ? row[wire] : extra.success ? extra.data[wire] : undefined;
     const schema = verb === "properties" ? propertyFields[field]! : wireFields[kind][wire] ??
       (field === "version" || field === "description" ? z.string() : z.json());
-    if (value === undefined || !schema.safeParse(value).success) invalid(`Missing or malformed selected property: ${field}`);
+    if (value === undefined) return [field, null];
+    if (!schema.safeParse(value).success) invalid(`Malformed selected property: ${field}`);
     return [field, preview(store.redactor.payload(value))];
   }));
   const seen = new Set<number>();
@@ -212,7 +236,7 @@ export async function inventoryCommand(argv: string[], store: ReturnType<typeof 
     return { [kind]: rows[0], ...(truncated ? { help: [`Run ${command(["--full"])} --full to read complete text`] } : {}) };
   }
   const help: string[] = [];
-  const selectors = [get("config") ? `--config ${JSON.stringify(get("config"))}` : "", get("profile") ? `--profile ${get("profile")}` : ""].filter(Boolean).join(" ");
+  const selectors = [get("config") ? `--config ${quote(get("config")!)}` : "", get("profile") ? `--profile ${quote(get("profile")!)}` : ""].filter(Boolean).join(" ");
   if (verb === "list") help.push(`Run tenable-axi ${kind} properties ${selectors}`.trim());
   if (verb === "list" && kind !== "software") help.push(`Run tenable-axi ${kind} show --id <id> ${selectors}`.trim());
   if (kind === "software" && verb === "list") help.push("The pinned API exposes no stable software ID");

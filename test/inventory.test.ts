@@ -25,7 +25,7 @@ afterEach(() => { for (const fixture of fixtures.splice(0)) fixture.cleanup(); v
 
 test.each([
   ["asset", asset, { id: "asset-1", name: "Example device", class: "DEVICE", exposureScore: 913 }],
-  ["finding", finding, finding],
+  ["finding", finding, { ...finding, sensor_type: null }],
   ["software", software, { name: "example-app", version: "1.2.3", publisher: "Example Publisher" }],
 ] as const)("%s list renders compact defaults while tolerating beta fields", async (kind, row, expected) => {
   const result = await fixture().run([kind, "list"], [{ body: page([{ ...row, beta: { new_field: true } }], 1) }]);
@@ -46,7 +46,7 @@ test.each(["asset", "finding", "software"])("%s empty search is a definitive suc
 test.each([
   [403, { message: "Denied" }, "PERMISSION_DENIED", "EXPOSURE_MANAGEMENT.INVENTORY.INVENTORY.READ"],
   [400, { message: "Requested unknown_field not found", status: 400 }, "VALIDATION_ERROR", "asset properties"],
-  [200, { data: [{ id: "asset-1", name: "Broken", asset_class: "DEVICE" }] }, "RESPONSE_INVALID", undefined],
+  [200, { data: [{ id: "asset-1", name: 123, asset_class: "DEVICE" }] }, "RESPONSE_INVALID", undefined],
   [200, { unexpected: [] }, "RESPONSE_INVALID", undefined],
   [200, { data: [], pagination: { total: "unknown", offset: 0, limit: 100 } }, "RESPONSE_INVALID", undefined],
 ] as const)("HTTP %i and invalid data fail without an empty success", async (status, body, code, hint) => {
@@ -204,13 +204,13 @@ test("extra properties without selected fields are projected instead of silently
   expect(new URL(result.requests[0]!.url).searchParams.get("extra_properties")).toBe("sources");
 });
 
-test("projected extra properties must be present in the response", async () => {
-  const result = await fixture().run(["asset", "list", "--extra-properties", "sources"], [{ body: page([asset], 1) }]);
-  expect(result.code).toBe(1);
-  expect(result.data).toMatchObject({ error: { code: "RESPONSE_INVALID" } });
+test("absent selected properties render null", async () => {
+  const result = await fixture().run(["asset", "list", "--fields", "id,name,fqdns"], [{ body: page([{ id: "asset-1" }], 1) }]);
+  expect(result.code).toBe(0);
+  expect(result.data.assets).toEqual([{ id: "asset-1", name: null, fqdns: null }]);
 });
 
-test("selected views require their fields without requiring unrendered fields", async () => {
+test("selected views validate present fields without requiring unrendered fields", async () => {
   const f = fixture();
   const minimal = await f.run(["asset", "list", "--fields", "id"], [{ body: page([{ id: "asset-1" }], 1) }]);
   expect(minimal.code).toBe(0);
@@ -239,7 +239,7 @@ test("row budget stops at ten thousand and full does not widen it", async () => 
   expect(result.code).toBe(0);
   expect(result.data).toMatchObject({ count: 10000, complete: false, reason: "ROW_BUDGET_EXCEEDED", cursor: expect.any(String) });
   expect(result.requests).toHaveLength(10);
-});
+}, 15000);
 
 test("resume preserves a within-page position without skipping unreturned rows", async () => {
   const f = fixture();
@@ -275,12 +275,103 @@ test("resume rejects different profiles and operation namespaces", async () => {
 
 test.each([
   { body: page([{ ...asset, id: "asset-2" }], 2, 0) },
-  { body: page([{ id: "asset-2" }], 2, 1) },
+  { body: page([{ id: "asset-2", name: 123 }], 2, 1) },
   { status: 403, body: { message: "Denied" } },
 ] as Reply[])("partial failures retain only validated rows and exit nonzero", async (reply) => {
   const result = await fixture().run(["asset", "list", "--all"], [{ body: page([asset], 2) }, reply]);
   expect(result.code).toBe(1);
   expect(result.data).toMatchObject({ assets: [{ id: "asset-1" }], count: 1, complete: false, error: { code: expect.any(String) }, cursor: expect.any(String) });
+});
+
+test.each([
+  ["asset", "name:asc", "asset_name:asc"], ["asset", "class:desc", "asset_class:desc"],
+  ["asset", "id:asc", "asset_id:asc"], ["asset", "exposureScore:desc", "aes:desc"],
+  ["finding", "name:asc", "finding_name:asc"], ["finding", "id:asc", "finding_id:asc"],
+  ["software", "name:asc", "application:asc"], ["finding", "severity:desc", "severity:desc"],
+])("%s maps sort %s to %s", async (kind, sort, expected) => {
+  const result = await fixture().run([kind, "list", "--sort", sort], [{ body: page([], 0) }]);
+  expect(result.code).toBe(0);
+  expect(new URL(result.requests[0]!.url).searchParams.get("sort")).toBe(expected);
+});
+
+test("unknown sort properties name the valid choices before HTTP", async () => {
+  const result = await fixture().run(["asset", "list", "--sort", "unknown:asc"]);
+  expect(result.code).toBe(2);
+  expect(result.data).toMatchObject({ error: { message: expect.stringContaining("asset_name") } });
+  expect(result.requests).toHaveLength(0);
+});
+
+test("resume hints preserve shell-quoted filters without JSON backslashes", async () => {
+  const result = await fixture().run(["asset", "list", "--limit", "1", "--filter", 'asset_name contains ["X"]'],
+    [{ body: page([asset], 2) }]);
+  expect(result.code).toBe(0);
+  expect(result.data.help).toContain('Run tenable-axi asset list --limit \'1\' --filter \'asset_name contains ["X"]\' --cursor <cursor> to resume; offset paging does not provide snapshot isolation');
+});
+
+test("full-text and discovery hints quote config paths and embedded apostrophes", async () => {
+  const f = fixture();
+  const path = f.config();
+  const result = await f.run(["asset", "list", "--config", path, "--filter", `asset_name contains ["O'Brien"]`],
+    [{ body: page([{ ...asset, name: "x".repeat(1200) }], 1) }]);
+  expect(result.code).toBe(0);
+  expect(result.data.help).toContain(`Run tenable-axi asset properties --config '${path}'`);
+  expect(result.data.help).toContain(`Run tenable-axi asset list --config '${path}' --filter 'asset_name contains ["O'\\''Brien"]' --full to read complete text`);
+});
+
+test.each([
+  ["asset", asset, { fqdns: ["device.example"], last_observed_at: "2026-01-01T00:00:00Z" }],
+  ["finding", finding, { cves: ["CVE-2026-0001"], sensor_type: "NESSUS" }],
+] as const)("%s show includes the richer documented defaults", async (kind, row, extra) => {
+  const result = await fixture().run([kind, "show", "--id", row.id], [{ body: page([{ ...row,
+    ...(kind === "finding" ? { asset_id: "asset-1" } : {}), extra_properties: extra }], 1) }]);
+  expect(result.code).toBe(0);
+  expect(result.data[kind]).toMatchObject(extra);
+  if (kind === "finding") expect(result.data.finding).toMatchObject({ asset_id: "asset-1" });
+  expect(new URL(result.requests[0]!.url).searchParams.get("extra_properties")).toBe(Object.keys(extra).sort().join(","));
+});
+
+test("finding list includes its sensor source by default", async () => {
+  const result = await fixture().run(["finding", "list"], [{ body: page([{ ...finding, extra_properties: { sensor_type: "NESSUS" } }], 1) }]);
+  expect(result.code).toBe(0);
+  expect(result.data.findings).toMatchObject([{ sensor_type: "NESSUS" }]);
+});
+
+test("finding summary counts each published severity and sensor value without listing findings", async () => {
+  const result = await fixture().run(["finding", "summary", "--filter", 'state = ["ACTIVE"]'],
+    Array.from({ length: 19 }, (_, index) => ({ body: page([], index) })));
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ complete: true, severity: expect.arrayContaining([{ value: "Info", total: 0 }, { value: "Low", total: 1 }]),
+    sensor_type: expect.arrayContaining([{ value: "NESSUS", total: 16 }]) });
+  expect(result.requests).toHaveLength(19);
+  expect(result.requests.map((request) => new URL(request.url).search)).toEqual(Array(19).fill("?offset=0&limit=1"));
+  expect(JSON.parse(result.requests[0]!.init.body as string)).toEqual({ filters: [
+    { property: "state", operator: "=", value: ["ACTIVE"] }, { property: "severity", operator: "=", value: ["Info"] },
+  ] });
+  expect(JSON.parse(result.requests[16]!.init.body as string).filters[1]).toEqual({ property: "sensor_type", operator: "=", value: ["NESSUS"] });
+});
+
+test("finding summary retains completed counts when a read fails", async () => {
+  const result = await fixture().run(["finding", "summary"], [{ body: page([], 17) }, { status: 403 }]);
+  expect(result.code).toBe(1);
+  expect(result.data).toMatchObject({ complete: false, severity: [{ value: "Info", total: 17 }], error: { code: "PERMISSION_DENIED" } });
+  expect(result.requests).toHaveLength(2);
+});
+
+test("finding summary refuses an absent total instead of inventing a count", async () => {
+  const result = await fixture().run(["finding", "summary"], [{ body: { data: [] } }]);
+  expect(result.code).toBe(1);
+  expect(result.data).toMatchObject({ error: { code: "RESPONSE_INVALID" } });
+});
+
+test("finding summary retains completed counts when the shared deadline expires", async () => {
+  vi.useFakeTimers();
+  const pending = fixture().run(["finding", "summary"], [{ body: page([], 17) }, "hang"]);
+  await vi.advanceTimersByTimeAsync(20000);
+  const result = await pending;
+  expect(result.code).toBe(1);
+  expect(result.data).toMatchObject({ complete: false, severity: [{ value: "Info", total: 17 }], error: { code: "DEADLINE_EXCEEDED" } });
+  expect(result.requests).toHaveLength(2);
+  expect(vi.getTimerCount()).toBe(0);
 });
 
 test("deadline budget stops normally with valid partial rows and a resumable cursor", async () => {

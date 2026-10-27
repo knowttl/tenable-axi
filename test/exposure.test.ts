@@ -7,7 +7,7 @@ import { localFixture } from "./support/local-cli.js";
 
 const fixtures: ReturnType<typeof localFixture>[] = [];
 afterEach(() => { fixtures.splice(0).forEach((fixture) => fixture.cleanup()); vi.useRealTimers(); });
-function setup(replies: Reply[] = [], configured = true) {
+function setup(replies: (Reply | "hang")[] = [], configured = true) {
   const fixture = localFixture();
   fixtures.push(fixture);
   if (configured) Object.assign(fixture.env, { TENABLE_AXI_ACCESS_KEY: syntheticKeys.accessKey, TENABLE_AXI_SECRET_KEY: syntheticKeys.secretKey });
@@ -65,28 +65,64 @@ test("hook context reads profile posture without resolving unavailable secrets o
   expect(fixture.requests).toHaveLength(0);
 });
 
-test("doctor verifies one tag-properties read and limits its claim to that privilege", async () => {
-  const fixture = setup([{ body: { data: [{ key: "tag_name", operators: ["="] }] } }]);
+const doctorReplies = [
+  { body: { data: [] } }, { body: { data: [] } }, { body: { data: [] } },
+  { body: { data: [] } }, { body: { data: [] } }, { body: { initiatives: [] } },
+  { body: { exports: [] } }, { body: { items: [] } },
+];
+
+test("doctor checks every module with one minimum-size read", async () => {
+  const fixture = setup([...doctorReplies]);
   const result = await fixture.cli(["doctor"]);
-  expect(result).toMatchObject({ code: 0, data: { status: "ok", check: "inventory-tag-properties-list", scope: expect.stringContaining("other modules are untested") } });
-  expect(fixture.requests).toHaveLength(1);
-  expect(fixture.requests[0]!.url).toBe("https://cloud.tenable.com/api/v1/t1/tags/properties");
+  expect(result).toMatchObject({ code: 0, data: { status: "ok", checks: [
+    { module: "assets", status: "ok" }, { module: "findings", status: "ok" }, { module: "software", status: "ok" },
+    { module: "attack-paths", status: "ok" }, { module: "attack-techniques", status: "ok" },
+    { module: "initiatives", status: "ok" }, { module: "export-jobs", status: "ok" }, { module: "connector-logs", status: "ok" },
+  ] } });
+  expect(fixture.requests.map((request) => new URL(request.url).pathname + new URL(request.url).search)).toEqual([
+    "/api/v1/t1/inventory/assets/search?offset=0&limit=1", "/api/v1/t1/inventory/findings/search?offset=0&limit=1",
+    "/api/v1/t1/inventory/software/search?offset=0&limit=1",
+    "/api/v1/t1/apa/top-attack-paths/search?offset=0&limit=100&exclude_resolved=true&run_ai_summarization=false",
+    "/api/v1/t1/apa/top-attack-techniques/search?offset=0&limit=100&exclude_resolved=true",
+    "/exposure-response/initiatives", "/api/v1/t1/inventory/export/assets/status?limit=1", "/api/v1/t1/connectors/logs",
+  ]);
 });
 
-test.each([[401, "AUTH_REQUIRED"], [403, "PERMISSION_DENIED"]])("doctor maps HTTP %i to actionable tag privilege advice", async (status, code) => {
-  const fixture = setup([{ status, body: { message: "Denied" } }]);
+test.each([[401, "AUTH_REQUIRED", "error"], [403, "PERMISSION_DENIED", "permission-denied"]])("doctor reports HTTP %i per module and continues", async (status, code, state) => {
+  const fixture = setup([doctorReplies[0]!, { status, body: { message: "Denied" } }, ...doctorReplies.slice(2)]);
   const result = await fixture.cli(["doctor"]);
-  expect(result).toMatchObject({ code: 1, data: { error: { code, operation: "inventory-tag-properties-list", status }, help: expect.arrayContaining([expect.stringContaining("EXPOSURE_MANAGEMENT.TAG.TAG.READ")]) } });
-  expect(fixture.requests).toHaveLength(1);
+  expect(result).toMatchObject({ code: 1, data: { status: "error", checks: [
+    { module: "assets", status: "ok" }, { module: "findings", status: state,
+      error: { code, operation: "inventory-findings-search", status }, privilege: expect.stringContaining("EXPOSURE_MANAGEMENT.INVENTORY.INVENTORY.READ") },
+    ...["software", "attack-paths", "attack-techniques", "initiatives", "export-jobs", "connector-logs"].map((module) => ({ module, status: "ok" })),
+  ] } });
+  expect(fixture.requests).toHaveLength(8);
 });
 
 test.each([429, 503])("doctor never retries HTTP %i", async (status) => {
   vi.useFakeTimers();
-  const fixture = setup([{ status, body: { message: "Try later" } }, { body: { data: [] } }]);
+  const fixture = setup([{ status, body: { message: "Try later" } }, ...doctorReplies.slice(1)]);
   const pending = fixture.cli(["doctor"]);
   await vi.runAllTimersAsync();
-  expect(await pending).toMatchObject({ code: 1, data: { error: { code: status === 429 ? "RATE_LIMITED" : "REQUEST_FAILED" } } });
-  expect(fixture.requests).toHaveLength(1);
+  expect(await pending).toMatchObject({ code: 1, data: { checks: expect.arrayContaining([
+    { module: "assets", operation: "inventory-assets-search", status: "error", privilege: expect.any(String), error: expect.objectContaining({ code: status === 429 ? "RATE_LIMITED" : "REQUEST_FAILED" }) },
+  ]) } });
+  expect(fixture.requests).toHaveLength(8);
+});
+
+test("doctor keeps the shared deadline when a module hangs", async () => {
+  vi.useFakeTimers();
+  const fixture = setup([doctorReplies[0]!, "hang"]);
+  const pending = fixture.cli(["doctor"]);
+  await vi.advanceTimersByTimeAsync(20000);
+  const result = await pending;
+  expect(result).toMatchObject({ code: 1, data: { checks: expect.arrayContaining([
+    expect.objectContaining({ module: "assets", status: "ok" }),
+    expect.objectContaining({ module: "findings", status: "error", error: expect.objectContaining({ code: "DEADLINE_EXCEEDED" }) }),
+    expect.objectContaining({ module: "connector-logs", status: "error", error: expect.objectContaining({ code: "DEADLINE_EXCEEDED" }) }),
+  ]) } });
+  expect(fixture.requests).toHaveLength(2);
+  expect(vi.getTimerCount()).toBe(0);
 });
 
 test("card list caps wire pages at 25 and resumes a scoped output window", async () => {

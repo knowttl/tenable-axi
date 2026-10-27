@@ -2,8 +2,8 @@ import { AxiError } from "axi-sdk-js";
 import { createHash } from "node:crypto";
 import { closeSync, openSync, readSync } from "node:fs";
 import { z } from "zod";
-import { catalogue, DESCRIPTION, SETUP_GUIDANCE } from "./catalogue.js";
-import { cardDetails, cardRecord, properties, tagRecord, TAG_PRIVILEGE } from "./exposure-contracts.js";
+import { catalogue, DESCRIPTION, SETUP_GUIDANCE, transportBindings } from "./catalogue.js";
+import { cardDetails, cardRecord, properties, tagRecord } from "./exposure-contracts.js";
 import { credentialStore } from "./profiles.js";
 import { createTransport, TransportError, type Transport, type TransportOptions } from "./transport.js";
 
@@ -59,7 +59,7 @@ export async function exposureCommand(argv: string[], store: ReturnType<typeof c
   const displayArgs = argv.map((arg, index) => name === "home" && argv[index - 1] === "--config" ? "<config>" : arg);
   const fullCommand = `tenable-axi ${displayArgs.map(quote).join(" ")} --full`;
   const defaults = name === "tag list" ? ["id", "category", "value"] : name === "tag properties" ? ["property", "operators"]
-    : name === "doctor" ? ["profile", "origin", "readOnly", "check", "status", "scope"]
+    : name === "doctor" ? ["profile", "origin", "readOnly", "status", "checks"]
       : name === "hook" ? ["profile", "origin", "readOnly"] : name === "card show" ? ["id", "name", "score", "ces_scores", "ces_trend", "exposure_classes_details"] : ["id", "name", "score"];
   const available = name === "tag list" ? tagFields : name === "tag properties" ? propertyFields : name === "card show" ? detailFields
     : ["doctor", "hook"].includes(name) ? defaults : cardFields;
@@ -175,13 +175,31 @@ export async function exposureCommand(argv: string[], store: ReturnType<typeof c
   const keys = store.credentials(profile, name === "doctor");
   const transport = factory({ keys, origin: profile.origin });
   if (name === "doctor") {
-    try { await transport.request("inventory-tag-properties-list", { retry: false }); }
-    catch (error) {
-      if (error instanceof TransportError && error.error.status === 401) throw new TransportError(error.error,
-        [...error.help, `This check requires ${TAG_PRIVILEGE}; authentication failure does not establish module access`]);
-      throw error;
+    const probes: { module: string; operation: string; query?: Record<string, string | number | boolean>; body?: unknown }[] = [
+      { module: "assets", operation: "inventory-assets-search", query: { offset: 0, limit: 1 }, body: {} },
+      { module: "findings", operation: "inventory-findings-search", query: { offset: 0, limit: 1 }, body: {} },
+      { module: "software", operation: "inventory-software-search", query: { offset: 0, limit: 1 }, body: {} },
+      { module: "attack-paths", operation: "apa-attack-paths-search", query: { offset: 0, limit: 100, exclude_resolved: true, run_ai_summarization: "false" } },
+      { module: "attack-techniques", operation: "apa-attack-techniques-search", query: { offset: 0, limit: 100, exclude_resolved: true } },
+      { module: "initiatives", operation: "initiatives-list" },
+      { module: "export-jobs", operation: "inventory-export-assets-jobs", query: { limit: 1 } },
+      { module: "connector-logs", operation: "connectors-logs" },
+    ];
+    const checks: Record<string, unknown>[] = [];
+    for (const probe of probes) {
+      const check = { module: probe.module, operation: probe.operation, privilege: transportBindings[probe.operation]!.permissionHelp };
+      try {
+        await transport.request(probe.operation, { ...(probe.query ? { query: probe.query } : {}),
+          ...("body" in probe ? { body: probe.body } : {}), retry: false });
+        checks.push({ ...check, status: "ok" });
+      } catch (error) {
+        if (!(error instanceof TransportError)) throw error;
+        checks.push({ ...check, status: error.error.status === 403 ? "permission-denied" : "error", error: error.error });
+      }
     }
-    return select({ ...context, check: "inventory-tag-properties-list", status: "ok", scope: `Verified one tag-properties read (${TAG_PRIVILEGE}); other modules are untested` });
+    const ok = checks.every((check) => check.status === "ok");
+    if (!ok) process.exitCode = 1;
+    return select({ ...context, status: ok ? "ok" : "error", checks });
   }
   const truncated: string[] = [];
   function preview(value: unknown, path: string): unknown {

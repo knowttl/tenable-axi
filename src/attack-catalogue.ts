@@ -68,9 +68,9 @@ export const attackCatalogue: Record<string, { description: string; operationId:
   "attack-technique list": { description: "Search top attack techniques; affectedAssets counts assets_ids", operationId: "apa-attack-techniques-search",
     flags: { ...common, ...search }, defaultFields: ["id", "name", "affectedAssets"],
     examples: ["tenable-axi attack-technique list --limit 20", "tenable-axi attack-technique list --sort priority:desc --include-resolved"], evidence: "specs/exposure-management.json" },
-  "connector logs": { description: "Read connector sync logs; the API has no server paging parameters", operationId: "connectors-logs",
+  "connector logs": { description: "Read connector sync logs with sync identity, trigger, first FAILED stage and first ERROR summary (falling back to text); the API has no server paging parameters", operationId: "connectors-logs",
     flags: { ...common, "connector-id": "Nonnegative numeric connector ID", status: "SUCCEEDED|FAILED",
       "start-date": "Inclusive YYYY-MM-DD; requires --end-date", "end-date": "Exclusive YYYY-MM-DD; requires --start-date" },
-    defaultFields: ["connectorId", "status", "timestamp"], examples: ["tenable-axi connector logs --connector-id 1 --limit 20",
+    defaultFields: ["connectorId", "status", "timestamp", "syncUuid", "type", "triggerReason", "failedStage", "error"], examples: ["tenable-axi connector logs --connector-id 1 --limit 20",
       "tenable-axi connector logs --status FAILED --start-date 2026-01-01 --end-date 2026-02-01"], evidence: "specs/exposure-management.json" },
 };
