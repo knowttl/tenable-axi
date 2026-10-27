@@ -90,8 +90,9 @@ Offline `spec:check` verifies byte hashes, complete operation classification, an
 An explicit refresh reviews route, field, permission, paging, and error changes before updating hashes.
 CI never requires fetching a floating upstream spec, and new operations stay blocked pending review.
 
-Zod decoders require only fields rendered by the selected view and tolerate extra upstream fields.
+Zod decoders validate fields rendered by the selected view and tolerate extra upstream fields.
 Decode explicitly requested extra fields without requiring the entire generated schema at runtime.
+See [shipped behavior](../README.md#shipped-behavior) for inventory's absent-property projection contract.
 Keep missing optional values distinct from required-field failures; never replace absent scores or denied data with zero.
 Strict command/profile/request validation is separate from tolerant response decoding.
 
@@ -261,16 +262,9 @@ An unconfigured home gives setup state without HTTP.
 The session hook prints a compact local-only profile summary, so session start does not implicitly contact the tenant.
 `auth status`, `profile list`, and `config path` are local and show sources rather than secret values.
 See [shipped behavior](../README.md#shipped-behavior) for home/auth status metadata omissions and secret-source output.
-`doctor` validates config/file security and performs one minimum-size read each for assets, findings, software, attack paths, attack techniques, initiatives, export jobs and connector logs without retries or writes.
-Doctor reports per-module `ok`, `permission-denied` (403, with the bound operation's privilege advice), or `error`, continuing after failures within the unchanged shared budgets.
-Initiatives and connector logs have no server paging; the byte and deadline budgets bound those reads.
-Inventory projections emit `null` for absent selected properties and reject present malformed values.
-Asset show adds `fqdns` and `last_observed_at`; finding show adds `asset_id` and `cves` alongside the default `sensor_type` source column.
-Inventory sort aliases are separate from response-field aliases: asset `name` sorts by `asset_name`, finding `name` by `finding_name`, and unknown keys report the pinned sortable choices.
-`finding summary` counts the five severity and fourteen sensor values in the pinned properties examples, including deprecated sensors, with 19 sequential limit-1 searches without retries or a budget increase.
-Summary retains completed counts on failure, rejects missing totals, and does no per-host grouping; independent sensor counts can overlap and are not a snapshot.
-Connector failure details select the first FAILED stage name and the first ERROR log's summarized text, falling back to text, then pass through ordinary redaction and truncation.
-`--full` means untruncated text and never expands fields or rows.
+See [shipped behavior](../README.md#shipped-behavior) for inventory defaults, finding counts, per-module doctor checks and connector failure details.
+Inventory sort aliases are separate from response-field aliases and use the pinned properties-route examples in `src/inventory-catalogue.ts`.
+Doctor and finding summary share the existing transport budgets and disable retries for every probe or count request.
 Bare `-v`, `-V`, and `--version` print only the version and exit 0 through `axi-sdk-js/fast-path` before dynamic import of the graph.
 Every leaf has concise `--help` with defaults, required arguments, and two or three complete examples.
 

@@ -9,7 +9,7 @@ See [README](README.md) for shipped behavior and development commands.
 Use the runtime required by [package.json](package.json), TypeScript with strict checking, ESM, and pnpm with the committed lockfile.
 Use `axi-sdk-js` for the CLI boundary and `@toon-format/toon` for stdout encoding.
 Keep JSON internally and decode untrusted responses with zod at the boundary.
-Require rendered fields, tolerate extra upstream fields, and keep command input schemas strict.
+Validate selected response fields according to the [output contract](docs/design.md#architecture-and-module-depth), tolerate extra upstream fields, and keep command input schemas strict.
 Use precise names, caller-shaped domain functions, and one authoritative command catalogue.
 Prefer functions that hide a complete responsibility over wrappers that merely forward calls.
 Do not add arbitrary HTTP execution or bypasses for credentials, origins, or write policy.

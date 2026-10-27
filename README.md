@@ -248,15 +248,15 @@ Use `asset list/show/properties`, `finding list/show/properties/summary`, and `s
 Lists default to 100 rows, expose upstream totals when supplied, and return a cursor when more rows remain.
 `--all` remains bounded by 10,000 rows and the shared transport budgets; resume with the returned `--cursor` and original selectors, filters, sort, and fields.
 Offset paging does not provide snapshot isolation.
-`--fields` selects display or wire properties and automatically requests extra properties; `--full` removes the 1,000-character text preview while retaining invocation bounds.
+`--fields` selects display or wire properties and automatically requests extra properties; `--full` removes the 1,000-character text preview without adding fields or rows or changing invocation bounds.
 For inventory reads and `tag list`, `--extra-properties` also adds the requested properties to the output, even when omitted from `--fields`.
 Absent selected inventory properties render as `null`; present malformed values still fail validation.
 Inventory sort accepts display aliases such as `name`, `class` and `exposureScore` and maps them to each kind's documented sortable keys.
 Unknown sort names return the valid choices before making a request.
 `asset show` includes FQDNs and last-observed time; `finding show` includes asset ID, CVEs and sensor type, and `finding list` includes sensor type.
-`--full` removes text truncation without adding fields or rows.
 `finding summary` counts each severity and sensor type published in the pinned properties examples, including deprecated sensor types, using 19 sequential limit-1 searches and `pagination.total` without retries.
 It accepts profile/config selection, does no per-host grouping, and retains completed counts with `complete: false` if a read fails or the unchanged invocation budget runs out.
+Missing `pagination.total` fails validation rather than inventing a count.
 These counts are independent reads rather than a snapshot, and sensor values can overlap; their sum is not a distinct finding total.
 Simple filters use `--filter 'severity = ["HIGH"]'`; `--filter-file` accepts a flat JSON array of `{property, operator, value: string[]}` and rejects nested boolean expressions.
 Software defaults to name, version, and publisher because the pinned API exposes no stable software ID.
