@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.3](https://github.com/knowttl/tenable-axi/compare/v0.1.2...v0.1.3) (2026-10-27)
+
+
+### Features
+
+* improve inventory output and diagnostics, add finding counts ([#22](https://github.com/knowttl/tenable-axi/issues/22)) ([9985aaf](https://github.com/knowttl/tenable-axi/commit/9985aafece69fd16b8b9fbc0dc3b2547a1a76f71))
+
 ## [0.1.2](https://github.com/knowttl/tenable-axi/compare/v0.1.1...v0.1.2) (2026-10-24)
 
 
