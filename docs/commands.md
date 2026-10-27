@@ -734,14 +734,10 @@ Operation: `inventory-findings-search`.
 |---|---|
 | `--config` | Config path; default credential precedence |
 | `--profile` | Profile name; default credential precedence |
-| `--query` | Simple query text |
-| `--filter` | Repeatable: <property> <operator> <JSON string array> |
-| `--filter-file` | JSON flat array of {property, operator, value: string[]}; '-' reads stdin; excludes --filter |
 | `--help` | Show help |
 
 ```sh
 tenable-axi finding summary
-tenable-axi finding summary --filter 'state = ["ACTIVE"]'
 ```
 
 ## home
