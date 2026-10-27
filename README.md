@@ -256,7 +256,7 @@ Unknown sort names return the valid choices before making a request.
 `asset show` includes FQDNs and last-observed time; `finding show` includes asset ID, CVEs and sensor type, and `finding list` includes sensor type.
 `--full` removes text truncation without adding fields or rows.
 `finding summary` counts each severity and sensor type published in the pinned properties examples, including deprecated sensor types, using 19 sequential limit-1 searches and `pagination.total` without retries.
-It accepts the same query and flat filters as finding lists, does no per-host grouping, and retains completed counts with `complete: false` if a read fails or the unchanged invocation budget runs out.
+It accepts profile/config selection, does no per-host grouping, and retains completed counts with `complete: false` if a read fails or the unchanged invocation budget runs out.
 These counts are independent reads rather than a snapshot, and sensor values can overlap; their sum is not a distinct finding total.
 Simple filters use `--filter 'severity = ["HIGH"]'`; `--filter-file` accepts a flat JSON array of `{property, operator, value: string[]}` and rejects nested boolean expressions.
 Software defaults to name, version, and publisher because the pinned API exposes no stable software ID.

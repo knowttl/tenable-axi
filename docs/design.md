@@ -196,7 +196,7 @@ This table defines selectors, extra flags, and compact projections; display fiel
 |---|---|---|
 | `asset list/show/properties` | Show: `--id`, using exact ID search; list: query/filter/sort and `--class`. | id, name, class, exposureScore |
 | `finding list/show/properties` | Show: `--id`, using exact ID search; list: query/filter/sort. | id, name, severity, state, sensor_type |
-| `finding summary` | Query/flat filters; one limit-1 search per published severity and sensor_type value, reading pagination.total. | severity and sensor_type counts, complete |
+| `finding summary` | Profile/config selection; one limit-1 search per published severity and sensor_type value, reading pagination.total. | severity and sensor_type counts, complete |
 | `software list/properties` | Query/filter/sort; the [pinned spec](../specs/exposure-management.json) exposes no stable software ID. | name (application), version (extra_properties.version), publisher |
 | `tag list/properties` | Exposure Management query/filter/sort. | id, category, value |
 | `card list/show` | List: `--global`, `--query`, `--sorting-order`; show: `--id` and trend/SLA flags below. | id, name, score |

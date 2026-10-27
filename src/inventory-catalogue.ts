@@ -37,6 +37,11 @@ export const wireFields: Record<InventoryKind, Record<string, z.ZodType>> = {
   finding: { id: z.string(), name: z.string(), severity: z.string(), state: z.string(), asset_id: z.string() },
   software: { application: z.string(), publisher: z.string(), type: z.array(z.string()), devices_count: z.number().int().nonnegative() },
 };
+export const extraFields: Record<InventoryKind, Record<string, z.ZodType>> = {
+  asset: { fqdns: z.array(z.string()), last_observed_at: z.string() },
+  finding: { cves: z.array(z.string()), sensor_type: z.string(), last_observed_at: z.string() },
+  software: {},
+};
 export const propertyFields: Record<string, z.ZodType> = { key: z.string(), readable_name: z.string(), operators: z.array(z.string()),
   sortable: z.boolean(), filterable: z.boolean(), control: z.record(z.string(), z.unknown()), description: z.string() };
 export const assetClasses = ["ACCOUNT", "APPLICATION", "CONTAINER", "DEVICE", "GENERAL", "GROUP", "IAC", "IDENTITY", "RESOURCE", "ROLE", "STORAGE", "UNKNOWN"] as const;
@@ -89,8 +94,8 @@ export const inventoryCatalogue = Object.fromEntries((Object.keys(inventoryKinds
     description: "Count findings by each published severity and sensor_type value using limit-1 searches; no per-asset grouping",
     operationId: "inventory-findings-search", defaultFields: [], evidence: "specs/exposure-management.json",
     flags: { config: "Config path; default credential precedence", profile: "Profile name; default credential precedence",
-      query: search.query, filter: search.filter, "filter-file": search["filter-file"], help: "Show help" },
-    examples: ["tenable-axi finding summary", `tenable-axi finding summary --filter 'state = ["ACTIVE"]'`],
+      help: "Show help" },
+    examples: ["tenable-axi finding summary"],
   }]]),
   [`${kind} list`, { description: `Search ${inventoryKinds[kind]}${kind === "software" ? "; the pinned API exposes no stable software ID" : ""}`,
     operationId: `inventory-${inventoryKinds[kind]}-search`, defaultFields: defaultFields[kind], evidence: "specs/exposure-management.json",

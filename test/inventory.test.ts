@@ -349,8 +349,42 @@ test("finding list includes its sensor source by default", async () => {
   expect(result.data.findings).toMatchObject([{ sensor_type: "NESSUS" }]);
 });
 
+test.each([
+  [["asset", "show", "--id", "asset-1"], asset, { fqdns: 42 }],
+  [["asset", "show", "--id", "asset-1"], asset, { fqdns: [42] }],
+  [["asset", "show", "--id", "asset-1"], asset, { last_observed_at: 42 }],
+  [["finding", "show", "--id", "finding-1"], finding, { cves: "CVE-2026-0001" }],
+  [["finding", "show", "--id", "finding-1"], finding, { cves: [42] }],
+  [["finding", "list"], finding, { sensor_type: ["NESSUS"] }],
+  [["asset", "list", "--fields", "id,fqdns"], asset, { fqdns: null }],
+  [["asset", "show", "--id", "asset-1", "--fields", "last_observed_at"], asset, { last_observed_at: [] }],
+  [["finding", "list", "--fields", "id,cves"], finding, { cves: {} }],
+  [["finding", "show", "--id", "finding-1", "--fields", "sensor_type"], finding, { sensor_type: 42 }],
+  [["asset", "list", "--extra-properties", "fqdns"], asset, { fqdns: false }],
+  [["finding", "list", "--extra-properties", "last_observed_at"], finding, { last_observed_at: 42 }],
+] as const)("%j rejects a malformed known extra field: %j", async (args, row, extra) => {
+  const result = await fixture().run([...args], [{ body: page([{ ...row, extra_properties: extra }], 1) }]);
+  expect(result.code).toBe(1);
+  expect(result.data).toMatchObject({ error: { code: "RESPONSE_INVALID" } });
+});
+
+test.each([
+  ["asset", asset, "fqdns,last_observed_at", { fqdns: [], last_observed_at: "2026-01-01T00:00:00Z" }, { fqdns: null, last_observed_at: null }],
+  ["finding", finding, "cves,sensor_type,last_observed_at", { cves: [], sensor_type: "NESSUS", last_observed_at: "2026-01-01T00:00:00Z" },
+    { cves: null, sensor_type: null, last_observed_at: null }],
+] as const)("%s explicit known extras retain valid values and null for absence", async (kind, row, fields, extra, missing) => {
+  const f = fixture();
+  const args = [kind, "show", "--id", row.id, "--fields", fields];
+  const present = await f.run(args, [{ body: page([{ ...row, extra_properties: extra }], 1) }]);
+  expect(present.code).toBe(0);
+  expect(present.data[kind]).toEqual(extra);
+  const absent = await f.run(args, [{ body: page([{ ...row, extra_properties: {} }], 1) }]);
+  expect(absent.code).toBe(0);
+  expect(absent.data[kind]).toEqual(missing);
+});
+
 test("finding summary counts each published severity and sensor value without listing findings", async () => {
-  const result = await fixture().run(["finding", "summary", "--filter", 'state = ["ACTIVE"]'],
+  const result = await fixture().run(["finding", "summary"],
     Array.from({ length: 19 }, (_, index) => ({ body: page([], index) })));
   expect(result.code).toBe(0);
   expect(result.data).toMatchObject({ complete: true, severity: expect.arrayContaining([{ value: "Info", total: 0 }, { value: "Low", total: 1 }]),
@@ -358,9 +392,20 @@ test("finding summary counts each published severity and sensor value without li
   expect(result.requests).toHaveLength(19);
   expect(result.requests.map((request) => new URL(request.url).search)).toEqual(Array(19).fill("?offset=0&limit=1"));
   expect(JSON.parse(result.requests[0]!.init.body as string)).toEqual({ filters: [
-    { property: "state", operator: "=", value: ["ACTIVE"] }, { property: "severity", operator: "=", value: ["Info"] },
+    { property: "severity", operator: "=", value: ["Info"] },
   ] });
-  expect(JSON.parse(result.requests[16]!.init.body as string).filters[1]).toEqual({ property: "sensor_type", operator: "=", value: ["NESSUS"] });
+  expect(JSON.parse(result.requests[16]!.init.body as string)).toEqual({ filters: [{ property: "sensor_type", operator: "=", value: ["NESSUS"] }] });
+});
+
+test.each([
+  ["--query", "example"], ["--filter", 'state = ["ACTIVE"]'], ["--filter-file", "filters.json"],
+])("finding summary rejects %s before credentials or HTTP", async (...flags) => {
+  const f = fixture();
+  delete f.env.TENABLE_AXI_SECRET_KEY;
+  const result = await f.run(["finding", "summary", ...flags]);
+  expect(result.code).toBe(2);
+  expect(result.data).toMatchObject({ error: { code: "VALIDATION_ERROR" } });
+  expect(result.requests).toHaveLength(0);
 });
 
 test("finding summary retains completed counts when a read fails", async () => {

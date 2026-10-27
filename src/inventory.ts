@@ -2,7 +2,7 @@ import { AxiError } from "axi-sdk-js";
 import { createHash } from "node:crypto";
 import { closeSync, openSync, readSync } from "node:fs";
 import { z } from "zod";
-import { aliases, assetClasses, filterExamples, filterSchema, findingCountValues, inventoryCatalogue, inventoryKinds, inventoryPage, propertyFields, sortAliases, sortableFields, wireFields, type InventoryKind } from "./inventory-catalogue.js";
+import { aliases, assetClasses, extraFields, filterExamples, filterSchema, findingCountValues, inventoryCatalogue, inventoryKinds, inventoryPage, propertyFields, sortAliases, sortableFields, wireFields, type InventoryKind } from "./inventory-catalogue.js";
 import { credentialStore } from "./profiles.js";
 import { createTransport, TransportError, type Transport, type TransportOptions } from "./transport.js";
 
@@ -144,7 +144,7 @@ export async function inventoryCommand(argv: string[], store: ReturnType<typeof 
     try {
       for (const [property, values] of Object.entries(findingCountValues)) for (const value of values) {
         const response = await transport.request(operation, { query: { offset: 0, limit: 1 }, retry: false,
-          body: { ...body, filters: [...filters, { property, operator: "=", value: [value] }] } });
+          body: { filters: [{ property, operator: "=", value: [value] }] } });
         const page = inventoryPage.parse(response.body);
         if (page.pagination?.total === undefined) throw new TransportError({ code: "RESPONSE_INVALID", message: "Finding count response is missing pagination.total", operation });
         counts[property]!.push({ value, total: page.pagination.total });
@@ -180,7 +180,7 @@ export async function inventoryCommand(argv: string[], store: ReturnType<typeof 
       const native = verb === "properties" || Object.hasOwn(wireFields[kind], wire);
       if (!native && row.extra_properties !== undefined && !extra.success) invalid("Malformed extra_properties container");
       const value = native ? row[wire] : extra.success ? extra.data[wire] : undefined;
-      const schema = verb === "properties" ? propertyFields[field]! : wireFields[kind][wire] ??
+      const schema = verb === "properties" ? propertyFields[field]! : wireFields[kind][wire] ?? extraFields[kind][wire] ??
         (field === "version" || field === "description" ? z.string() : z.json());
       if (value === undefined) return [field, null];
       if (!schema.safeParse(value).success) invalid(`Malformed selected property: ${field}`);
