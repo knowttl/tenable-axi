@@ -174,16 +174,19 @@ export async function inventoryCommand(argv: string[], store: ReturnType<typeof 
     return value;
   };
   const invalid = (message: string): never => { throw new TransportError({ code: "RESPONSE_INVALID", message, operation }); };
-  const project = (row: Record<string, unknown>) => Object.fromEntries(projection.map(([field, wire]) => {
-    const native = verb === "properties" || Object.hasOwn(wireFields[kind], wire);
+  const project = (row: Record<string, unknown>) => {
     const extra = z.record(z.string(), z.unknown()).safeParse(row.extra_properties);
-    const value = native ? row[wire] : extra.success ? extra.data[wire] : undefined;
-    const schema = verb === "properties" ? propertyFields[field]! : wireFields[kind][wire] ??
-      (field === "version" || field === "description" ? z.string() : z.json());
-    if (value === undefined) return [field, null];
-    if (!schema.safeParse(value).success) invalid(`Malformed selected property: ${field}`);
-    return [field, preview(store.redactor.payload(value))];
-  }));
+    return Object.fromEntries(projection.map(([field, wire]) => {
+      const native = verb === "properties" || Object.hasOwn(wireFields[kind], wire);
+      if (!native && row.extra_properties !== undefined && !extra.success) invalid("Malformed extra_properties container");
+      const value = native ? row[wire] : extra.success ? extra.data[wire] : undefined;
+      const schema = verb === "properties" ? propertyFields[field]! : wireFields[kind][wire] ??
+        (field === "version" || field === "description" ? z.string() : z.json());
+      if (value === undefined) return [field, null];
+      if (!schema.safeParse(value).success) invalid(`Malformed selected property: ${field}`);
+      return [field, preview(store.redactor.payload(value))];
+    }));
+  };
   const seen = new Set<number>();
   try {
     while (rows.length < (verb === "show" ? 2 : rowLimit)) {

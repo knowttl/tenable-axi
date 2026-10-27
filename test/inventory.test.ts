@@ -210,6 +210,19 @@ test("absent selected properties render null", async () => {
   expect(result.data.assets).toEqual([{ id: "asset-1", name: null, fqdns: null }]);
 });
 
+test.each([
+  [["asset", "show", "--id", "asset-1"], asset, "broken"],
+  [["finding", "list"], finding, null],
+  [["finding", "show", "--id", "finding-1"], finding, []],
+  [["software", "list"], software, 12],
+  [["asset", "list", "--fields", "id,fqdns"], asset, false],
+  [["asset", "list", "--extra-properties", "sources"], asset, "broken"],
+] as const)("%j rejects a malformed selected extra-properties container", async (args, row, extra) => {
+  const result = await fixture().run([...args], [{ body: page([{ ...row, extra_properties: extra }], 1) }]);
+  expect(result.code).toBe(1);
+  expect(result.data).toMatchObject({ error: { code: "RESPONSE_INVALID" } });
+});
+
 test("selected views validate present fields without requiring unrendered fields", async () => {
   const f = fixture();
   const minimal = await f.run(["asset", "list", "--fields", "id"], [{ body: page([{ id: "asset-1" }], 1) }]);
