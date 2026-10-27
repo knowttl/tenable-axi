@@ -90,8 +90,9 @@ Offline `spec:check` verifies byte hashes, complete operation classification, an
 An explicit refresh reviews route, field, permission, paging, and error changes before updating hashes.
 CI never requires fetching a floating upstream spec, and new operations stay blocked pending review.
 
-Zod decoders require only fields rendered by the selected view and tolerate extra upstream fields.
+Zod decoders validate fields rendered by the selected view and tolerate extra upstream fields.
 Decode explicitly requested extra fields without requiring the entire generated schema at runtime.
+See [shipped behavior](../README.md#shipped-behavior) for inventory's absent-property projection contract.
 Keep missing optional values distinct from required-field failures; never replace absent scores or denied data with zero.
 Strict command/profile/request validation is separate from tolerant response decoding.
 
@@ -183,7 +184,7 @@ Keys share the user's rate budget and rotation invalidates the old pair; do not 
 ## CLI and output contract
 
 Use noun/subnoun/verb grammar, named selectors, kebab-case flags, and no prompts.
-`--profile`, `--config`, and `--help` are common flags; declare `--fields` and `--full` on output-bearing leaves.
+`--profile`, `--config`, and `--help` are common flags; leaves with selectable projections declare `--fields` and `--full`.
 Reject unknown flags, unexpected arguments, invalid combinations, and duplicate non-repeatable flags before credentials or HTTP, with exit 2 and valid flags inline.
 Lists expose `--limit` (default 100), `--offset` where supported, `--cursor` for bounded resume, and `--all` mutually exclusive with `--limit`.
 Search leaves expose documented `--query`, repeatable `--filter`, `--sort`, and domain flags only where supported.
@@ -195,13 +196,14 @@ This table defines selectors, extra flags, and compact projections; display fiel
 | Commands | Selectors and additional flags | Default list fields |
 |---|---|---|
 | `asset list/show/properties` | Show: `--id`, using exact ID search; list: query/filter/sort and `--class`. | id, name, class, exposureScore |
-| `finding list/show/properties` | Show: `--id`, using exact ID search; list: query/filter/sort. | id, name, severity, state |
+| `finding list/show/properties` | Show: `--id`, using exact ID search; list: query/filter/sort. | id, name, severity, state, sensor_type |
+| `finding summary` | Profile/config selection; one limit-1 search per published severity and sensor_type value, reading pagination.total. | severity and sensor_type counts, complete |
 | `software list/properties` | Query/filter/sort; the [pinned spec](../specs/exposure-management.json) exposes no stable software ID. | name (application), version (extra_properties.version), publisher |
 | `tag list/properties` | Exposure Management query/filter/sort. | id, category, value |
 | `card list/show` | List: `--global`, `--query`, `--sorting-order`; show: `--id` and trend/SLA flags below. | id, name, score |
 | `attack-path list` | Documented filters/sort and `--include-resolved`; AI summarization off by default. | id, name, priority |
 | `attack-technique list` | Documented filters/sort and `--include-resolved`. | id, name, affectedAssets |
-| `connector logs` | Documented connector/time selectors and bounded limit. | connectorId, status, timestamp |
+| `connector logs` | Documented connector/time selectors and bounded limit. | connectorId, status, timestamp, syncUuid, type, triggerReason, failedStage, error |
 | `export asset start`, `export finding start` | Optional strict `--body-file` for query/filters; query-option and write flags. | id, state |
 | `export asset jobs`, `export finding jobs` | `--status`, `--limit`; see [README export usage](../README.md) for history limits. | id, state, createdAt |
 | `export inventory status` | `--id`. | id, state, availableChunks |
@@ -260,10 +262,11 @@ An unconfigured home gives setup state without HTTP.
 The session hook prints a compact local-only profile summary, so session start does not implicitly contact the tenant.
 `auth status`, `profile list`, and `config path` are local and show sources rather than secret values.
 See [shipped behavior](../README.md#shipped-behavior) for home/auth status metadata omissions and secret-source output.
-`doctor` validates config/file security and performs one bounded `inventory-tag-properties-list` read without retries or writes.
-Doctor privilege advice is operation-specific; it cannot prove access to all modules.
+See [shipped behavior](../README.md#shipped-behavior) for inventory defaults, finding counts, per-module doctor checks and connector failure details.
+Inventory sort aliases are separate from response-field aliases and use the pinned properties-route examples in `src/inventory-catalogue.ts`.
+Doctor and finding summary share the existing transport budgets and disable retries for every probe or count request.
 Bare `-v`, `-V`, and `--version` print only the version and exit 0 through `axi-sdk-js/fast-path` before dynamic import of the graph.
-Every leaf has concise `--help` with defaults, required arguments, and two or three complete examples.
+Every leaf has concise `--help` with applicable defaults, required arguments, and complete examples.
 
 ## Collections, jobs, and bounded reads
 
@@ -356,9 +359,9 @@ The order below is the delivery order even when dependencies allow independent p
 | T2 | T1 | Profiles, SecretRefs, private files, redaction, credential schema, local auth/profile/config commands. | Both platform branches, precedence, partial env, sentinels, no network. |
 | T3 | T1 | Closed transport, origin/header policy, bounded retry/errors, network guard, fake transport/HTTPS Tenable. | Every error family, redirects, continuations, retry/deadline bounds. |
 | T4 | T2, T3 | Write coordinator, immutable scope, preview, confirmation, durable journal, unknown outcome. | Default/forced read-only, allowlist, no-op, journal failures, send once. |
-| T5 | T2, T3 | Assets/findings/software list, show where defined, properties, filters, paging, fields/truncation. | Populated/empty/denied/beta fixtures, budgets/resume. |
-| T6 | T2, T3 | Tags, exposure cards, home, doctor. | Five-card home, unconfigured state, local hook context, one-read doctor, card details/totals. |
-| T7 | T2, T3 | Attack paths, techniques, connector logs. | Published path, denied Administrator logs, paging, AI default off. |
+| T5 | T2, T3 | Assets/findings/software list, richer show where defined, properties, filters, sort aliases, paging, fields/truncation; finding severity/source summary. | Populated/empty/denied/beta fixtures, absent versus malformed properties, quoted hints, minimum-size summary reads, budgets/resume. |
+| T6 | T2, T3 | Tags, exposure cards, home, per-module doctor. | Five-card home, unconfigured state, local hook context, eight reads without retries, isolated permission denial, card details/totals. |
+| T7 | T2, T3 | Attack paths, techniques, connector logs with derived failure details. | Published path, denied Administrator logs, first failed stage/error, redacted truncation/resume, paging, AI default off. |
 | T8 | T4, T5 | Inventory exports: creation, jobs, status, chunk downloads. | Guarded starts, no replay/poll, chunk selection, atomic bounded redacted output. |
 | T9 | T4, T7 | Attack path/technique/heatmap export creation, status, download. | WRITE privilege advice, separate job namespace, unknown outcome, bounded files. |
 | T10 | T4, T6 | Platform tag categories/values, bulk deletion, assignments, exclusions, filters. | All 15 operations, nested ACL rejection, dynamic filters, version conflicts, no-ops. |

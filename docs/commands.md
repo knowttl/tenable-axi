@@ -17,7 +17,7 @@ Operation: `inventory-assets-search`.
 | `--config` | Config path; default credential precedence |
 | `--profile` | Profile name; default credential precedence |
 | `--fields` | Comma-separated display or wire properties; display names: id, name, class, exposureScore; default compact view |
-| `--full` | Show full text; default false |
+| `--full` | Show untruncated text; does not add fields or rows; default false |
 | `--help` | Show help |
 | `--limit` | Maximum emitted rows, 1-10000; default 100 |
 | `--all` | Read up to 10000 rows within invocation budgets; excludes --limit |
@@ -25,7 +25,7 @@ Operation: `inventory-assets-search`.
 | `--query` | Simple query text |
 | `--filter` | Repeatable: <property> <operator> <JSON string array>, e.g. asset_class = ["DEVICE"] |
 | `--filter-file` | JSON flat array of {property, operator, value: string[]}; '-' reads stdin; excludes --filter |
-| `--sort` | Wire property:asc\|desc |
+| `--sort` | Sortable display or wire property:asc\|desc; unknown names report valid choices |
 | `--extra-properties` | Comma-separated extra wire properties |
 | `--offset` | Starting record; default 0; excludes --cursor |
 | `--class` | Server-side asset class filter |
@@ -47,7 +47,7 @@ Operation: `inventory-asset-properties-list`.
 | `--config` | Config path; default credential precedence |
 | `--profile` | Profile name; default credential precedence |
 | `--fields` | Comma-separated output fields; accepted: key, readable_name, operators, sortable, filterable, control, description; default compact view |
-| `--full` | Show full text; default false |
+| `--full` | Show untruncated text; does not add fields or rows; default false |
 | `--help` | Show help |
 | `--limit` | Maximum emitted rows, 1-10000; default 100 |
 | `--all` | Read up to 10000 rows within invocation budgets; excludes --limit |
@@ -69,8 +69,8 @@ Operation: `inventory-assets-search`.
 |---|---|
 | `--config` | Config path; default credential precedence |
 | `--profile` | Profile name; default credential precedence |
-| `--fields` | Comma-separated display or wire properties; display names: id, name, class, exposureScore; default compact view |
-| `--full` | Show full text; default false |
+| `--fields` | Comma-separated display or wire properties; display names: id, name, class, exposureScore, fqdns, last_observed_at; default compact view |
+| `--full` | Show untruncated text; does not add fields or rows; default false |
 | `--help` | Show help |
 | `--id` | Required exact inventory ID |
 | `--extra-properties` | Comma-separated extra wire properties |
@@ -354,7 +354,7 @@ tenable-axi config path --fields config
 
 ## connector logs
 
-Read connector sync logs; the API has no server paging parameters
+Read connector sync logs with sync identity, trigger, first FAILED stage and first ERROR summary (falling back to text); the API has no server paging parameters
 
 Operation: `connectors-logs`.
 
@@ -380,7 +380,7 @@ tenable-axi connector logs --status FAILED --start-date 2026-01-01 --end-date 20
 
 ## doctor
 
-Check local security and one tag-properties read without retries
+Check local security and read access to assets, findings, software, attack paths, attack techniques, initiatives, export jobs and connector logs without retries
 
 | Flag | Meaning |
 |---|---|
@@ -660,8 +660,8 @@ Operation: `inventory-findings-search`.
 |---|---|
 | `--config` | Config path; default credential precedence |
 | `--profile` | Profile name; default credential precedence |
-| `--fields` | Comma-separated display or wire properties; display names: id, name, severity, state; default compact view |
-| `--full` | Show full text; default false |
+| `--fields` | Comma-separated display or wire properties; display names: id, name, severity, state, sensor_type; default compact view |
+| `--full` | Show untruncated text; does not add fields or rows; default false |
 | `--help` | Show help |
 | `--limit` | Maximum emitted rows, 1-10000; default 100 |
 | `--all` | Read up to 10000 rows within invocation budgets; excludes --limit |
@@ -669,7 +669,7 @@ Operation: `inventory-findings-search`.
 | `--query` | Simple query text |
 | `--filter` | Repeatable: <property> <operator> <JSON string array>, e.g. severity = ["HIGH"] |
 | `--filter-file` | JSON flat array of {property, operator, value: string[]}; '-' reads stdin; excludes --filter |
-| `--sort` | Wire property:asc\|desc |
+| `--sort` | Sortable display or wire property:asc\|desc; unknown names report valid choices |
 | `--extra-properties` | Comma-separated extra wire properties |
 | `--offset` | Starting record; default 0; excludes --cursor |
 
@@ -692,7 +692,7 @@ Operation: `inventory-finding-properties-list`.
 | `--config` | Config path; default credential precedence |
 | `--profile` | Profile name; default credential precedence |
 | `--fields` | Comma-separated output fields; accepted: key, readable_name, operators, sortable, filterable, control, description; default compact view |
-| `--full` | Show full text; default false |
+| `--full` | Show untruncated text; does not add fields or rows; default false |
 | `--help` | Show help |
 | `--limit` | Maximum emitted rows, 1-10000; default 100 |
 | `--all` | Read up to 10000 rows within invocation budgets; excludes --limit |
@@ -713,8 +713,8 @@ Operation: `inventory-findings-search`.
 |---|---|
 | `--config` | Config path; default credential precedence |
 | `--profile` | Profile name; default credential precedence |
-| `--fields` | Comma-separated display or wire properties; display names: id, name, severity, state; default compact view |
-| `--full` | Show full text; default false |
+| `--fields` | Comma-separated display or wire properties; display names: id, name, severity, state, sensor_type, asset_id, cves; default compact view |
+| `--full` | Show untruncated text; does not add fields or rows; default false |
 | `--help` | Show help |
 | `--id` | Required exact inventory ID |
 | `--extra-properties` | Comma-separated extra wire properties |
@@ -722,6 +722,22 @@ Operation: `inventory-findings-search`.
 ```sh
 tenable-axi finding show --id <id>
 tenable-axi finding show --id <id> --fields id,name,description --full
+```
+
+## finding summary
+
+Count findings by each published severity and sensor_type value using limit-1 searches; no per-asset grouping
+
+Operation: `inventory-findings-search`.
+
+| Flag | Meaning |
+|---|---|
+| `--config` | Config path; default credential precedence |
+| `--profile` | Profile name; default credential precedence |
+| `--help` | Show help |
+
+```sh
+tenable-axi finding summary
 ```
 
 ## home
@@ -912,7 +928,7 @@ Operation: `inventory-software-search`.
 | `--config` | Config path; default credential precedence |
 | `--profile` | Profile name; default credential precedence |
 | `--fields` | Comma-separated display or wire properties; display names: name, version, publisher; default compact view |
-| `--full` | Show full text; default false |
+| `--full` | Show untruncated text; does not add fields or rows; default false |
 | `--help` | Show help |
 | `--limit` | Maximum emitted rows, 1-10000; default 100 |
 | `--all` | Read up to 10000 rows within invocation budgets; excludes --limit |
@@ -920,7 +936,7 @@ Operation: `inventory-software-search`.
 | `--query` | Simple query text |
 | `--filter` | Repeatable: <property> <operator> <JSON string array>, e.g. application = ["example-app"] |
 | `--filter-file` | JSON flat array of {property, operator, value: string[]}; '-' reads stdin; excludes --filter |
-| `--sort` | Wire property:asc\|desc |
+| `--sort` | Sortable display or wire property:asc\|desc; unknown names report valid choices |
 | `--extra-properties` | Comma-separated extra wire properties |
 | `--offset` | Starting record; default 0; excludes --cursor |
 
@@ -941,7 +957,7 @@ Operation: `inventory-software-properties-list`.
 | `--config` | Config path; default credential precedence |
 | `--profile` | Profile name; default credential precedence |
 | `--fields` | Comma-separated output fields; accepted: key, readable_name, operators, sortable, filterable, control, description; default compact view |
-| `--full` | Show full text; default false |
+| `--full` | Show untruncated text; does not add fields or rows; default false |
 | `--help` | Show help |
 | `--limit` | Maximum emitted rows, 1-10000; default 100 |
 | `--all` | Read up to 10000 rows within invocation budgets; excludes --limit |
