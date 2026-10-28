@@ -32,4 +32,4 @@ npx skills add knowttl/tenable-axi --skill tenable-axi
 Hooks and skill work independently or together.
 The skill uses non-interactive `npx -y @knowttl/tenable-axi` examples and ships inside the npm tarball.
 
-See the [generated skill](../skills/tenable-axi/SKILL.md) for the complete command index.
+See the [agent guide](../skills/tenable-axi/SKILL.md) to start an investigation without running help, and the [command reference](commands.md) for the complete command index.

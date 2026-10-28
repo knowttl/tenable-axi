@@ -97,7 +97,7 @@ The write coordinator owns a separate authorization boundary.
 One typed executable catalogue owns grammar, flags, effect, method/path, operation ID, decoder, default fields, paging, privileges, and evidence references.
 The inventory records every upstream operation, including blocked ones, with source URL/hash, disposition, reason, and slice.
 Evidence entries never enable execution: commands bind reviewed operations explicitly and the sink refuses absent or mismatched bindings.
-Catalogue data generates concise help, reference, static skill, and hosted inventory.
+Catalogue data generates concise help, the command reference, and hosted inventory.
 
 T1 pins `openapi-typescript` as a dev dependency and generates separate declarations from all three specs.
 There is no generated runtime client, auth helper, or request behavior.
@@ -397,7 +397,7 @@ T12 adds explicit `setup hooks` opt-in for Claude Code, Codex, and OpenCode.
 See [agent setup guidance](agent-integration.md) for executable selection, active configuration directories, scopes, and removal.
 Use SessionStart where supported and an equivalent managed plugin for OpenCode.
 Ordinary commands never install hooks.
-Generate the installable skill from static home/discovery metadata, remove live state, and use `npx -y @knowttl/tenable-axi` examples.
+`scripts/generate-docs.mjs` owns the installable investigation guide template, using the catalogue's description and setup guidance with static `npx -y @knowttl/tenable-axi` examples and no live state.
 Document hooks first and skill as complementary discovery; the [development checks](../CONTRIBUTING.md#development-and-testing) verify reference and skill freshness.
 See [release guidance](../CONTRIBUTING.md#releases) for release ownership, publication checks, and npm provenance.
 
