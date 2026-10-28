@@ -50,13 +50,13 @@ npx skills add knowttl/tenable-axi --skill tenable-axi
 Hooks inject local profile, origin and write posture at session start; the skill supplies command discovery on demand.
 Both are optional, grant no permissions and work independently.
 Restart the agent session after installing hooks.
-The [generated skill](https://github.com/knowttl/tenable-axi/blob/main/skills/tenable-axi/SKILL.md) is the full command index.
+The [compact agent guide](https://github.com/knowttl/tenable-axi/blob/main/skills/tenable-axi/SKILL.md) supplies investigation examples, output bounds, read allowlists and failure notes so agents can start without running help.
 To remove hooks, delete only `tenable-axi-hook` entries in Claude's `settings.json` and Codex's `hooks.json`, plus OpenCode's `plugins/axi-tenable-axi-hook.js`.
 See [agent integration](https://github.com/knowttl/tenable-axi/blob/main/docs/agent-integration.md) for active directories, project scope and removal.
 
 ## What it covers
 
-Use a leaf command's `--help` for focused discovery, for example `tenable-axi asset list --help`.
+Start investigations from the [agent guide](https://github.com/knowttl/tenable-axi/blob/main/skills/tenable-axi/SKILL.md); use a leaf command's `--help` to recover from a failed or unfamiliar command.
 The [generated command reference](https://github.com/knowttl/tenable-axi/blob/main/docs/commands.md) lists every leaf, flag and example.
 
 | Group | Purpose | Access | Reference |
