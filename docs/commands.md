@@ -3,6 +3,137 @@
 # Command reference
 
 Investigate Tenable One exposure and run explicitly guarded writes.
+
+## Contents
+
+- [asset list](#asset-list)
+- [asset properties](#asset-properties)
+- [asset show](#asset-show)
+- [attack-path list](#attack-path-list)
+- [attack-technique list](#attack-technique-list)
+- [auth status](#auth-status)
+- [card list](#card-list)
+- [card show](#card-show)
+- [combination create](#combination-create)
+- [combination delete](#combination-delete)
+- [combination filters](#combination-filters)
+- [combination list](#combination-list)
+- [combination show](#combination-show)
+- [combination update](#combination-update)
+- [config path](#config-path)
+- [connector logs](#connector-logs)
+- [doctor](#doctor)
+- [export asset jobs](#export-asset-jobs)
+- [export asset start](#export-asset-start)
+- [export attack download](#export-attack-download)
+- [export attack status](#export-attack-status)
+- [export attack-path start](#export-attack-path-start)
+- [export attack-technique start](#export-attack-technique-start)
+- [export finding jobs](#export-finding-jobs)
+- [export finding start](#export-finding-start)
+- [export inventory download](#export-inventory-download)
+- [export inventory status](#export-inventory-status)
+- [export mitre-heatmap start](#export-mitre-heatmap-start)
+- [finding list](#finding-list)
+- [finding properties](#finding-properties)
+- [finding show](#finding-show)
+- [finding summary](#finding-summary)
+- [home](#home)
+- [hook](#hook)
+- [initiative create](#initiative-create)
+- [initiative delete](#initiative-delete)
+- [initiative list](#initiative-list)
+- [initiative show](#initiative-show)
+- [initiative update](#initiative-update)
+- [profile list](#profile-list)
+- [setup hooks](#setup-hooks)
+- [software list](#software-list)
+- [software properties](#software-properties)
+- [tag asset-filter list](#tag-asset-filter-list)
+- [tag assignment add](#tag-assignment-add)
+- [tag assignment list](#tag-assignment-list)
+- [tag assignment remove](#tag-assignment-remove)
+- [tag category create](#tag-category-create)
+- [tag category delete](#tag-category-delete)
+- [tag category list](#tag-category-list)
+- [tag category show](#tag-category-show)
+- [tag category update](#tag-category-update)
+- [tag exclusion list](#tag-exclusion-list)
+- [tag list](#tag-list)
+- [tag properties](#tag-properties)
+- [tag value bulk-delete](#tag-value-bulk-delete)
+- [tag value create](#tag-value-create)
+- [tag value delete](#tag-value-delete)
+- [tag value list](#tag-value-list)
+- [tag value show](#tag-value-show)
+- [tag value update](#tag-value-update)
+
+## All commands
+
+| Command | Purpose |
+|---|---|
+| `tenable-axi asset list` | Search assets |
+| `tenable-axi asset properties` | Discover asset properties and supported operators |
+| `tenable-axi asset show` | Find one asset by exact ID search |
+| `tenable-axi attack-path list` | Search top attack paths using the published specification route |
+| `tenable-axi attack-technique list` | Search top attack techniques; affectedAssets counts assets_ids |
+| `tenable-axi auth status` | Check local credentials and file security without contacting Tenable |
+| `tenable-axi card list` | List exposure view cards |
+| `tenable-axi card show` | Show an exposure card and its scores, trends and SLA details |
+| `tenable-axi combination create` | Preview or create combination |
+| `tenable-axi combination delete` | Preview or delete combination |
+| `tenable-axi combination filters` | List allowed combination query properties and operators |
+| `tenable-axi combination list` | list combinations |
+| `tenable-axi combination show` | show combination |
+| `tenable-axi combination update` | Preview or update combination |
+| `tenable-axi config path` | Show selected config and state paths without reading files |
+| `tenable-axi connector logs` | Read connector sync logs with sync identity, trigger, first FAILED stage and first ERROR summary (falling back to text); the API has no server paging parameters |
+| `tenable-axi doctor` | Check local security and read access to assets, findings, software, attack paths, attack techniques, initiatives, export jobs and connector logs without retries |
+| `tenable-axi export asset jobs` | List recent inventory asset export jobs |
+| `tenable-axi export asset start` | Preview or create an inventory asset export job |
+| `tenable-axi export attack download` | Download an attack export to a new file, redacting JSON/CSV within 128 MiB |
+| `tenable-axi export attack status` | Read an attack export job; no polling by default |
+| `tenable-axi export attack-path start` | Preview or start one attack-path export; requires configured write scope and ATTACK_PATH.WRITE |
+| `tenable-axi export attack-technique start` | Preview or start one attack-technique export; requires configured write scope and ATTACK_PATH.WRITE |
+| `tenable-axi export finding jobs` | List recent inventory finding export jobs |
+| `tenable-axi export finding start` | Preview or create an inventory finding export job |
+| `tenable-axi export inventory download` | Download one inventory chunk to a new redacted file |
+| `tenable-axi export inventory status` | Read one inventory export status without polling |
+| `tenable-axi export mitre-heatmap start` | Preview or start one mitre-heatmap export; requires configured write scope and ATTACK_PATH.WRITE |
+| `tenable-axi finding list` | Search findings |
+| `tenable-axi finding properties` | Discover finding properties and supported operators |
+| `tenable-axi finding show` | Find one finding by exact ID search |
+| `tenable-axi finding summary` | Count findings by each published severity and sensor_type value using limit-1 searches; no per-asset grouping |
+| `tenable-axi home` | Show profile state and up to five live exposure cards |
+| `tenable-axi hook` | Show compact local profile context without resolving secrets or HTTP |
+| `tenable-axi initiative create` | Preview or create initiative |
+| `tenable-axi initiative delete` | Preview or delete initiative |
+| `tenable-axi initiative list` | list initiatives |
+| `tenable-axi initiative show` | show initiative |
+| `tenable-axi initiative update` | Preview or update initiative |
+| `tenable-axi profile list` | List configured profiles without resolving secrets or contacting Tenable |
+| `tenable-axi setup hooks` | Explicitly install or repair local agent session integrations |
+| `tenable-axi software list` | Search software; the pinned API exposes no stable software ID |
+| `tenable-axi software properties` | Discover software properties and supported operators |
+| `tenable-axi tag asset-filter list` | List documented dynamic tag filter definitions |
+| `tenable-axi tag assignment add` | add tags for the exact asset set |
+| `tenable-axi tag assignment list` | List tags assigned to one asset |
+| `tenable-axi tag assignment remove` | remove tags for the exact asset set |
+| `tenable-axi tag category create` | Create platform tag category |
+| `tenable-axi tag category delete` | Delete platform tag category |
+| `tenable-axi tag category list` | List platform tag category |
+| `tenable-axi tag category show` | Show platform tag category |
+| `tenable-axi tag category update` | Update platform tag category |
+| `tenable-axi tag exclusion list` | List assets excluded from a dynamic tag |
+| `tenable-axi tag list` | Search Exposure Management tags |
+| `tenable-axi tag properties` | List available tag properties and operators |
+| `tenable-axi tag value bulk-delete` | Preview or delete the exact tag value set |
+| `tenable-axi tag value create` | Create platform tag value |
+| `tenable-axi tag value delete` | Delete platform tag value |
+| `tenable-axi tag value list` | List platform tag value |
+| `tenable-axi tag value show` | Show platform tag value |
+| `tenable-axi tag value update` | Update platform tag value |
+
 Run each command with `--help` for concise help.
 Writes default to preview and require configured operation scope even for previews.
 

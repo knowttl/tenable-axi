@@ -1,8 +1,23 @@
 # tenable-axi design
 
 Planning baseline prepared on 2026-10-22.
-This document defines intended behavior; see [README](../README.md) for shipped commands.
+This document defines intended behavior; see [behavior reference](behavior.md) for shipped commands.
 Remaining endpoint commands and safety boundaries below remain commitments for later slices.
+
+## Contents
+
+- [Purpose and scope](#purpose-and-scope)
+- [Accepted decisions](#accepted-decisions)
+- [Evidence and API contracts](#evidence-and-api-contracts)
+- [Capability map](#capability-map)
+- [Architecture and module depth](#architecture-and-module-depth)
+- [Profiles and authentication](#profiles-and-authentication)
+- [CLI and output contract](#cli-and-output-contract)
+- [Collections, jobs, and bounded reads](#collections-jobs-and-bounded-reads)
+- [Mutation coordinator](#mutation-coordinator)
+- [Change recipe and tests](#change-recipe-and-tests)
+- [Implementation slices](#implementation-slices)
+- [Complete operation ledger](#complete-operation-ledger)
 
 ## Purpose and scope
 
@@ -92,7 +107,7 @@ CI never requires fetching a floating upstream spec, and new operations stay blo
 
 Zod decoders validate fields rendered by the selected view and tolerate extra upstream fields.
 Decode explicitly requested extra fields without requiring the entire generated schema at runtime.
-See [shipped behavior](../README.md#shipped-behavior) for inventory's absent-property projection contract.
+See [shipped behavior](behavior.md) for inventory's absent-property projection contract.
 Keep missing optional values distinct from required-field failures; never replace absent scores or denied data with zero.
 Strict command/profile/request validation is separate from tolerant response decoding.
 
@@ -120,7 +135,7 @@ Translate all documented error bodies into `error: {code, message, operation, st
 Handle `{statusCode,error,message}`, `{message,status}`, `{error,message}`, connector `{detail:...}`, Exposure View `{status,message,error:[]}`, and selected Platform/VM variants.
 Handle empty bodies, malformed JSON, schema-less responses, and HTML 429 without emitting raw HTML, dependency output, or stack traces.
 Map 401 to authentication failure, 403 to permission denial with operation-specific advice, 404 to missing resource, and invalid input to actionable validation guidance.
-Malformed successful responses produce `RESPONSE_INVALID`, never plausible empty data, except for the narrowly scoped [tag value deletion behavior](../README.md#shipped-behavior).
+Malformed successful responses produce `RESPONSE_INVALID`, never plausible empty data, except for the narrowly scoped [tag value deletion behavior](behavior.md).
 Category/value create/update, category delete and assignment add/remove retain strict response validation, including mutation identity checks where applicable.
 Redact bounded error text before any channel renders it.
 
@@ -205,11 +220,11 @@ This table defines selectors, extra flags, and compact projections; display fiel
 | `attack-technique list` | Documented filters/sort and `--include-resolved`. | id, name, affectedAssets |
 | `connector logs` | Documented connector/time selectors and bounded limit. | connectorId, status, timestamp, syncUuid, type, triggerReason, failedStage, error |
 | `export asset start`, `export finding start` | Optional strict `--body-file` for query/filters; query-option and write flags. | id, state |
-| `export asset jobs`, `export finding jobs` | `--status`, `--limit`; see [README export usage](../README.md) for history limits. | id, state, createdAt |
+| `export asset jobs`, `export finding jobs` | `--status`, `--limit`; see [inventory export usage](behavior.md#inventory-exports) for history limits. | id, state, createdAt |
 | `export inventory status` | `--id`. | id, state, availableChunks |
 | `export inventory download` | `--id`, `--chunk`, `--output`. | id, chunk, output, bytes, format, compressed |
 | `export attack-path start`, `export attack-technique start`, `export mitre-heatmap start` | Strict `--body-file` for format/filter options; write flags. | id, state |
-| `export attack status` | `--id`; optional `--wait`, with budget-stop behavior described in [README](../README.md). | id, state |
+| `export attack status` | `--id`; optional `--wait`, with budget-stop behavior described in [behavior reference](behavior.md). | id, state |
 | `export attack download` | `--id`, `--output`. | id, output, bytes, format |
 | `tag category list/show/create/update/delete` | Show/update/delete: `--id`; create/update: `--name`, optional `--description`; list: repeatable `--filter`, `--filter-type and\|or`, `--sort`. | id, name, reserved |
 | `tag value list/show/create/update/delete/bulk-delete` | Show/update/delete: `--id`; create/update: `--body-file`; bulk-delete: `--ids-file`; list: filter/type/sort, `--with`, `--with-filter` for `w`/`wf`. | id, category, value, type |
@@ -220,7 +235,7 @@ This table defines selectors, extra flags, and compact projections; display fiel
 
 `--body-file -` and explicit list files accept stdin; reject competing stdin consumers and enforce input size bounds.
 Payloads are operation-specific, reject unknown/security fields recursively, and cannot select a method/path.
-See [README](../README.md) for shipped platform tag payloads and limits.
+See [behavior reference](behavior.md) for shipped platform tag payloads and limits.
 Initiatives validate at most ten scope tags and documented combination/query limits without discovering owners through blocked endpoints.
 
 The following parameter mappings complete the Exposure Management flag contract.
@@ -229,7 +244,7 @@ All unspecified API defaults follow the pinned schema, except the CLI's explicit
 
 | Leaves | Additional mapping |
 |---|---|
-| Inventory and tag searches | `--extra-properties` maps `extra_properties`; see [shipped behavior](../README.md#shipped-behavior) for output projection; `--fields` automatically requests properties needed by the selected projection; `--filter-file` accepts the [pinned spec's](../specs/exposure-management.json) flat array of {property, operator, value: string[]}, mutually exclusive with repeatable simple `--filter`; nested boolean expressions are unsupported. |
+| Inventory and tag searches | `--extra-properties` maps `extra_properties`; see [shipped behavior](behavior.md) for output projection; `--fields` automatically requests properties needed by the selected projection; `--filter-file` accepts the [pinned spec's](../specs/exposure-management.json) flat array of {property, operator, value: string[]}, mutually exclusive with repeatable simple `--filter`; nested boolean expressions are unsupported. |
 | `asset properties` | `--asset-classes` maps the documented `asset_classes` array; upstream `properties` and `data` envelopes normalize to internal `data`; list `--class` is a validated server-side class filter rather than an invented query parameter. |
 | Attack searches | `--filter-file` represents the documented single/nested filter body; `--sort`, offset/limit, and `--include-resolved` map their query fields; attack paths also exposes `--run-ai-summarization true\|false`, default false. |
 | `connector logs` | `--connector-id`, `--status`, `--start-date`, `--end-date` map the four documented query fields; dates use YYYY-MM-DD. |
@@ -261,8 +276,8 @@ No arguments and `home` print a one-sentence description, profile/origin, effect
 An unconfigured home gives setup state without HTTP.
 The session hook prints a compact local-only profile summary, so session start does not implicitly contact the tenant.
 `auth status`, `profile list`, and `config path` are local and show sources rather than secret values.
-See [shipped behavior](../README.md#shipped-behavior) for home/auth status metadata omissions and secret-source output.
-See [shipped behavior](../README.md#shipped-behavior) for inventory defaults, finding counts, per-module doctor checks and connector failure details.
+See [shipped behavior](behavior.md) for home/auth status metadata omissions and secret-source output.
+See [shipped behavior](behavior.md) for inventory defaults, finding counts, per-module doctor checks and connector failure details.
 Inventory sort aliases are separate from response-field aliases and use the pinned properties-route examples in `src/inventory-catalogue.ts`.
 Doctor and finding summary share the existing transport budgets and disable retries for every probe or count request.
 Bare `-v`, `-V`, and `--version` print only the version and exit 0 through `axi-sdk-js/fast-path` before dynamic import of the graph.
@@ -276,7 +291,7 @@ Fetch sequentially only what is needed for the requested output.
 A normal budget stop emits `complete:false`, reason, and resumable cursor; a partial transport/schema failure retains valid rows but exits 1.
 Cursors bind origin, profile identity, operation, supported selectors, and position.
 Paged operations preserve unreturned rows and detect repeated continuations.
-Exposure Response uses re-fetching continuation instead; see [README](../README.md) for its cursor bounds and changed-collection behavior.
+Exposure Response uses re-fetching continuation instead; see [behavior reference](behavior.md) for its cursor bounds and changed-collection behavior.
 Offset paging does not promise snapshot isolation.
 Unpaged collections still obey byte/output limits without invented paging parameters.
 
@@ -379,12 +394,12 @@ Before release, perform real Windows `auth status` and protected config-write ch
 ### Release and session integration
 
 T12 adds explicit `setup hooks` opt-in for Claude Code, Codex, and OpenCode.
-See [README's agent setup guidance](../README.md#use-with-your-agent) for executable selection, active configuration directories, scopes, and removal.
+See [agent setup guidance](agent-integration.md) for executable selection, active configuration directories, scopes, and removal.
 Use SessionStart where supported and an equivalent managed plugin for OpenCode.
 Ordinary commands never install hooks.
 Generate the installable skill from static home/discovery metadata, remove live state, and use `npx -y @knowttl/tenable-axi` examples.
-Document hooks first and skill as complementary discovery; the [development checks](../README.md#development-and-testing) verify reference and skill freshness.
-See [README releases](../README.md#releases) for release ownership, publication checks, and npm provenance.
+Document hooks first and skill as complementary discovery; the [development checks](../CONTRIBUTING.md#development-and-testing) verify reference and skill freshness.
+See [release guidance](../CONTRIBUTING.md#releases) for release ownership, publication checks, and npm provenance.
 
 ### artium-axi integration contract
 

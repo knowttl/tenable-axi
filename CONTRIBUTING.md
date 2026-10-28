@@ -2,7 +2,7 @@
 
 Keep changes focused and describe the problem, resulting behavior, scope, and verification in the pull request.
 Follow [the design](docs/design.md); capability evidence does not enable an executable command.
-See [README](README.md) for shipped behavior and development commands.
+See [README](README.md) for the introduction and [behavior](docs/behavior.md) for the operator contract.
 
 ## TypeScript conventions
 
@@ -32,9 +32,9 @@ The fixed baseline always includes `test/packaged-cli.test.ts`; `scripts/test-ch
 Package, lockfile, TypeScript/Vitest configuration, test support, scripts, pinned specifications and `.no-mistakes.yaml` changes run the full suite.
 The selector prints its mode and fails if it cannot compute the merge base or find the required CLI baseline.
 No hosted pull-request test CI is configured; `.no-mistakes.yaml` declares `no_ci: true`.
-Hosted publication checks are described in [README releases](README.md#releases).
-Run the development commands in [README](README.md) before review.
-After catalogue changes, follow [README's documentation generation commands](README.md#development-and-testing).
+Hosted publication checks are described under [releases](#releases).
+Run the [development commands](#development-and-testing) before review.
+After catalogue changes, follow the [documentation generation commands](#development-and-testing).
 Repeat changed async, clock, and I/O tests to detect leaks and order dependence.
 Live acceptance is a separate, explicitly authorized manual activity described in T13.
 
@@ -51,3 +51,31 @@ Review staged changes for secrets and unintended files before committing.
 Keep each full Markdown sentence on its own line.
 Use a plain dash instead of an em dash.
 Do not add agent co-author trailers automatically.
+
+## Development and testing
+
+```sh
+corepack pnpm install --frozen-lockfile --ignore-scripts --config.confirm-modules-purge=false
+corepack pnpm run build
+node scripts/isolated.mjs node bin/tenable-axi.js --help
+node scripts/isolated.mjs node bin/tenable-axi.js --version
+corepack pnpm test
+corepack pnpm run lint
+corepack pnpm run spec:check
+corepack pnpm run docs:check
+```
+
+See [verification](#verification) for offline isolation and test selection.
+The [capability map](docs/design.md#capability-map) defines planned v1 scope; the generated [inventory](inventory/capabilities.json) records every pinned operation's classification and does not enable execution.
+After catalogue changes, rebuild and run `corepack pnpm run docs:generate` to regenerate the command reference and skill.
+Tests and manual CLI checks use temporary HOME/XDG directories and synthetic fixtures, with no live tenant or real credentials.
+Pull requests are validated locally; hosted checks run only during [release publication](#releases).
+
+
+## Releases
+
+Release-please owns versions, tags, release notes and changelog updates.
+The release workflow publishes only when release-please creates a release, after build, lint, offline fake tarball tests, spec and documentation checks.
+It publishes the verified tarball with npm provenance through OIDC trusted publishing, with no stored npm token.
+Trusted publishing uses `knowttl/tenable-axi` and `.github/workflows/release-please.yml`.
+Live acceptance is separate from offline verification and requires explicit authorization.
