@@ -56,7 +56,7 @@ See [agent integration](https://github.com/knowttl/tenable-axi/blob/main/docs/ag
 
 ## What it covers
 
-Every group supports focused discovery through `--help`.
+Use a leaf command's `--help` for focused discovery, for example `tenable-axi asset list --help`.
 The [generated command reference](https://github.com/knowttl/tenable-axi/blob/main/docs/commands.md) lists every leaf, flag and example.
 
 | Group | Purpose | Access | Reference |
