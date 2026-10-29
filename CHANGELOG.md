@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.4](https://github.com/knowttl/tenable-axi/compare/v0.1.3...v0.1.4) (2026-10-28)
+
+
+### Bug Fixes
+
+* provide a compact investigation guide for agents ([#29](https://github.com/knowttl/tenable-axi/issues/29)) ([406dc15](https://github.com/knowttl/tenable-axi/commit/406dc153753dcf53c829156b92dbadb61046a1d2))
+
 ## [0.1.3](https://github.com/knowttl/tenable-axi/compare/v0.1.2...v0.1.3) (2026-10-27)
 
 
