@@ -43,6 +43,9 @@ Live acceptance is a separate, explicitly authorized manual activity described i
 After an explicit specification review, run `corepack pnpm run build` and `corepack pnpm run spec:generate` to regenerate the inventory and declarations, then run `spec:check` offline.
 Never edit `src/generated/` or `inventory/capabilities.json` by hand.
 
+`src/response-diagnostics.ts` and `test/fixtures/response-diagnostics-vectors.json` are byte copies from [beyondtrust-axi](https://github.com/knowttl/beyondtrust-axi/tree/8a8626a9e1b15d2e23ef484a69176f216d757e7c), guarded by `test/response-diagnostics-contract.test.ts` against `test/fixtures/response-diagnostics-sha256.json`.
+Update the canonical helper there and copy it with the vectors and hash manifest here.
+
 ## Public repository hygiene
 
 Never commit credentials, authentication headers, tenant responses, customer identifiers, private paths, or internal infrastructure details.
