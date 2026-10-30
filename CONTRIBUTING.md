@@ -21,9 +21,7 @@ Do not edit generated files or changelogs by hand.
 Automated tests must work offline with synthetic credentials and our own fixtures and fakes.
 Deny external network access and isolate HOME, XDG directories, `CLAUDE_CONFIG_DIR`, `CODEX_HOME`, and filesystem state.
 Use the fake transport for domain tests and the fake HTTPS Tenable for critical packaged-CLI journeys.
-Mock only real boundaries such as HTTP, clock, randomness, and platform ACL operations.
-Prove practical observable behavior through the CLI and transport against the fake Tenable upstream.
-Do not add tautological mock-echo checks, checks already covered by the compiler, or implementation snapshots.
+Follow the canonical test-quality rules in [AGENTS.md](AGENTS.md#testing).
 Never require a live tenant, customer data, or a real credential for a test.
 T1 configures `.no-mistakes.yaml` following vectra-axi's separated prepare/test/lint command pattern.
 Run only tests affected by the change plus a small fixed baseline.
