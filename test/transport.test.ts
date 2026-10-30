@@ -106,6 +106,30 @@ test.each(["", "not JSON", '{"data":null}', '{"data":[{"id":"asset"}]}'])(
   },
 );
 
+test("reports an HTML login response without exposing its body or content-type parameters", async () => {
+  const fake = await fakeHttpsTenable([{ text: `<html>${syntheticKeys.secretKey} private login</html>`,
+    headers: { "content-type": "text/html; private=header-sentinel" } }]);
+  try {
+    const error = await fake.transport(bindings).request("search").catch((error: unknown) => error) as TransportError;
+    expect(error.toJSON()).toEqual({ error: { code: "RESPONSE_INVALID", message: "Tenable response is not valid JSON",
+      operation: "search", status: 200, contentType: "text/html", shape: [{ path: "$", type: "string" }], shapeTruncated: false } });
+  } finally { await fake.close(); }
+});
+
+test("reports received and expected types without response values or tenant map keys", async () => {
+  const fake = fakeTransport([{ body: { data: [{ id: "private-id", name: 123 }],
+    "tenant.example.test": syntheticKeys.secretKey }, headers: { "content-type": "application/json" } }], bindings);
+  const error = await fake.transport.request("search").catch((error: unknown) => error) as TransportError;
+  expect(error.toJSON()).toEqual({ error: { code: "RESPONSE_INVALID", message: "Tenable response does not match the selected view",
+    operation: "search", status: 200, contentType: "application/json", shape: [
+      { path: "$", type: "object" }, { path: '$["data"]', type: "array", count: 1 },
+      { path: '$["data"][*]', type: "object" }, { path: '$["data"][*]["id"]', type: "string" },
+      { path: '$["data"][*]["name"]', type: "number", expected: "string" }, { path: '$["<key>"]', type: "string" },
+    ], shapeTruncated: false, issues: [{ path: '$["data"][*]["name"]', received: "number", expected: "string", code: "invalid_type" }],
+    issuePaths: ['$["data"][*]["name"]'], issuePathsTruncated: false },
+    help: ["Check the operation response contract; no result was inferred"] });
+});
+
 test.each([301, 302, 303, 307, 308])("HTTPS redirect %i never forwards keys to its destination", async (status) => {
   const fake = await fakeHttpsTenable([{ status, headers: { location: "https://collector.invalid/keys" }, text: "" }]);
   try {
