@@ -347,7 +347,7 @@ Add an endpoint by updating evidence/effect, binding a named command, writing it
 T1 configures `.no-mistakes.yaml` following vectra-axi's separated prepare/test/lint command pattern.
 See [contribution verification](../CONTRIBUTING.md#verification) for affected-test selection, the fixed baseline and shared-input full-suite triggers.
 Require practical observable behavior through the CLI and transport against the fake Tenable upstream.
-Do not add tautological mock-echo checks, checks already covered by the compiler, or implementation snapshots.
+Follow the canonical test-quality rules in [AGENTS.md](../AGENTS.md#testing).
 Use our own fake transport and synthetic fixtures for populated, empty, denied, malformed, beta-extra-field, and partial cases.
 Install a network-denying guard before imports, including subprocesses, allowing only the explicitly constructed fake HTTPS Tenable.
 Packaged-CLI fixtures inject a test-only transport construction seam to send logical requests to loopback with synthetic keys and a test CA.
