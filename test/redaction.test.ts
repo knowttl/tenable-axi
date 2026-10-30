@@ -4,10 +4,29 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { localFixture } from "./support/local-cli.js";
+import { transportBindings } from "../src/catalogue.js";
+import { fakeTransport } from "./support/fake-tenable.js";
 
 let fixture: ReturnType<typeof localFixture>;
 beforeEach(() => { fixture = localFixture(); });
 afterEach(() => fixture.cleanup());
+
+test("CLI renders bounded schema diagnostics with known secrets and tenant keys redacted", async () => {
+  const keys = { accessKey: "SyntheticAccess", secretKey: "SyntheticSecret" };
+  Object.assign(fixture.env, { TENABLE_AXI_ACCESS_KEY: keys.accessKey, TENABLE_AXI_SECRET_KEY: keys.secretKey });
+  const fake = fakeTransport([{ body: { data: null, [keys.accessKey]: "private-value",
+    "tenant.example.test": keys.secretKey }, headers: { "content-type": `application/${keys.secretKey}; private=header-sentinel` } }],
+  transportBindings, { keys });
+  const result = await fixture.cli(["asset", "list"], {}, () => fake.transport);
+  expect(result.code).toBe(1);
+  expect(result.data).toMatchObject({ error: { code: "RESPONSE_INVALID", status: 200,
+    contentType: expect.stringContaining("REDACTED"), shape: [
+      { path: "$", type: "object" }, { path: '$["data"]', type: "null", expected: "array" },
+      { path: expect.stringContaining("REDACTED"), type: "string" }, { path: '$["<key>"]', type: "string" },
+    ], issues: [{ path: '$["data"]', received: "null", expected: "array", code: "invalid_type" }] } });
+  for (const sentinel of [keys.accessKey, keys.secretKey, "private-value", "tenant.example.test", "header-sentinel"])
+    expect(result.stdout).not.toContain(sentinel);
+});
 
 test.each(["raw", "json", "url", "header", "header-json", "header-url"])("removes %s credential sentinels from CLI output and diagnostics", (form) => {
   const access = 'synthetic-access"sentinel';

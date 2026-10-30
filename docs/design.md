@@ -131,7 +131,8 @@ If retries are exhausted while the service still returns 429, return `RATE_LIMIT
 Never automatically replay writes, including export creation, because an interrupted send may already have changed the tenant.
 A mutation 429 returns `RATE_LIMITED` and its delay without replay.
 
-Translate all documented error bodies into `error: {code, message, operation, status?, retryAfter?, auditId?}` and contextual `help` when useful.
+Translate all documented error bodies into the base fields `error: {code, message, operation, status?, retryAfter?, auditId?}` and contextual `help` when useful.
+Transport parse/schema failures add the bounded response diagnostics described in [shipped behavior](behavior.md#credentials-and-transport).
 Handle `{statusCode,error,message}`, `{message,status}`, `{error,message}`, connector `{detail:...}`, Exposure View `{status,message,error:[]}`, and selected Platform/VM variants.
 Handle empty bodies, malformed JSON, schema-less responses, and HTML 429 without emitting raw HTML, dependency output, or stack traces.
 Map 401 to authentication failure, 403 to permission denial with operation-specific advice, 404 to missing resource, and invalid input to actionable validation guidance.

@@ -30,6 +30,13 @@ The internal transport enforces the exact commercial origin, reviewed catalogue 
 One transport instance represents one invocation, sharing the [transport budgets](design.md#transport-contract) across pages and retries.
 Read operations may retry 429/502/503/504 twice; writes require coordinator authorization and never replay automatically.
 Transport errors carry a stable code, operation, optional HTTP status and `retryAfter` in milliseconds, plus bounded redacted guidance.
+For 2xx responses handled as JSON that fail parsing or transport schema validation, `RESPONSE_INVALID` includes the HTTP `status`, `contentType`, `shape` and `shapeTruncated`; schema failures also include `issues`, `issuePaths` and `issuePathsTruncated`.
+This includes non-JSON bodies such as HTML login pages, whose shape reports only a root `string` type.
+These diagnostics report types and expected types, never response values or validator messages.
+Content-type parameters are discarded; missing or invalid media types become null.
+Shape keys accept only an ASCII letter followed by up to 39 ASCII letters, digits or underscores, excluding GUID-like names, and pass through the existing redactor; other keys become `<key>`.
+Arrays report their count and sample only the first element at `[*]`; reports stop at 64 entries, depth four, 256 characters per path or 4096 total path characters.
+Later command-specific checks and export file parsing may still report only a fixed message.
 Production binds reviewed inventory search/properties and exports, Exposure Management tag and card reads, attack searches, attack exports, connector logs, platform tags and Exposure Response commands; offline tests use synthetic fixtures and a CA-verified loopback HTTPS fake through the internal construction seam.
 No flag or environment variable enables that seam in the CLI.
 

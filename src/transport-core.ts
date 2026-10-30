@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import { ResponseDiagnostics } from "./response-diagnostics.js";
 
 export const TENABLE_ORIGIN = "https://cloud.tenable.com";
 export type ApiKeys = Readonly<{ accessKey: string; secretKey: string }>;
@@ -32,6 +33,9 @@ export type TransportOptions = { keys: ApiKeys; origin?: string };
 export class TransportError extends Error {
   constructor(readonly error: {
     code: string; message: string; operation: string; status?: number; retryAfter?: number; auditId?: string;
+    contentType?: string | null; shape?: readonly { path: string; type: string; count?: number; expected?: string }[];
+    shapeTruncated?: boolean; issues?: readonly { path: string; received: string; expected: string; code?: string; pathTruncated?: boolean }[];
+    issuePaths?: readonly string[]; issuePathsTruncated?: boolean;
   }, readonly help: readonly string[] = []) {
     super(error.message);
     this.name = "TransportError";
@@ -50,7 +54,7 @@ export function constructTransport(options: TransportOptions, dependencies: {
   }) => boolean;
 }): Transport {
   const fail = (code: string, message: string, operation = "transport", help: readonly string[] = [],
-    details: { status?: number; retryAfter?: number } = {}): never => {
+    details: Omit<Partial<TransportError["error"]>, "code" | "message" | "operation"> = {}): never => {
     throw new TransportError({ code, message, operation, ...details }, help);
   };
   if ((options.origin ?? TENABLE_ORIGIN) !== TENABLE_ORIGIN) {
@@ -211,11 +215,19 @@ export function constructTransport(options: TransportOptions, dependencies: {
           return { status: response!.status, body: file! };
         }
         let decoded: unknown;
+        const diagnostics = new ResponseDiagnostics({ text: redact }, ["RESPONSE_INVALID"]);
         try { decoded = text! ? JSON.parse(text!) : undefined; }
-        catch { fail("RESPONSE_INVALID", "Tenable response is not valid JSON", operation, [], { status: response!.status }); }
+        catch {
+          diagnostics.record(response!.status, response!.headers, text!);
+          fail("RESPONSE_INVALID", "Tenable response is not valid JSON", operation, [], diagnostics.forError({ code: "RESPONSE_INVALID" }));
+        }
         const result = record.decoder.safeParse(decoded);
-        if (!result.success) fail("RESPONSE_INVALID", "Tenable response does not match the selected view", operation,
-          ["Check the operation response contract; no result was inferred"], { status: response!.status });
+        if (!result.success) {
+          diagnostics.record(response!.status, response!.headers, decoded);
+          diagnostics.validationFailed(result.error.issues);
+          fail("RESPONSE_INVALID", "Tenable response does not match the selected view", operation,
+            ["Check the operation response contract; no result was inferred"], diagnostics.forError({ code: "RESPONSE_INVALID" }));
+        }
         return { status: response!.status, body: result.data };
       }
       const status = response!.status;
