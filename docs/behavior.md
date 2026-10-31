@@ -92,7 +92,7 @@ See [download bounds](design.md#collections-jobs-and-bounded-reads) for file siz
 
 ## Inventory reads
 
-Use `asset list/show/properties`, `finding list/show/properties/summary`, and `software list/properties` with `--help` for their flags and examples.
+Use `asset list/show/properties/investigate`, `finding list/show/properties/summary`, and `software list/properties` with `--help` for their flags and examples.
 Lists default to 100 rows, expose upstream totals when supplied, and return a cursor when more rows remain.
 `--all` remains bounded by 10,000 rows and the shared transport budgets; resume with the returned `--cursor` and original selectors, filters, sort, and fields.
 Offset paging does not provide snapshot isolation.
@@ -102,6 +102,13 @@ Absent selected inventory properties render as `null`; present malformed values 
 Inventory sort accepts display aliases such as `name`, `class` and `exposureScore` and maps them to each kind's documented sortable keys.
 Unknown sort names return the valid choices before making a request.
 `asset show` includes FQDNs and last-observed time; `finding show` includes asset ID, CVEs and sensor type, and `finding list` includes sensor type.
+`asset investigate --query <text>` looks up at most two compact asset candidates, returning their count, total and completeness in `lookup`.
+It reads findings only after a complete lookup returns exactly one asset, then includes `asset` alongside the ordinary finding list output.
+Multiple candidates fail with `ASSET_AMBIGUOUS`; no matches fail with `NOT_FOUND`; an incomplete lookup never pivots.
+`--fields`, `--extra-properties`, `--limit` and `--all` apply to findings, while asset evidence uses compact defaults.
+Both phases share the existing 20-second, 20-request and 20 MiB budgets, and findings retain their ordinary totals, completeness, text previews and row limits.
+Partial failures retain validated evidence and exit nonzero; ordinary budget exhaustion reports `complete: false` and its reason.
+Resume a findings cursor with the returned `finding list` suggestion, retaining its asset ID filter, profile and selected fields.
 `finding summary` counts each severity and sensor type published in the pinned properties examples, including deprecated sensor types, using 19 sequential limit-1 searches and `pagination.total` without retries.
 It accepts profile/config selection, does no per-host grouping, and retains completed counts with `complete: false` if a read fails or the unchanged invocation budget runs out.
 Missing `pagination.total` fails validation rather than inventing a count.

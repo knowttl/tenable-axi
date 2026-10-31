@@ -23,6 +23,89 @@ function fixture() {
 }
 afterEach(() => { for (const fixture of fixtures.splice(0)) fixture.cleanup(); vi.useRealTimers(); });
 
+test("asset investigation resolves one candidate and returns selected finding evidence", async () => {
+  const result = await fixture().run(["asset", "investigate", "--query", "example-device", "--fields", "id,severity,cves"], [
+    { body: page([asset], 1) }, { body: page([{ ...finding, extra_properties: { cves: ["CVE-2026-0001"] } }], 1) },
+  ]);
+  expect(result).toMatchObject({ code: 0, data: {
+    asset: { id: "asset-1", name: "Example device", class: "DEVICE", exposureScore: 913 },
+    lookup: { count: 1, total: 1, complete: true },
+    count: 1, total: 1, complete: true,
+  } });
+  expect(result.requests.map((request) => JSON.parse(String(request.init.body)))).toEqual([
+    { query: { mode: "simple", text: "example-device" } },
+    { filters: [{ property: "asset_id", operator: "=", value: ["asset-1"] }] },
+  ]);
+  expect(new URL(result.requests[0]!.url).searchParams.get("limit")).toBe("2");
+  expect(result.data.findings).toEqual([{ id: "finding-1", severity: "HIGH", cves: ["CVE-2026-0001"] }]);
+});
+
+test("asset investigation exposes ambiguous candidates without reading findings", async () => {
+  const result = await fixture().run(["asset", "investigate", "--query", "example"], [
+    { body: page([asset, { ...asset, id: "asset-2" }], 3) },
+  ]);
+  expect(result).toMatchObject({ code: 1, data: { lookup: { assets: [{ id: "asset-1" }, { id: "asset-2" }],
+    count: 2, total: 3, complete: false }, complete: false, error: { code: "ASSET_AMBIGUOUS" } } });
+  expect(result.data).not.toHaveProperty("findings");
+  expect(result.requests).toHaveLength(1);
+});
+
+test("asset investigation reports an unmatched selector without reading findings", async () => {
+  const result = await fixture().run(["asset", "investigate", "--query", "missing-device"], [{ body: page([], 0) }]);
+  expect(result).toMatchObject({ code: 1, data: { lookup: { assets: [], count: 0, total: 0, complete: true },
+    complete: false, error: { code: "NOT_FOUND" } } });
+  expect(result.requests).toHaveLength(1);
+});
+
+test.each([[], ["--query", "example", "--limit", "0"], ["--query", "example", "--fields", "id,id"]])(
+  "asset investigation rejects invalid input before HTTP: %j", async (...flags) => {
+    const result = await fixture().run(["asset", "investigate", ...flags]);
+    expect(result).toMatchObject({ code: 2, data: { error: { code: "VALIDATION_ERROR" } } });
+    expect(result.requests).toHaveLength(0);
+  },
+);
+
+test("asset investigation shares the request budget and resumes findings through their list command", async () => {
+  const f = fixture();
+  const first = await f.run(["asset", "investigate", "--query", "example", "--all"], [
+    { body: page([asset], 1) },
+    ...Array.from({ length: 19 }, (_, offset) => ({ body: page([{ ...finding, id: `finding-${offset}` }], 20, offset) })),
+  ]);
+  expect(first).toMatchObject({ code: 0, data: { asset: { id: "asset-1" }, count: 19, total: 20,
+    complete: false, reason: "REQUEST_BUDGET_EXCEEDED" } });
+  expect(first.requests).toHaveLength(20);
+  const resumed = await f.run(["finding", "list", "--all", "--filter", 'asset_id = ["asset-1"]', "--cursor", String(first.data.cursor)],
+    [{ body: page([{ ...finding, id: "finding-19" }], 20, 19) }]);
+  expect(resumed).toMatchObject({ code: 0, data: { findings: [{ id: "finding-19" }], count: 1, total: 20, complete: true } });
+});
+
+test("asset investigation retains asset and validated findings when a later finding page fails", async () => {
+  const result = await fixture().run(["asset", "investigate", "--query", "example"], [
+    { body: page([asset], 1) }, { body: page([finding], 2) }, { status: 403 },
+  ]);
+  expect(result).toMatchObject({ code: 1, data: { asset: { id: "asset-1" }, lookup: { complete: true },
+    findings: [{ id: "finding-1" }], count: 1, total: 2, complete: false, reason: "READ_FAILED", error: { code: "PERMISSION_DENIED" } } });
+});
+
+test("asset investigation retains the asset when the first findings read is denied", async () => {
+  const result = await fixture().run(["asset", "investigate", "--query", "example"], [
+    { body: page([asset], 1) }, { status: 403 },
+  ]);
+  expect(result).toMatchObject({ code: 1, data: { asset: { id: "asset-1" }, findings: [], count: 0, total: null,
+    complete: false, error: { code: "PERMISSION_DENIED" } } });
+});
+
+test("asset investigation never pivots from an incomplete single-candidate lookup", async () => {
+  vi.useFakeTimers();
+  const pending = fixture().run(["asset", "investigate", "--query", "example"], [{ body: page([asset], 2) }, "hang"]);
+  await vi.advanceTimersByTimeAsync(20000);
+  const result = await pending;
+  expect(result).toMatchObject({ code: 0, data: { lookup: { count: 1, complete: false }, complete: false, reason: "DEADLINE_EXCEEDED" } });
+  expect(result.data).not.toHaveProperty("findings");
+  expect(result.requests).toHaveLength(2);
+  expect(vi.getTimerCount()).toBe(0);
+});
+
 test.each([
   ["asset", asset, { id: "asset-1", name: "Example device", class: "DEVICE", exposureScore: 913 }],
   ["finding", finding, { ...finding, sensor_type: null }],

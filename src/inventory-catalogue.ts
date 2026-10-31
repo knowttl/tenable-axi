@@ -90,6 +90,14 @@ const search = { query: "Simple query text", filter: "Repeatable: <property> <op
   sort: "Sortable display or wire property:asc|desc; unknown names report valid choices", "extra-properties": "Comma-separated extra wire properties", offset: "Starting record; default 0; excludes --cursor" };
 
 export const inventoryCatalogue = Object.fromEntries((Object.keys(inventoryKinds) as InventoryKind[]).flatMap((kind) => [
+  ...(kind !== "asset" ? [] : [["asset investigate", {
+    description: "Resolve a unique asset text query and read its findings within one shared invocation budget; ambiguous or incomplete lookups never pivot",
+    operationId: "inventory-findings-search", defaultFields: defaultFields.finding, evidence: "specs/exposure-management.json",
+    flags: { ...common(listFields("finding")), query: "Required asset simple query text; lookup returns at most two compact asset candidates",
+      limit: collection.limit, all: collection.all, "extra-properties": search["extra-properties"] },
+    examples: ["tenable-axi asset investigate --query example-device --limit 20",
+      "tenable-axi asset investigate --query example-device --fields id,name,severity,state,sensor_type,cves"],
+  }]]),
   ...(kind !== "finding" ? [] : [["finding summary", {
     description: "Count findings by each published severity and sensor_type value using limit-1 searches; no per-asset grouping",
     operationId: "inventory-findings-search", defaultFields: [], evidence: "specs/exposure-management.json",

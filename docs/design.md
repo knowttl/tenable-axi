@@ -212,6 +212,7 @@ This table defines selectors, extra flags, and compact projections; display fiel
 | Commands | Selectors and additional flags | Default list fields |
 |---|---|---|
 | `asset list/show/properties` | Show: `--id`, using exact ID search; list: query/filter/sort and `--class`. | id, name, class, exposureScore |
+| `asset investigate` | Required `--query`; pivot only after a complete unique asset lookup; findings share invocation budgets. | compact asset and finding defaults; `--fields` selects finding evidence |
 | `finding list/show/properties` | Show: `--id`, using exact ID search; list: query/filter/sort. | id, name, severity, state, sensor_type |
 | `finding summary` | Profile/config selection; one limit-1 search per published severity and sensor_type value, reading pagination.total. | severity and sensor_type counts, complete |
 | `software list/properties` | Query/filter/sort; the [pinned spec](../specs/exposure-management.json) exposes no stable software ID. | name (application), version (extra_properties.version), publisher |
