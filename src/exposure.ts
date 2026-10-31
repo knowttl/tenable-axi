@@ -38,7 +38,7 @@ const fieldTypes: Record<string, z.ZodType> = {
 };
 
 export async function exposureCommand(argv: string[], store: ReturnType<typeof credentialStore>, factory: TransportFactory = createTransport): Promise<Record<string, unknown>> {
-  const name = !argv.length || argv[0]?.startsWith("--") ? "home"
+  const name = !argv.length || argv[0]?.startsWith("-") ? "home"
     : ["card", "tag"].includes(argv[0]!) ? argv.slice(0, 2).join(" ") : argv[0]!;
   const entry = catalogue[name as keyof typeof catalogue];
   const usage = (message = "Unknown command, argument, duplicate or invalid flag"): never => {
@@ -49,7 +49,7 @@ export async function exposureCommand(argv: string[], store: ReturnType<typeof c
   if (!entry) usage();
   const flags = new Map<string, string>();
   const filters: string[] = [];
-  const start = !argv.length || argv[0]?.startsWith("--") ? 0 : name.includes(" ") ? 2 : 1;
+  const start = !argv.length || argv[0]?.startsWith("-") ? 0 : name.includes(" ") ? 2 : 1;
   for (let index = start; index < argv.length; index++) {
     const arg = argv[index]!;
     const flag = arg.slice(2);

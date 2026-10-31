@@ -376,6 +376,19 @@ test.each([[], ["home"], ["card", "list"], ["tag", "list"], ["asset", "list"], [
   },
 );
 
+test.each([["-x"], ["home", "-x"], ["--full", "-x"], ["home", "--full", "-x"]])(
+  "packaged short unknown flags use home validation before credential resolution: %j", (...args) => {
+    const fixture = hookFixture();
+    try {
+      const result = fixture.run(args, { TENABLE_AXI_ACCESS_KEY: "partial-profile" });
+      expect(result.status).toBe(2);
+      expect(result.stderr).toBe("");
+      expect(decode(result.stdout)).toMatchObject({ error: { code: "VALIDATION_ERROR", message: expect.stringContaining("-x") },
+        help: ["Valid flags for home: --config, --profile, --fields, --full, --help"] });
+    } finally { fixture.cleanup(); }
+  },
+);
+
 test("packaged home follows relocation and collapses only the home directory boundary", () => {
   const fixture = hookFixture();
   const moved = join(fixture.home, "Relocated tools");
