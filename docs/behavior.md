@@ -87,9 +87,12 @@ Previews never poll, and unknown creation outcomes or wait timeouts never create
 `TENABLE_AXI_READ_ONLY=true` overrides every configured write policy.
 `export asset jobs` and `export finding jobs` expose `--status` and `--limit` (default 100, maximum 1000), returning only the last three days without server paging or a claim of complete history.
 `export inventory status --id <id>` reads once by default and reports available chunks; add `--wait` to poll once per second within the shared deadline and request budgets.
-Budget exhaustion after an observed pending state returns the final observed job with `complete: false` and `reason: POLL_BUDGET_EXCEEDED`, without claiming completion.
+For both inventory and attack exports, waiting continues only while the observed state is `QUEUED` or `PROCESSING`; inspect the final state, since stopping also includes failed or cancelled jobs.
+Budget exhaustion after an observed pending state returns the final observed job with `complete: false` and `reason: POLL_BUDGET_EXCEEDED`, including when retries exhaust the request budget or an in-flight poll reaches the deadline, without claiming completion.
 Other polling failures retain the last observed job with `complete: false` and a structured error and exit nonzero; without an observed status, standalone status failures remain errors.
+Status responses must match the exact requested job ID; a mismatch returns `RESPONSE_INVALID` rather than adopting another job or claiming its completion.
 Start-and-wait retains the created ID and audit ID even when the first status read fails or times out, so status can resume without a new creation.
+Before any status is observed, this retained state is `QUEUED` for inventory or `SUBMITTED` for attack exports; a budget stop still carries `complete: false` and `reason: POLL_BUDGET_EXCEEDED`.
 `export inventory download --id <id> --chunk <number> --output <new-file>` downloads one explicit chunk and prints file metadata only.
 Files are validated as JSON or CSV, scanned for secrets, redacted and published atomically without overwrite; gzip exports are decoded and re-encoded with the same format.
 Inventory JSON chunks must contain arrays of objects.
@@ -186,10 +189,7 @@ Add `--wait` to poll that returned job ID after confirmed creation within the sa
 Previews never poll; creation sends at most once, and unknown outcomes or wait timeouts never create replacement jobs.
 Exports require `EXPOSURE_MANAGEMENT.ATTACK_PATH.ATTACK_PATH.WRITE` and the corresponding upstream entitlement.
 Use `export attack status --id <id>` for a single status read, or add `--wait` to poll within the shared deadline and request budgets.
-If a polling budget expires after a validated pending response, `--wait` returns the last validated job with `complete:false` and `reason:POLL_BUDGET_EXCEEDED`, including when retries exhaust the request budget or an in-flight poll reaches the deadline.
-Without a validated status, standalone status budget exhaustion remains an error.
-Other polling failures retain the last observed job with `complete: false` and a structured error and exit nonzero.
-Start-and-wait retains the created ID and audit ID even if its first status read fails or times out; resume status on that ID instead of creating again.
+The shared [export wait rules](#inventory-exports) describe pending states, budget stops, exact job identity checks and partial failures, including retention of the created ID and audit ID when status fails.
 Use `export attack download --id <id> --output <new-file>` to download JSON or CSV, including gzip-encoded files, with format-aware secret redaction and atomic publication within the [download bounds](design.md#collections-jobs-and-bounded-reads).
 Attack JSON downloads accept arrays of objects and top-level objects, including MITRE heatmap Navigator layers.
 Downloads refuse overwrite and print file metadata only.

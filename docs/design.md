@@ -220,11 +220,11 @@ This table defines selectors, extra flags, and compact projections; display fiel
 | `attack-path list` | Documented filters/sort and `--include-resolved`; AI summarization off by default. | id, name, priority |
 | `attack-technique list` | Documented filters/sort and `--include-resolved`. | id, name, affectedAssets |
 | `connector logs` | Documented connector/time selectors and bounded limit. | connectorId, status, timestamp, syncUuid, type, triggerReason, failedStage, error |
-| `export asset start`, `export finding start` | Optional strict `--body-file` for query/filters; query-option and write flags. | id, state |
+| `export asset start`, `export finding start` | See [inventory export usage](behavior.md#inventory-exports) for query options, write flags and optional waiting. | id, state |
 | `export asset jobs`, `export finding jobs` | `--status`, `--limit`; see [inventory export usage](behavior.md#inventory-exports) for history limits. | id, state, createdAt |
-| `export inventory status` | `--id`. | id, state, availableChunks |
+| `export inventory status` | See [inventory export usage](behavior.md#inventory-exports) for ID selection and optional waiting. | id, state, availableChunks |
 | `export inventory download` | `--id`, `--chunk`, `--output`. | id, chunk, output, bytes, format, compressed |
-| `export attack-path start`, `export attack-technique start`, `export mitre-heatmap start` | Strict `--body-file` for format/filter options; write flags. | id, state |
+| `export attack-path start`, `export attack-technique start`, `export mitre-heatmap start` | See [attack export usage](behavior.md#attack-exports) for body options, write flags and optional waiting. | id, state |
 | `export attack status` | `--id`; optional `--wait`, with budget-stop behavior described in [behavior reference](behavior.md). | id, state |
 | `export attack download` | `--id`, `--output`. | id, output, bytes, format |
 | `tag category list/show/create/update/delete` | Show/update/delete: `--id`; create/update: `--name`, optional `--description`; list: repeatable `--filter`, `--filter-type and\|or`, `--sort`. | id, name, reserved |
