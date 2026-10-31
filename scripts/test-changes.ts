@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-function git(args) {
+function git(args: string[]) {
   const result = spawnSync("git", args, { encoding: "utf8" });
   if (result.error || result.status !== 0) throw new Error(`Cannot compute changed files: git ${args.join(" ")} failed`);
   return result.stdout;
@@ -25,12 +25,13 @@ try {
   if (process.argv.includes("--plan")) console.log(JSON.stringify({ mode: full ? "full-suite" : "affected-only", changed, baseline, vitestArgs }));
   else {
     const root = new URL("../", import.meta.url);
-    const guard = fileURLToPath(new URL("../test/support/deny-network.mjs", import.meta.url));
+    const guard = fileURLToPath(new URL("../test/support/deny-network.ts", import.meta.url));
     const steps = [
       ["node_modules/typescript/bin/tsc", "-p", "tsconfig.json"],
       ["node_modules/typescript/bin/tsc", "--noEmit", "-p", "tsconfig.json"],
+      ["node_modules/typescript/bin/tsc", "-p", "tsconfig.tooling.json"],
       ["node_modules/vitest/vitest.mjs", ...vitestArgs],
-    ];
+    ] satisfies [string, ...string[]][];
     for (const [entry, ...args] of steps) {
       const test = entry.includes("vitest");
       const result = spawnSync(process.execPath, [fileURLToPath(new URL(entry, root)), ...args], {
@@ -42,6 +43,6 @@ try {
     }
   }
 } catch (error) {
-  console.error(error.message);
+  console.error((error as Error).message);
   process.exitCode = 1;
 }

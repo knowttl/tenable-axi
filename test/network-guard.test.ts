@@ -12,7 +12,7 @@ test.each([
   '(await import("node:http")).get("http://127.0.0.1:443")',
   '(await import("node:dgram")).createSocket("udp4").send("test",443,"127.0.0.1")',
 ])("the process-tree guard denies unregistered network access: %s", (source) => {
-  const guard = fileURLToPath(new URL("./support/deny-network.mjs", import.meta.url));
+  const guard = fileURLToPath(new URL("./support/deny-network.ts", import.meta.url));
   const result = spawnSync(process.execPath, ["--import", guard, "--input-type=module", "-e", source], {
     encoding: "utf8", timeout: 5000,
   });

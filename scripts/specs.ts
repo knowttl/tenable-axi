@@ -1,16 +1,17 @@
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import openapiTS, { astToString } from "openapi-typescript";
+import openapiTS, { astToString, type OpenAPI3 } from "openapi-typescript";
 import { inventorySchema } from "../dist/src/inventory/schema.js";
+import type { CapabilityInventory } from "../dist/src/inventory/schema.js";
 
 const generate = process.argv[2] === "--generate";
 if (!generate && process.argv[2] !== "--check") throw new Error("Use --generate or --check");
-const sources = JSON.parse(readFileSync("inventory/specs.json", "utf8"));
+const sources = JSON.parse(readFileSync("inventory/specs.json", "utf8")) as CapabilityInventory["sources"];
 const design = readFileSync("docs/design.md", "utf8");
 const methods = new Set(["get", "post", "put", "patch", "delete", "head", "options", "trace"]);
-const operations = [];
+const operations: CapabilityInventory["operations"] = [];
 
-function plannedSlice(commands) {
+function plannedSlice(commands: string[]) {
   const command = commands[0];
   if (!command) return null;
   if (/^(asset|finding|software) /.test(command)) return "T5";
@@ -23,7 +24,7 @@ function plannedSlice(commands) {
   throw new Error(`No implementation slice for ${command}`);
 }
 
-function artifact(path, content) {
+function artifact(path: string, content: string) {
   if (generate) writeFileSync(path, content);
   else if (readFileSync(path, "utf8") !== content) throw new Error(`Stale generated artifact: ${path}`);
 }
@@ -34,11 +35,11 @@ for (const source of sources) {
   if (createHash("sha256").update(bytes).digest("hex") !== source.sha256) {
     throw new Error(`Pinned specification hash mismatch: ${source.id}`);
   }
-  const spec = JSON.parse(bytes);
+  const spec = JSON.parse(bytes.toString()) as OpenAPI3;
   // Generation must stay offline, even if a future snapshot adds external references.
-  function checkRefs(value) {
+  function checkRefs(value: unknown) {
     if (!value || typeof value !== "object") return;
-    if (typeof value.$ref === "string" && !value.$ref.startsWith("#/")) throw new Error("External $ref is forbidden");
+    if ("$ref" in value && typeof value.$ref === "string" && !value.$ref.startsWith("#/")) throw new Error("External $ref is forbidden");
     for (const child of Object.values(value)) checkRefs(child);
   }
   checkRefs(spec);
@@ -46,17 +47,17 @@ for (const source of sources) {
   if (!section) throw new Error(`Missing design ledger: ${source.id}`);
   const ledger = [...section.matchAll(/^\| `([^`]+)` \| `([A-Z]+) ([^`]+)` \| (v1-read|v1-write|blocked) \| (.*?) \| (.*?) \|$/gm)];
   const seen = new Set();
-  for (const [path, item] of Object.entries(spec.paths)) {
+  for (const [path, item] of Object.entries(spec.paths!)) {
     for (const [method, operation] of Object.entries(item)) {
       if (!methods.has(method)) continue;
       const matches = ledger.filter((row) => row[1] === operation.operationId && row[2] === method.toUpperCase() && row[3] === path);
       if (matches.length !== 1) throw new Error(`Operation needs exactly one classification: ${method} ${path}`);
-      const row = matches[0];
+      const row = matches[0] as unknown as [string, string, string, string, CapabilityInventory["operations"][number]["disposition"], string, string];
       if (seen.has(operation.operationId)) throw new Error(`Duplicate operation ID: ${operation.operationId}`);
       seen.add(operation.operationId);
-      const plannedCommands = row[5] === "-" ? [] : row[5].replaceAll("`", "").split(" / ");
+      const plannedCommands = row[5] === "-" ? [] : row[5]!.replaceAll("`", "").split(" / ");
       if ((row[4] === "blocked") !== (plannedCommands.length === 0)) throw new Error("Blocked operation cannot have a planned command");
-      operations.push({ source: source.id, operationId: operation.operationId, method: method.toUpperCase(), path,
+      operations.push({ source: source.id, operationId: operation.operationId, method: method.toUpperCase() as CapabilityInventory["operations"][number]["method"], path,
         disposition: row[4], plannedCommands, reason: row[6], slice: plannedSlice(plannedCommands) });
     }
   }

@@ -1,6 +1,6 @@
 # Contributing agents
 
-Use Node.js 22.12 or later and pnpm through Corepack.
+Use Node.js 24 or later for development and pnpm through Corepack.
 The authoritative commands are in `package.json`: `corepack pnpm run build`, `corepack pnpm run lint`, `corepack pnpm test`, and `corepack pnpm run spec:check`.
 `.no-mistakes.yaml` separates preparation, testing and linting; see [releases](CONTRIBUTING.md#releases) for hosted publication checks.
 Do not add a hosted test workflow.
@@ -27,7 +27,7 @@ Tests are never required first; a change is verified end to end against the beha
 Exempt: validation-boundary tests, contract tests against an agreed schema or recording, and regression tests that cite the bug they reproduce.
 <!-- END canonical test-quality rules -->
 
-Validation runs only affected tests plus the fixed baseline, per `.no-mistakes.yaml` and `scripts/test-changes.mjs`; shared infrastructure changes run the full suite.
+Validation runs only affected tests plus the fixed baseline, per `.no-mistakes.yaml` and `scripts/test-changes.ts`; shared infrastructure changes run the full suite.
 See [Change recipe and tests](docs/design.md#change-recipe-and-tests) for the contract.
 
 ## Boundaries

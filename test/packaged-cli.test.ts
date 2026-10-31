@@ -49,7 +49,7 @@ function hookFixture() {
   const isolated = { ...env, HOME: home, USERPROFILE: home, XDG_CONFIG_HOME: join(home, ".config"),
     CODEX_HOME: join(home, ".codex"), CLAUDE_CONFIG_DIR: join(home, ".claude"),
     XDG_STATE_HOME: join(home, "state"), APPDATA: join(home, "AppData/Roaming"), LOCALAPPDATA: join(home, "AppData/Local"),
-    NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --import=${resolve("test/support/deny-network.mjs")}` };
+    NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --import=${resolve("test/support/deny-network.ts")}` };
   const run = (args: string[], extra: NodeJS.ProcessEnv = {}) => spawnSync(process.execPath, [entry, ...args], {
     cwd: home, env: { ...isolated, ...extra }, encoding: "utf8", timeout: 10_000,
   });

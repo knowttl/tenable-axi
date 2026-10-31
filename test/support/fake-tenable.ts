@@ -2,7 +2,7 @@ import { createServer, request as httpsRequest } from "node:https";
 import { Readable } from "node:stream";
 import { gunzipSync } from "node:zlib";
 import { constructTransport, type ApiKeys, type OperationBinding } from "../../src/transport-core.js";
-import { allowFakeServer } from "./deny-network.mjs";
+import { allowFakeServer } from "./deny-network.js";
 import { cert, key } from "./test-tls.js";
 
 export const syntheticKeys: ApiKeys = { accessKey: "synthetic-access-sentinel", secretKey: "synthetic-secret-sentinel" };

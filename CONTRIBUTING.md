@@ -6,7 +6,7 @@ See [README](README.md) for the introduction and [behavior](docs/behavior.md) fo
 
 ## TypeScript conventions
 
-Use the runtime required by [package.json](package.json), TypeScript with strict checking, ESM, and pnpm with the committed lockfile.
+Use Node.js 24 or later for development, TypeScript with strict checking, ESM, and pnpm with the committed lockfile.
 Use `axi-sdk-js` for the CLI boundary and `@toon-format/toon` for stdout encoding.
 Keep JSON internally and decode untrusted responses with zod at the boundary.
 Validate selected response fields according to the [output contract](docs/design.md#architecture-and-module-depth), tolerate extra upstream fields, and keep command input schemas strict.
@@ -25,8 +25,8 @@ Follow the canonical test-quality rules in [AGENTS.md](AGENTS.md#testing).
 Never require a live tenant, customer data, or a real credential for a test.
 T1 configures `.no-mistakes.yaml` following vectra-axi's separated prepare/test/lint command pattern.
 Run only tests affected by the change plus a small fixed baseline.
-`corepack pnpm test` always builds and typechecks, then `scripts/test-changes.mjs` selects tests related to files changed since the merge base with `origin/main`, including tracked working-tree changes and untracked files.
-The fixed baseline always includes `test/packaged-cli.test.ts`; `scripts/test-changes.mjs` defines any additional safety baselines.
+`corepack pnpm test` always builds and typechecks, then `scripts/test-changes.ts` selects tests related to files changed since the merge base with `origin/main`, including tracked working-tree changes and untracked files.
+The fixed baseline always includes `test/packaged-cli.test.ts`; `scripts/test-changes.ts` defines any additional safety baselines.
 Package, lockfile, TypeScript/Vitest configuration, test support, scripts, pinned specifications and `.no-mistakes.yaml` changes run the full suite.
 The selector prints its mode and fails if it cannot compute the merge base or find the required CLI baseline.
 No hosted pull-request test CI is configured; `.no-mistakes.yaml` declares `no_ci: true`.
@@ -58,8 +58,8 @@ Do not add agent co-author trailers automatically.
 ```sh
 corepack pnpm install --frozen-lockfile --ignore-scripts --config.confirm-modules-purge=false
 corepack pnpm run build
-node scripts/isolated.mjs node bin/tenable-axi.js --help
-node scripts/isolated.mjs node bin/tenable-axi.js --version
+node scripts/isolated.ts node bin/tenable-axi.js --help
+node scripts/isolated.ts node bin/tenable-axi.js --version
 corepack pnpm test
 corepack pnpm run lint
 corepack pnpm run spec:check

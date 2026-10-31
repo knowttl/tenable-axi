@@ -8,12 +8,12 @@ test("documentation check detects stale release artifacts and regeneration repai
   const directory = mkdtempSync(join(tmpdir(), "tenable-axi-docs-"));
   try {
     mkdirSync(join(directory, "scripts"));
-    cpSync("scripts/generate-docs.mjs", join(directory, "scripts/generate-docs.mjs"));
+    cpSync("scripts/generate-docs.ts", join(directory, "scripts/generate-docs.ts"));
     cpSync("README.md", join(directory, "README.md"));
     cpSync("docs", join(directory, "docs"), { recursive: true });
     cpSync("skills", join(directory, "skills"), { recursive: true });
     symlinkSync(resolve("dist"), join(directory, "dist"), "junction");
-    const run = (...args: string[]) => spawnSync(process.execPath, [join(directory, "scripts/generate-docs.mjs"), ...args], { encoding: "utf8" });
+    const run = (...args: string[]) => spawnSync(process.execPath, [join(directory, "scripts/generate-docs.ts"), ...args], { encoding: "utf8" });
     expect(run("--check").status).toBe(0);
     writeFileSync(join(directory, "docs/commands.md"), "outdated reference\n");
     writeFileSync(join(directory, "skills/tenable-axi/SKILL.md"), "outdated skill\n");
