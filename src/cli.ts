@@ -4,7 +4,7 @@ import { encode } from "@toon-format/toon";
 import { credentialStore, type CredentialContext } from "./profiles.js";
 import { localCommand } from "./local-commands.js";
 import { inventoryCommand } from "./inventory.js";
-import { exposureCommand, type TransportFactory } from "./exposure.js";
+import { exposureCommand, homeIdentity, type TransportFactory } from "./exposure.js";
 import { TransportError } from "./transport.js";
 import { attackCommand } from "./attack.js";
 import { attackExportCommand } from "./attack-export.js";
@@ -23,8 +23,12 @@ export async function main(argv = process.argv.slice(2), options: { credentials?
     home: async () => store.redactor.payload(await exposureCommand([], store, options.transportFactory)) as Record<string, unknown>,
     stdout: { write: (chunk) => (options.stdout ?? process.stdout).write(store.redactor.text(chunk)) },
     formatError: (error) => ({
-      output: `${encode(store.redactor.value(error instanceof TransportError ? error.toJSON() : error instanceof AxiError ? { error: { code: error.code, message: error.message }, help: error.suggestions }
-        : { error: { code: "CONFIG_INVALID", message: "Command could not complete" } }))}\n`,
+      output: `${encode(store.redactor.value({
+        ...((!argv.length || argv[0] === "home" || argv[0]?.startsWith("--") && argv[0] !== "--help")
+          && !(error instanceof AxiError && error.code === "VALIDATION_ERROR") ? homeIdentity() : {}),
+        ...(error instanceof TransportError ? error.toJSON() : error instanceof AxiError ? { error: { code: error.code, message: error.message }, help: error.suggestions }
+          : { error: { code: "CONFIG_INVALID", message: "Command could not complete" } }),
+      }))}\n`,
       exitCode: error instanceof AxiError && error.code === "VALIDATION_ERROR" ? 2 : 1,
     }),
     commands: {

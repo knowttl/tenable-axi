@@ -15,10 +15,14 @@ Inventory reads and exports, attack searches and connector logs are implemented.
 Attack path, attack technique and MITRE heatmap exports support guarded creation, status and redacted file downloads.
 `tag list`, `tag properties`, `card list` and `card show` provide bounded Exposure Management reads.
 Platform tag categories, values, assignments, exclusions and dynamic filter definitions are implemented, including guarded mutations.
-Home shows up to five exposure cards when configured and setup guidance offline otherwise, without printing the executable path.
+Home starts with `bin`, the absolute current executable path, followed by `description`, the tool description, including on authentication failures.
+Only the actual home-directory prefix is collapsed to `~`.
+Home shows up to five exposure cards when configured and setup guidance offline otherwise.
 Exposure response initiatives and combinations support reads and guarded writes, including allowed combination filters.
 `hook` reports local profile context without resolving secrets or contacting Tenable.
 Help, version, `auth status`, `profile list` and `config path` remain local.
+Unknown-flag errors name the rejected flag, list the applicable valid flags and exit 2 before authentication or service calls.
+Unknown root flags, including single-dash flags such as `-x`, report the valid home flags.
 
 Credentials use the strict versioned config and SecretRefs described in [profiles and authentication](design.md#profiles-and-authentication).
 Run `tenable-axi config path` to find the platform config path, or set both `TENABLE_AXI_ACCESS_KEY` and `TENABLE_AXI_SECRET_KEY` for an environment profile.

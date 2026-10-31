@@ -5,14 +5,15 @@ import { credentialStore } from "./profiles.js";
 export function localCommand(argv: string[], store: ReturnType<typeof credentialStore>): Record<string, unknown> {
   const name = argv.slice(0, 2).join(" ");
   const entry = catalogue[name as keyof typeof catalogue];
-  const usage = (): never => { throw new AxiError("Unknown command, argument, duplicate or invalid flag", "VALIDATION_ERROR", [
-    "Valid commands: auth status, profile list, config path; valid flags: --config <path>, --profile <name>, --fields <names>, --full, --help",
+  const usage = (message = "Unknown command, argument, duplicate or invalid flag"): never => { throw new AxiError(message, "VALIDATION_ERROR", [
+    entry ? `Valid flags for ${name}: ${Object.keys(entry.flags).map((flag) => `--${flag}`).join(", ")}`
+      : "Valid commands: auth status, profile list, config path; valid flags: --config <path>, --profile <name>, --fields <names>, --full, --help",
   ]); };
   if (!entry || name === "home") usage();
   const flags = new Map<string, string>();
   for (let index = 2; index < argv.length; index++) {
     const flag = argv[index]!;
-    if (!flag.startsWith("--") || !Object.hasOwn(entry.flags, flag.slice(2)) || flags.has(flag)) usage();
+    if (!flag.startsWith("--") || !Object.hasOwn(entry.flags, flag.slice(2)) || flags.has(flag)) usage(`Unknown argument, flag, or duplicate flag: ${flag}`);
     if (flag === "--help" || flag === "--full") flags.set(flag, "true");
     else {
       const value = argv[++index];
