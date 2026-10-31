@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/knowttl/tenable-axi/compare/v0.1.4...v0.1.5) (2026-10-30)
+
+
+### Bug Fixes
+
+* preserve safe diagnostics for invalid Tenable responses ([#31](https://github.com/knowttl/tenable-axi/issues/31)) ([b2c5a6d](https://github.com/knowttl/tenable-axi/commit/b2c5a6dfd823e277928a0763475610740344f9ef))
+
 ## [0.1.4](https://github.com/knowttl/tenable-axi/compare/v0.1.3...v0.1.4) (2026-10-28)
 
 
