@@ -26,14 +26,21 @@ function setup(replies: (Reply | "hang")[] = [], configured = true) {
 }
 const card = (id: string, score = 42) => ({ id, name: `Card ${id}`, ces_score: { score } });
 
+test.each([[], ["card", "list"], ["tag", "list"], ["asset", "list"], ["auth", "status"]])("unknown flags prevent configured service calls: %j", async (...args) => {
+  const fixture = setup();
+  const result = await fixture.cli([...args, "--axi-review-unknown"]);
+  expect(result).toMatchObject({ code: 2, data: { error: { code: "VALIDATION_ERROR", message: expect.stringContaining("--axi-review-unknown") },
+    help: expect.arrayContaining([expect.stringContaining(`Valid flags for ${args.join(" ") || "home"}:`)]) } });
+  expect(fixture.requests).toHaveLength(0);
+});
+
 test("configured home requests five cards once and reports the upstream total", async () => {
   const fixture = setup([{ body: { data: [card("1"), card("2"), card("3"), card("4"), card("5")], pagination: { total_record_count: 60 } } }]);
   const result = await fixture.cli([]);
   expect(result.code).toBe(0);
   expect(result.data).toMatchObject({ profile: "env", origin: "https://cloud.tenable.com", readOnly: true, count: 5, total: 60, complete: false });
   expect(result.data.cards).toHaveLength(5);
-  expect(result.data).not.toHaveProperty("bin");
-  expect(result.stdout).not.toContain(process.argv[1]!);
+  expect(result.data.bin).toBe(process.argv[1]);
   expect(fixture.requests.map((request) => request.url)).toEqual(["https://cloud.tenable.com/api/v1/t1/exposure-view/cards?limit=5&offset=0"]);
 });
 
@@ -42,8 +49,7 @@ test("unconfigured home explains setup without HTTP", async () => {
   const result = await fixture.cli(["home"]);
   expect(result.code).toBe(0);
   expect(result.data).toMatchObject({ status: "not configured", help: expect.arrayContaining([expect.stringContaining("SecretRefs")]) });
-  expect(result.data).not.toHaveProperty("bin");
-  expect(result.stdout).not.toContain(process.argv[1]!);
+  expect(result.data.bin).toBe(process.argv[1]);
   expect(fixture.requests).toHaveLength(0);
 });
 

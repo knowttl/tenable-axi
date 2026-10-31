@@ -15,7 +15,9 @@ Inventory reads and exports, attack searches and connector logs are implemented.
 Attack path, attack technique and MITRE heatmap exports support guarded creation, status and redacted file downloads.
 `tag list`, `tag properties`, `card list` and `card show` provide bounded Exposure Management reads.
 Platform tag categories, values, assignments, exclusions and dynamic filter definitions are implemented, including guarded mutations.
-Home shows up to five exposure cards when configured and setup guidance offline otherwise, without printing the executable path.
+Home starts with the absolute current executable path and the tool description, including on authentication failures.
+Only the actual home-directory prefix is collapsed to `~`.
+Home shows up to five exposure cards when configured and setup guidance offline otherwise.
 Exposure response initiatives and combinations support reads and guarded writes, including allowed combination filters.
 `hook` reports local profile context without resolving secrets or contacting Tenable.
 Help, version, `auth status`, `profile list` and `config path` remain local.

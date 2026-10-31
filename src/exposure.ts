@@ -1,6 +1,8 @@
 import { AxiError } from "axi-sdk-js";
 import { createHash } from "node:crypto";
 import { closeSync, openSync, readSync } from "node:fs";
+import { homedir } from "node:os";
+import { resolve, sep } from "node:path";
 import { z } from "zod";
 import { catalogue, DESCRIPTION, SETUP_GUIDANCE, transportBindings } from "./catalogue.js";
 import { cardDetails, cardRecord, properties, tagRecord } from "./exposure-contracts.js";
@@ -8,6 +10,12 @@ import { credentialStore } from "./profiles.js";
 import { createTransport, TransportError, type Transport, type TransportOptions } from "./transport.js";
 
 export type TransportFactory = (options: TransportOptions) => Transport;
+export function homeIdentity() {
+  const executable = resolve(process.argv[1]!);
+  const home = homedir();
+  const prefix = home.endsWith(sep) ? home : `${home}${sep}`;
+  return { bin: executable.startsWith(prefix) ? `~${sep}${executable.slice(prefix.length)}` : executable, description: DESCRIPTION };
+}
 const operators = ["=", "!=", "<=", "between", "match", ">=", "<", ">", "contains", "not contains", "exists", "not exists", "older than", "newer than", "within last"] as const;
 const filterSchema = z.array(z.strictObject({ property: z.string().min(1), operator: z.enum(operators), value: z.array(z.string()) }));
 const cardFields = ["id", "name", "score", "card_type", "is_global_card", "tag_count", "created_at", "updated_at", "sla_percentage", "ces_trend", "exposure_class", "last_data_update_date", "sources"];
@@ -45,7 +53,7 @@ export async function exposureCommand(argv: string[], store: ReturnType<typeof c
   for (let index = start; index < argv.length; index++) {
     const arg = argv[index]!;
     const flag = arg.slice(2);
-    if (!arg.startsWith("--") || !Object.hasOwn(entry!.flags, flag) || (flags.has(flag) && flag !== "filter")) usage();
+    if (!arg.startsWith("--") || !Object.hasOwn(entry!.flags, flag) || (flags.has(flag) && flag !== "filter")) usage(`Unknown argument, flag, or duplicate flag: ${arg}`);
     if (["help", "full", "all"].includes(flag)) flags.set(flag, "true");
     else {
       const value = argv[++index];
@@ -153,8 +161,7 @@ export async function exposureCommand(argv: string[], store: ReturnType<typeof c
     } catch { usage("Cursor does not match this profile, operation, fields or filters"); }
   }
   const config = flags.get("config"), selected = flags.get("profile");
-  // Never print the executable path: on a hosted server it is an absolute server path.
-  const identity = { description: DESCRIPTION };
+  const identity = name === "home" ? homeIdentity() : {};
   let profile;
   try { store.readOnly(); profile = store.select(store.load(config, name === "doctor").config, selected); }
   catch (error) {

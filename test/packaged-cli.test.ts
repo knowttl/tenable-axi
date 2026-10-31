@@ -353,12 +353,85 @@ test("packaged help describes executable commands offline", () => {
 });
 
 test("packaged unconfigured home provides setup guidance offline", () => {
-  const result = cli("home");
+  const fixture = hookFixture();
+  const result = fixture.run(["home"]);
+  fixture.cleanup();
   expect(result.status, result.stderr).toBe(0);
   expect(decode(result.stdout)).toMatchObject({ status: "not configured", help: expect.arrayContaining([expect.stringContaining("config path")]) });
-  expect(decode(result.stdout)).not.toHaveProperty("bin");
-  expect(result.stdout).not.toContain(entry);
+  expect(decode(result.stdout)).toMatchObject({ bin: entry, description: "Investigate Tenable One exposure and run explicitly guarded writes" });
+  expect(result.stdout.startsWith("bin: ")).toBe(true);
   expect(result.stderr).toBe("");
+});
+
+test.each([[], ["home"], ["card", "list"], ["tag", "list"], ["asset", "list"], ["auth", "status"], ["setup", "hooks"]])(
+  "packaged unknown flags name the rejected input before credential resolution: %j", (...args) => {
+    const fixture = hookFixture();
+    try {
+      const result = fixture.run([...args, "--axi-review-unknown"], { TENABLE_AXI_ACCESS_KEY: "partial-profile" });
+      expect(result.status).toBe(2);
+      expect(result.stderr).toBe("");
+      expect(decode(result.stdout)).toMatchObject({ error: { code: "VALIDATION_ERROR", message: expect.stringContaining("--axi-review-unknown") },
+        help: expect.arrayContaining([expect.stringMatching(/[Vv]alid flags.*--help/)]) });
+    } finally { fixture.cleanup(); }
+  },
+);
+
+test("packaged home follows relocation and collapses only the home directory boundary", () => {
+  const fixture = hookFixture();
+  const moved = join(fixture.home, "Relocated tools");
+  const sibling = `${fixture.home}-sibling`;
+  try {
+    cpSync(join(directory, "Agent's $Tools"), moved, { recursive: true });
+    const relocatedEntry = join(moved, "node_modules/@knowttl/tenable-axi/bin/tenable-axi.js");
+    const run = (path: string) => spawnSync(process.execPath, [path], { cwd: fixture.home, env: fixture.env, encoding: "utf8" });
+    const relocated = run(relocatedEntry);
+    expect(relocated.status, relocated.stderr).toBe(0);
+    expect(decode(relocated.stdout)).toMatchObject({ bin: join("~", "Relocated tools/node_modules/@knowttl/tenable-axi/bin/tenable-axi.js") });
+    renameSync(moved, sibling);
+    const siblingEntry = join(sibling, "node_modules/@knowttl/tenable-axi/bin/tenable-axi.js");
+    const outsideHome = run(siblingEntry);
+    expect(outsideHome.status, outsideHome.stderr).toBe(0);
+    expect(decode(outsideHome.stdout)).toMatchObject({ bin: siblingEntry });
+  } finally { fixture.cleanup(); rmSync(sibling, { recursive: true, force: true }); }
+});
+
+test.each([
+  { args: ["card", "show"], flags: { id: expect.stringMatching(/required.*id/i) } },
+  { args: ["setup", "hooks"], flags: { scope: expect.stringMatching(/user or project; default user/) } },
+])("packaged leaf help supplies the command-specific contract: $args", ({ args, flags }) => {
+  const fixture = hookFixture();
+  try {
+    const result = fixture.run([...args, "--help"]);
+    expect(result.status, result.stderr).toBe(0);
+    expect(decode(result.stdout)).toMatchObject({ command: args.join(" "), flags, examples: expect.arrayContaining([expect.stringContaining("tenable-axi")]) });
+  } finally { fixture.cleanup(); }
+});
+
+test.each([
+  { label: "configured", reply: { body: { data: [{ id: "card-1", name: "Exposure", ces_score: { score: 42 } }], pagination: { total_record_count: 7 } } },
+    code: 0, expected: { cards: [{ id: "card-1", name: "Exposure", score: 42 }], count: 1, total: 7, complete: false } },
+  { label: "empty", reply: { body: { data: [], pagination: { total_record_count: 0 } } }, code: 0,
+    expected: { cards: [], count: 0, total: 0, complete: true, message: "0 cards matched the selected filters" } },
+  { label: "failed authentication", reply: { status: 401, body: { message: "Denied" } }, code: 1,
+    expected: { error: { code: "AUTH_REQUIRED", status: 401 } } },
+])("installed $label home retains its identity", async ({ reply, code, expected }) => {
+  const { main } = await import(pathToFileURL(join(packageRoot, "dist/src/cli.js")).href);
+  const { transportBindings } = await import(pathToFileURL(join(packageRoot, "dist/src/catalogue.js")).href);
+  const { constructTransport } = await import(pathToFileURL(join(packageRoot, "dist/src/transport-core.js")).href);
+  const fake = await fakeHttpsTenable([reply]);
+  const previous = process.exitCode;
+  let stdout = "";
+  process.exitCode = 0;
+  try {
+    await main([], { credentials: { home: directory, env: { TENABLE_AXI_ACCESS_KEY: syntheticKeys.accessKey,
+      TENABLE_AXI_SECRET_KEY: syntheticKeys.secretKey } }, transportFactory: (options: unknown) => constructTransport(options, { bindings: transportBindings, fetch: fake.fetch }),
+      stdout: { write: (chunk: string) => { stdout += chunk; } } });
+    expect(process.exitCode).toBe(code);
+    expect(decode(stdout)).toMatchObject({ bin: process.argv[1], description: "Investigate Tenable One exposure and run explicitly guarded writes", ...expected });
+    expect(stdout.startsWith("bin: ")).toBe(true);
+    expect(fake.requests.map(({ url }) => url)).toEqual(["/api/v1/t1/exposure-view/cards?limit=5&offset=0"]);
+    if (code === 1) expect(decode(stdout)).not.toHaveProperty("cards");
+  } finally { process.exitCode = previous; await fake.close(); }
 });
 
 test("packaged credentials report sources locally and ship the host schema", () => {
@@ -377,6 +450,37 @@ test("packaged credentials report sources locally and ship the host schema", () 
   expect(result.stdout).not.toContain("synthetic-packaged");
   const schema = JSON.parse(readFileSync(join(packageRoot, "axi-credential.schema.json"), "utf8"));
   expect(schema.properties).toMatchObject({ accessKey: { "x-secret": true }, secretKey: { "x-secret": true } });
+});
+
+test("installed home exposes truncation recovery and a resumable bounded card window", async () => {
+  const { main } = await import(pathToFileURL(join(packageRoot, "dist/src/cli.js")).href);
+  const { transportBindings } = await import(pathToFileURL(join(packageRoot, "dist/src/catalogue.js")).href);
+  const { constructTransport } = await import(pathToFileURL(join(packageRoot, "dist/src/transport-core.js")).href);
+  const longName = "Exposure ".repeat(150);
+  const cards = Array.from({ length: 5 }, (_, index) => ({ id: `card-${index}`, name: index === 0 ? longName : `Card ${index}`, ces_score: { score: 42 } }));
+  const fake = await fakeHttpsTenable([
+    { body: { data: cards, pagination: { total_record_count: 6 } } },
+    { body: { data: [{ id: "card-5", name: "Last card", ces_score: { score: 7 } }], pagination: { total_record_count: 6 } } },
+    { body: { data: cards, pagination: { total_record_count: 6 } } },
+  ]);
+  const invoke = async (args: string[]) => {
+    let stdout = "";
+    await main(args, { credentials: { home: directory, env: { TENABLE_AXI_ACCESS_KEY: syntheticKeys.accessKey,
+      TENABLE_AXI_SECRET_KEY: syntheticKeys.secretKey } }, transportFactory: (options: unknown) => constructTransport(options, { bindings: transportBindings, fetch: fake.fetch }),
+      stdout: { write: (chunk: string) => { stdout += chunk; } } });
+    return decode(stdout) as Record<string, unknown>;
+  };
+  try {
+    const home = await invoke([]);
+    expect(home).toMatchObject({ cards: [{ id: "card-0", name: { text: longName.slice(0, 1000), length: longName.length }, score: 42 },
+      ...[1, 2, 3, 4].map((index) => ({ id: `card-${index}`, name: `Card ${index}`, score: 42 }))], count: 5, total: 6, complete: false,
+      help: expect.arrayContaining(["Run tenable-axi card show --id <id>", expect.stringContaining("card list"), expect.stringContaining("--full")]) });
+    expect(await invoke(["card", "list", "--cursor", String(home.cursor)])).toMatchObject({ cards: [{ id: "card-5", name: "Last card", score: 7 }], count: 1, total: 6, complete: true });
+    expect(await invoke(["home", "--full"])).toMatchObject({ cards: [{ id: "card-0", name: longName, score: 42 },
+      ...[1, 2, 3, 4].map((index) => ({ id: `card-${index}`, name: `Card ${index}`, score: 42 }))], count: 5, total: 6, complete: false });
+    expect(fake.requests.map(({ url }) => url)).toEqual(["/api/v1/t1/exposure-view/cards?limit=5&offset=0",
+      "/api/v1/t1/exposure-view/cards?limit=25&offset=5", "/api/v1/t1/exposure-view/cards?limit=5&offset=0"]);
+  } finally { await fake.close(); }
 });
 
 test("packaged CLI resumes an inventory read through the closed HTTPS transport", async () => {
