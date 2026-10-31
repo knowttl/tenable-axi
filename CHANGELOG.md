@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.6](https://github.com/knowttl/tenable-axi/compare/v0.1.5...v0.1.6) (2026-10-31)
+
+
+### Bug Fixes
+
+* restore home executable identity and clarify unknown flags ([#35](https://github.com/knowttl/tenable-axi/issues/35)) ([6389663](https://github.com/knowttl/tenable-axi/commit/6389663365139d29dedae0d5f742507bd7083eeb))
+
 ## [0.1.5](https://github.com/knowttl/tenable-axi/compare/v0.1.4...v0.1.5) (2026-10-30)
 
 
