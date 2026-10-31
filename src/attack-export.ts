@@ -3,6 +3,7 @@ import { closeSync, openSync, readSync } from "node:fs";
 import { z } from "zod";
 import { attackExportCatalogue, attackExportCreated, attackExportInputs, attackExportStatus } from "./attack-export-catalogue.js";
 import { exportOutputPath, saveExport } from "./export-file.js";
+import { exportStatus } from "./export-wait.js";
 import type { credentialStore } from "./profiles.js";
 import { createTransport, TransportError, type Transport, type TransportOptions } from "./transport.js";
 import { createWriteCoordinator, type WriteCoordinatorOptions } from "./writes.js";
@@ -34,6 +35,11 @@ export async function attackExportCommand(argv: string[], store: ReturnType<type
   const fields = get("fields")?.split(",") ?? entry!.defaultFields;
   if (new Set(fields).size !== fields.length || fields.some((field) => !available.includes(field))) usage(`Available fields: ${available.join(", ")}`);
   const project = (value: Record<string, unknown>) => Object.fromEntries(fields.filter((key) => value[key] !== undefined).map((key) => [key, value[key]]));
+  const decode = (body: unknown, id: string) => {
+    const status = attackExportStatus.parse(body);
+    if (status.export_id !== id) throw new TransportError({ code: "RESPONSE_INVALID", message: "Status belongs to a different attack export", operation: "apa-export-status" });
+    return { id, state: status.status, submittedAt: status.submitted_at, lastRefreshedAt: status.last_refreshed_at };
+  };
   let body: unknown;
   if (start) {
     if (get("execute") && get("dry-run")) usage("--execute and --dry-run are mutually exclusive");
@@ -64,7 +70,8 @@ export async function attackExportCommand(argv: string[], store: ReturnType<type
   }
   const operation = entry!.operationId;
   if (start) {
-    const result = await writeFactory({ config: get("config"), profile: get("profile") }).run(operation, body,
+    const coordinator = writeFactory({ config: get("config"), profile: get("profile") });
+    const result = await coordinator.run(operation, body,
       { execute: !!get("execute"), dryRun: !!get("dry-run"), confirm: get("confirm") });
     if (result.kind !== "success") {
       let truncated = false;
@@ -81,6 +88,12 @@ export async function attackExportCommand(argv: string[], store: ReturnType<type
       return { kind: result.kind, preview, ...(truncated ? { help: [`Run tenable-axi ${name} --body-file ${JSON.stringify(get("body-file"))} --full${get("config") ? ` --config ${JSON.stringify(get("config"))}` : ""}${get("profile") ? ` --profile ${get("profile")}` : ""} to see full preview text`] } : {}) };
     }
     const created = attackExportCreated.parse(result.response);
+    if (get("wait")) {
+      const status = await exportStatus(coordinator.reader, "apa-export-status", created.export_id,
+        (body) => decode(body, created.export_id), true, { id: created.export_id, state: "SUBMITTED" });
+      return { ...status, job: project(status.job), auditId: result.auditId,
+        help: [`tenable-axi export attack status --id ${created.export_id}${get("config") ? ` --config ${JSON.stringify(get("config"))}` : ""} --profile ${result.preview.profile}`] };
+    }
     return { job: project({ id: created.export_id, state: "SUBMITTED" }), auditId: result.auditId,
       help: [`tenable-axi export attack status --id ${created.export_id}${get("config") ? ` --config ${JSON.stringify(get("config"))}` : ""}${get("profile") ? ` --profile ${get("profile")}` : ""}`] };
   }
@@ -98,23 +111,6 @@ export async function attackExportCommand(argv: string[], store: ReturnType<type
     try { return { file: project({ id: get("id"), ...saveExport(response.body, output!, store.redactor, operation) }) }; }
     catch { throw new TransportError({ code: "EXPORT_FILE_INVALID", message: "Export could not be validated, redacted or saved within 128 MiB to a new file", operation }); }
   }
-  const deadline = Date.now() + 19_000;
-  let status: z.infer<typeof attackExportStatus> | undefined;
-  for (;;) {
-    let response;
-    try { response = await transport.request(operation, request); }
-    catch (error) {
-      if (get("wait") && status && error instanceof TransportError && ["REQUEST_BUDGET_EXCEEDED", "DEADLINE_EXCEEDED"].includes(error.error.code)) break;
-      throw error;
-    }
-    status = attackExportStatus.parse(response.body);
-    if (status.export_id !== get("id")) throw new TransportError({ code: "RESPONSE_INVALID", message: "Status belongs to a different attack export", operation });
-    const pending = ["QUEUED", "PROCESSING"].includes(status.status);
-    if (!get("wait") || !pending || Date.now() + 1000 >= deadline) break;
-    await new Promise<void>((resolve) => setTimeout(resolve, 1000));
-  }
-  return {
-    job: project({ id: status.export_id, state: status.status, submittedAt: status.submitted_at, lastRefreshedAt: status.last_refreshed_at }),
-    ...(get("wait") && ["QUEUED", "PROCESSING"].includes(status.status) ? { complete: false, reason: "POLL_BUDGET_EXCEEDED" } : {}),
-  };
+  const status = await exportStatus(transport, operation, get("id")!, (body) => decode(body, get("id")!), !!get("wait"));
+  return { ...status, job: project(status.job) };
 }

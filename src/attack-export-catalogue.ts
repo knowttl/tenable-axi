@@ -47,13 +47,14 @@ const global = { config: "Config path; default credential precedence", profile: 
   fields: "Comma-separated metadata fields; default compact view", full: "Full metadata text; default false", help: "Show help" };
 const write = { "body-file": "Required strict operation-specific JSON file, at most 1 MiB; '-' reads stdin",
   execute: "Create the previewed job once; default false", "dry-run": "Preview only; excludes --execute",
-  confirm: "Exact confirmation string from preview; required with --execute" };
+  confirm: "Exact confirmation string from preview; required with --execute",
+  wait: "After confirmed creation, poll within the shared 20-second/20-request budgets; never creates a replacement; default false" };
 export const attackExportCatalogue: Record<string, { description: string; operationId: string; flags: Record<string, string>;
   defaultFields: string[]; examples: string[]; evidence: string }> = {
   ...Object.fromEntries(["attack-path", "attack-technique", "mitre-heatmap"].map((kind) => [`export ${kind} start`, {
     description: `Preview or start one ${kind} export; requires configured write scope and ATTACK_PATH.WRITE`, operationId: `apa-export-${kind}`,
     flags: { ...global, ...write }, defaultFields: ["id", "state"],
-    examples: [`tenable-axi export ${kind} start --body-file export.json`, `tenable-axi export ${kind} start --body-file export.json --execute --confirm '<preview-confirmation>'`], evidence: "specs/exposure-management.json",
+    examples: [`tenable-axi export ${kind} start --body-file export.json`, `tenable-axi export ${kind} start --body-file export.json --execute --confirm '<preview-confirmation>' --wait`], evidence: "specs/exposure-management.json",
   }])),
   "export attack status": { description: "Read an attack export job; no polling by default", operationId: "apa-export-status",
     flags: { ...global, id: "Required attack export UUID", wait: "Poll once per second within 20-second/20-request budgets; default false" }, defaultFields: ["id", "state"],

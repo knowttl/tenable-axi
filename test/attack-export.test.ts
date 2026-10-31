@@ -65,7 +65,7 @@ test.each([
 ])("creation refuses $code before sending", async ({ policy, forced, execute, code }) => {
   const f = fixture();
   f.config({ example: { writes: policy } }); f.env.TENABLE_AXI_READ_ONLY = forced;
-  const result = await f.run([...f.start, ...(execute ? ["--execute", "--confirm", "wrong"] : [])]);
+  const result = await f.run([...f.start, "--wait", ...(execute ? ["--execute", "--confirm", "wrong"] : [])]);
   expect(result.code).toBe(1);
   expect(result.data).toMatchObject({ error: { code } });
   expect(result.requests).toHaveLength(0);
@@ -81,9 +81,9 @@ test.each(["attack-path", "attack-technique", "mitre-heatmap"])("denied %s creat
   expect(result.requests).toHaveLength(1);
 });
 
-test("an interrupted creation records unknown outcome and never replays", async () => {
+test("an interrupted creation with wait records unknown outcome and never replays or polls", async () => {
   const f = fixture();
-  const result = await f.run([...f.start, "--execute", "--confirm", await f.confirm()], ["disconnect"]);
+  const result = await f.run([...f.start, "--wait", "--execute", "--confirm", await f.confirm()], ["disconnect"]);
   expect(result.code).toBe(1);
   expect(result.data).toMatchObject({ error: { code: "OUTCOME_UNKNOWN", auditId: expect.any(String) } });
   expect(result.stdout).toContain("export attack status");
@@ -156,6 +156,48 @@ test("explicit wait polls pending jobs with fake time until completion", async (
   expect(result.code).toBe(0);
   expect(result.data).toMatchObject({ job: { id, state: "FINISHED" } });
   expect(result.requests).toHaveLength(3);
+});
+
+test.each(["attack-path", "attack-technique", "mitre-heatmap"])("%s start waits on the confirmed job only", async (kind) => {
+  vi.useFakeTimers();
+  const f = fixture(kind);
+  const preview = await f.run([...f.start, "--wait"]);
+  expect(preview.requests).toHaveLength(0);
+  const pending = f.run([...f.start, "--wait", "--execute", "--confirm", (preview.data.preview as { confirm: string }).confirm], [
+    { body: { export_id: id } }, { body: { export_id: id, status: "PROCESSING" } }, { body: { export_id: id, status: "FINISHED" } },
+  ]);
+  await vi.advanceTimersByTimeAsync(1000);
+  const result = await pending;
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ job: { id, state: "FINISHED" }, auditId: expect.any(String) });
+  expect(result.requests.map(({ init }) => init.method)).toEqual(["POST", "GET", "GET"]);
+  expect(result.requests[2]!.url).toBe(`https://cloud.tenable.com/api/v1/export/${id}/status`);
+  expect(f.journal()).toContain('"result":"SUCCESS"');
+});
+
+test("start wait retains the created job when its first status read fails", async () => {
+  const f = fixture();
+  const result = await f.run([...f.start, "--wait", "--execute", "--confirm", await f.confirm()], [
+    { body: { export_id: id } }, { status: 403 },
+  ]);
+  expect(result.code).toBe(1);
+  expect(result.data).toMatchObject({ job: { id, state: "SUBMITTED" }, auditId: expect.any(String), complete: false, error: { code: "PERMISSION_DENIED" } });
+  expect(result.requests.map(({ init }) => init.method)).toEqual(["POST", "GET"]);
+});
+
+test("start wait shares the creation request budget without a replacement job", async () => {
+  vi.useFakeTimers();
+  const f = fixture();
+  const pending = f.run([...f.start, "--wait", "--execute", "--confirm", await f.confirm()], [
+    { body: { export_id: id } }, { status: 503 }, { status: 503 },
+    ...Array.from({ length: 17 }, () => ({ body: { export_id: id, status: "PROCESSING" } })),
+  ]);
+  await vi.advanceTimersByTimeAsync(20000);
+  const result = await pending;
+  expect(result.data).toMatchObject({ job: { id, state: "PROCESSING" }, complete: false, reason: "POLL_BUDGET_EXCEEDED", auditId: expect.any(String) });
+  expect(result.requests).toHaveLength(20);
+  expect(result.requests.filter(({ init }) => init.method === "POST")).toHaveLength(1);
+  expect(vi.getTimerCount()).toBe(0);
 });
 
 test("explicit wait returns a pending job when its polling budget ends", async () => {

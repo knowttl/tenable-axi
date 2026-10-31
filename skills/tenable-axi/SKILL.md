@@ -41,6 +41,7 @@ The fields shown are useful compact projections; omit `--fields` for the command
 | Find Exposure Management tags | `npx -y @knowttl/tenable-axi tag list --query example --limit 10` |
 | Diagnose failed connector syncs | `npx -y @knowttl/tenable-axi connector logs --status FAILED --start-date 2026-01-01 --end-date 2026-02-01 --limit 10` |
 | Wait for an existing attack export | `npx -y @knowttl/tenable-axi export attack status --id 00000000-0000-4000-8000-000000000001 --wait` |
+| Wait for an existing inventory export | `npx -y @knowttl/tenable-axi export inventory status --id 00000000-0000-4000-8000-000000000001 --wait` |
 
 Inventory filters are repeatable AND conditions with a JSON array of strings, even for numeric values.
 Inventory `--filter-file` accepts a flat JSON array and excludes `--filter`.
@@ -68,14 +69,18 @@ Resume a returned `--cursor` with the same profile, filters, fields and sort; do
 `--full` removes the 1,000-character text preview, without adding fields, rows or budget.
 Connector logs have no server paging; `UPSTREAM_UNPAGED` means unavailable history, not an exhaustive empty result.
 
-Attack export status `--wait` polls once per second within 20 seconds/20 requests; inspect the returned state before downloading.
-There is no combined export start-and-wait, inventory-status wait or bulk show command.
+Attack and inventory export status `--wait` poll once per second within 20 seconds/20 requests; inspect the returned state before downloading.
+Pending jobs returned after a wait budget ends carry `complete: false` and `reason: POLL_BUDGET_EXCEEDED`; resume status with the same exact ID rather than starting a replacement.
+There is no bulk show command.
 Use a filtered list for multiple details.
 Software has no stable ID or show command.
 
 ## Read allowlist and state changes
 
 The table above is read-only, including POST searches and waiting on an existing export.
+Export start commands accept `--wait` after `--execute --confirm '<exact-preview-confirmation>'`, sharing the creation deadline and request budget.
+Preview, configured operation scope and the durable journal remain required; previews never poll, creation sends at most once and unknown outcomes never start a replacement.
+A failed status read after creation retains the created job and audit ID with `complete: false` and an error; reconcile that ID instead of creating again.
 Other remote reads: `home`, `card show`, `tag properties`, platform `tag category/value list/show`, `tag assignment/exclusion/asset-filter list`, `initiative list/show`, `combination list/show/filters`, `export asset/finding jobs`, `export inventory status` and `doctor`.
 `doctor` makes eight module probes without retries; use it for access diagnosis, not before each case.
 Local reads: `auth status`, `profile list`, `config path`, `hook`, help and version.

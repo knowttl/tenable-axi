@@ -221,11 +221,11 @@ This table defines selectors, extra flags, and compact projections; display fiel
 | `attack-path list` | Documented filters/sort and `--include-resolved`; AI summarization off by default. | id, name, priority |
 | `attack-technique list` | Documented filters/sort and `--include-resolved`. | id, name, affectedAssets |
 | `connector logs` | Documented connector/time selectors and bounded limit. | connectorId, status, timestamp, syncUuid, type, triggerReason, failedStage, error |
-| `export asset start`, `export finding start` | Optional strict `--body-file` for query/filters; query-option and write flags. | id, state |
+| `export asset start`, `export finding start` | See [inventory export usage](behavior.md#inventory-exports) for query options, write flags and optional waiting. | id, state |
 | `export asset jobs`, `export finding jobs` | `--status`, `--limit`; see [inventory export usage](behavior.md#inventory-exports) for history limits. | id, state, createdAt |
-| `export inventory status` | `--id`. | id, state, availableChunks |
+| `export inventory status` | See [inventory export usage](behavior.md#inventory-exports) for ID selection and optional waiting. | id, state, availableChunks |
 | `export inventory download` | `--id`, `--chunk`, `--output`. | id, chunk, output, bytes, format, compressed |
-| `export attack-path start`, `export attack-technique start`, `export mitre-heatmap start` | Strict `--body-file` for format/filter options; write flags. | id, state |
+| `export attack-path start`, `export attack-technique start`, `export mitre-heatmap start` | See [attack export usage](behavior.md#attack-exports) for body options, write flags and optional waiting. | id, state |
 | `export attack status` | `--id`; optional `--wait`, with budget-stop behavior described in [behavior reference](behavior.md). | id, state |
 | `export attack download` | `--id`, `--output`. | id, output, bytes, format |
 | `tag category list/show/create/update/delete` | Show/update/delete: `--id`; create/update: `--name`, optional `--description`; list: repeatable `--filter`, `--filter-type and\|or`, `--sort`. | id, name, reserved |
@@ -297,7 +297,9 @@ Exposure Response uses re-fetching continuation instead; see [behavior reference
 Offset paging does not promise snapshot isolation.
 Unpaged collections still obey byte/output limits without invented paging parameters.
 
-Export start creates one job and returns immediately; status is a separate read with no default polling.
+Export start creates one job and returns immediately by default; optional `--wait` polls that exact returned ID after confirmed creation using the same transport and invocation budgets.
+Attack and inventory status commands are separate reads with no default polling and optional bounded `--wait`.
+Wait timeouts and unknown creation outcomes never trigger replacement jobs.
 Inventory status exposes available chunks; download addresses one explicit chunk ID.
 Attack exports use separate status/download commands so IDs cannot accidentally select the wrong API family.
 Downloads require an explicit new output file, use a bounded temporary file and atomic completion, refuse overwrite, and print metadata only.
@@ -379,7 +381,7 @@ The order below is the delivery order even when dependencies allow independent p
 | T5 | T2, T3 | Assets/findings/software list, richer show where defined, properties, filters, sort aliases, paging, fields/truncation; finding severity/source summary. | Populated/empty/denied/beta fixtures, absent versus malformed properties, quoted hints, minimum-size summary reads, budgets/resume. |
 | T6 | T2, T3 | Tags, exposure cards, home, per-module doctor. | Five-card home, unconfigured state, local hook context, eight reads without retries, isolated permission denial, card details/totals. |
 | T7 | T2, T3 | Attack paths, techniques, connector logs with derived failure details. | Published path, denied Administrator logs, first failed stage/error, redacted truncation/resume, paging, AI default off. |
-| T8 | T4, T5 | Inventory exports: creation, jobs, status, chunk downloads. | Guarded starts, no replay/poll, chunk selection, atomic bounded redacted output. |
+| T8 | T4, T5 | Inventory exports: creation, jobs, status, chunk downloads. | Guarded starts, no replay or default polling, bounded optional waits, chunk selection, atomic bounded redacted output. |
 | T9 | T4, T7 | Attack path/technique/heatmap export creation, status, download. | WRITE privilege advice, separate job namespace, unknown outcome, bounded files. |
 | T10 | T4, T6 | Platform tag categories/values, bulk deletion, assignments, exclusions, filters. | All 15 operations, nested ACL rejection, dynamic filters, version conflicts, no-ops. |
 | T11 | T4, T10 | Initiatives, combinations, allowed filters. | All 11 operations, owner/scope/SLA/query limits, public/private preview, conflicts/deletes. |
