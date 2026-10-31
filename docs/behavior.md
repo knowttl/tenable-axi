@@ -106,7 +106,7 @@ Unknown sort names return the valid choices before making a request.
 It reads findings only after a complete lookup returns exactly one asset, then includes `asset` alongside the ordinary finding list output.
 Multiple candidates fail with `ASSET_AMBIGUOUS`; no matches fail with `NOT_FOUND`; an incomplete lookup never pivots.
 `--fields`, `--extra-properties`, `--limit` and `--all` apply to findings, while asset evidence uses compact defaults.
-Both phases share the existing 20-second, 20-request and 20 MiB budgets, and findings retain their ordinary totals, completeness, text previews and row limits.
+Both phases share the existing [transport budgets](design.md#transport-contract), and findings retain their ordinary totals, completeness, text previews and row limits.
 Partial failures retain validated evidence and exit nonzero; ordinary budget exhaustion reports `complete: false` and its reason.
 Resume a findings cursor with the returned `finding list` suggestion, retaining its asset ID filter, profile and selected fields.
 `finding summary` counts each severity and sensor type published in the pinned properties examples, including deprecated sensor types, using 19 sequential limit-1 searches and `pagination.total` without retries.
