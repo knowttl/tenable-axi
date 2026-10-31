@@ -6,6 +6,7 @@ Investigate Tenable One exposure and run explicitly guarded writes.
 
 ## Contents
 
+- [asset investigate](#asset-investigate)
 - [asset list](#asset-list)
 - [asset properties](#asset-properties)
 - [asset show](#asset-show)
@@ -72,6 +73,7 @@ Investigate Tenable One exposure and run explicitly guarded writes.
 
 | Command | Purpose |
 |---|---|
+| `tenable-axi asset investigate` | Resolve a unique asset text query and read its findings within one shared invocation budget; ambiguous or incomplete lookups never pivot |
 | `tenable-axi asset list` | Search assets |
 | `tenable-axi asset properties` | Discover asset properties and supported operators |
 | `tenable-axi asset show` | Find one asset by exact ID search |
@@ -136,6 +138,29 @@ Investigate Tenable One exposure and run explicitly guarded writes.
 
 Run each command with `--help` for concise help.
 Writes default to preview and require configured operation scope even for previews.
+
+## asset investigate
+
+Resolve a unique asset text query and read its findings within one shared invocation budget; ambiguous or incomplete lookups never pivot
+
+Operation: `inventory-findings-search`.
+
+| Flag | Meaning |
+|---|---|
+| `--config` | Config path; default credential precedence |
+| `--profile` | Profile name; default credential precedence |
+| `--fields` | Comma-separated display or wire properties; display names: id, name, severity, state, sensor_type; default compact view |
+| `--full` | Show untruncated text; does not add fields or rows; default false |
+| `--help` | Show help |
+| `--query` | Required asset simple query text; lookup returns at most two compact asset candidates |
+| `--limit` | Maximum emitted rows, 1-10000; default 100 |
+| `--all` | Read up to 10000 rows within invocation budgets; excludes --limit |
+| `--extra-properties` | Comma-separated extra wire properties |
+
+```sh
+tenable-axi asset investigate --query example-device --limit 20
+tenable-axi asset investigate --query example-device --fields id,name,severity,state,sensor_type,cves
+```
 
 ## asset list
 

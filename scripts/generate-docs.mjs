@@ -43,6 +43,7 @@ The fields shown are useful compact projections; omit \`--fields\` for the comma
 |---|---|
 | Check credentials locally, without HTTP | \`npx -y @knowttl/tenable-axi auth status\` |
 | Look up an asset by text | \`npx -y @knowttl/tenable-axi asset list --query example-device --class DEVICE --limit 10 --fields id,name,class,exposureScore\` |
+| Resolve a unique asset and read its findings | \`npx -y @knowttl/tenable-axi asset investigate --query example-device --limit 20 --fields id,name,severity,state,sensor_type,cves\` |
 | Read one exact asset, including observation evidence | \`npx -y @knowttl/tenable-axi asset show --id asset-1 --fields id,name,fqdns,last_observed_at\` |
 | Pivot from an asset ID to findings | \`npx -y @knowttl/tenable-axi finding list --filter 'asset_id = ["asset-1"]' --limit 20 --fields id,name,severity,state,sensor_type,cves\` |
 | Search high severity findings | \`npx -y @knowttl/tenable-axi finding list --filter 'severity = ["HIGH"]' --filter 'sensor_type = ["NESSUS"]' --limit 20\` |
@@ -71,6 +72,11 @@ Connector defaults include sync identity, trigger, first failed stage and first 
 Use list \`--fields\` to retrieve the needed evidence together instead of showing every result.
 Inventory selected extra fields are requested automatically; \`--extra-properties\` also adds them to output.
 Exact-ID \`asset show\` and \`finding show\` search directly without a preceding list.
+\`asset investigate --query <text>\` returns compact asset candidates in \`lookup\` and pivots only after a complete, unique match.
+Multiple candidates return \`ASSET_AMBIGUOUS\`; choose an exact ID explicitly before using \`finding list\`.
+\`--fields\`, \`--extra-properties\`, \`--limit\` and \`--all\` control findings; asset evidence uses compact defaults.
+Lookup and findings share one invocation budget; failures retain validated evidence and disclose incompleteness.
+Resume a returned findings cursor with the suggested \`finding list\` command, preserving its asset filter and fields.
 \`finding summary\` is one CLI call making 19 sequential limit-1 reads without retries, using upstream totals.
 It has no filters or per-asset grouping; counts are independent, sensor values may overlap, and \`complete: false\` means partial counts.
 
@@ -83,8 +89,8 @@ Connector logs have no server paging; \`UPSTREAM_UNPAGED\` means unavailable his
 
 Attack and inventory export status \`--wait\` poll once per second within 20 seconds/20 requests; inspect the returned state before downloading.
 Pending jobs returned after a wait budget ends carry \`complete: false\` and \`reason: POLL_BUDGET_EXCEEDED\`; resume status with the same exact ID rather than starting a replacement.
-There is no bulk show or asset-to-findings pivot command.
-Use a filtered list for multiple details; use the returned asset ID in a separate finding query.
+There is no bulk show command.
+Use a filtered list for multiple details.
 Software has no stable ID or show command.
 
 ## Read allowlist and state changes

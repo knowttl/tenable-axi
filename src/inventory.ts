@@ -34,11 +34,11 @@ export async function inventoryCommand(argv: string[], store: ReturnType<typeof 
   const entry = inventoryCatalogue[name];
   const usage = (message: string): never => { throw new AxiError(message, "VALIDATION_ERROR", [
     entry ? `Valid flags for ${name}: ${Object.keys(entry.flags).map((flag) => `--${flag}`).join(", ")}`
-      : "Valid commands: asset list/show/properties, finding list/show/properties/summary, software list/properties",
+      : "Valid commands: asset list/show/properties/investigate, finding list/show/properties/summary, software list/properties",
   ]); };
   if (!entry) usage("Unknown inventory command");
-  const kind = argv[0] as InventoryKind;
   const verb = argv[1]!;
+  const kind = (verb === "investigate" ? "finding" : argv[0]) as InventoryKind;
   const flags = new Map<string, string[]>();
   for (let index = 2; index < argv.length; index++) {
     const flag = argv[index]!;
@@ -55,6 +55,7 @@ export async function inventoryCommand(argv: string[], store: ReturnType<typeof 
     exclude.includes(flag) ? [] : values.flatMap((value) => [flag, ...(["--all", "--full", "--help"].includes(flag) ? [] : [quote(value)])]))].join(" ");
   if (get("help")) return { command: name, description: entry!.description, flags: entry!.flags,
     defaultFields: entry!.defaultFields, examples: entry!.examples };
+  if (verb === "investigate" && !get("query")) usage("--query is required to select an asset");
   if (get("all") && get("limit")) usage("--all and --limit are mutually exclusive");
   if (get("cursor") && get("offset")) usage("--cursor and --offset are mutually exclusive");
   if (get("filter-file") && get("filter")) usage("--filter-file and --filter are mutually exclusive");
@@ -139,6 +140,32 @@ export async function inventoryCommand(argv: string[], store: ReturnType<typeof 
     loaded.path, operation, body, query, projection])).digest("hex");
   if (cursor && cursor.scope !== scope) usage("Cursor belongs to a different profile, operation, filters, sort, or fields");
   const transport = transportFactory({ origin: profile.origin, keys: store.credentials(profile) });
+  if (verb === "investigate") {
+    const selectors = ["config", "profile", "full"].flatMap((flag) => get(flag) === undefined ? []
+      : flag === "full" ? ["--full"] : [`--${flag}`, get(flag)!]);
+    const lookup = await inventoryCommand(["asset", "list", ...selectors, "--query", get("query")!, "--limit", "2"], store, () => transport);
+    const assets = lookup.assets as Record<string, unknown>[];
+    if (assets.length > 1) return { lookup, complete: false,
+      error: { code: "ASSET_AMBIGUOUS", message: "Multiple assets matched; select an exact asset ID from the candidates" },
+      help: [`Run tenable-axi finding list --filter 'asset_id = ["<asset-id>"]' ${selectors.map(quote).join(" ")}`.trim()] };
+    if (!lookup.complete) return { lookup, complete: false, reason: lookup.reason,
+      ...(lookup.error ? { error: lookup.error } : {}) };
+    if (!assets.length) return { lookup, complete: false,
+      error: { code: "NOT_FOUND", message: "No asset matched the selected query" } };
+    const asset = assets[0]!;
+    if (typeof asset.id !== "string" || !asset.id.length) throw new TransportError({ code: "RESPONSE_INVALID",
+      message: "Asset lookup is missing the pivot identifier", operation: "inventory-assets-search" });
+    const findingFlags = ["fields", "extra-properties", "limit", "all"].flatMap((flag) => get(flag) === undefined ? []
+      : flag === "all" ? ["--all"] : [`--${flag}`, get(flag)!]);
+    try {
+      const findings = await inventoryCommand(["finding", "list", ...selectors, ...findingFlags,
+        "--filter", `asset_id = ${JSON.stringify([asset.id])}`], store, () => transport);
+      return { asset, lookup, ...findings };
+    } catch (error) {
+      if (!(error instanceof TransportError)) throw error;
+      return { asset, lookup, findings: [], count: 0, total: null, complete: false, reason: "READ_FAILED", ...error.toJSON() };
+    }
+  }
   if (verb === "summary") {
     const counts: Record<string, { value: string; total: number }[]> = { severity: [], sensor_type: [] };
     try {

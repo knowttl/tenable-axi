@@ -62,7 +62,7 @@ The [generated command reference](https://github.com/knowttl/tenable-axi/blob/ma
 | Group | Purpose | Access | Reference |
 | --- | --- | --- | --- |
 | `home`, `card` | Profile posture and exposure cards | Read | [Cards](https://github.com/knowttl/tenable-axi/blob/main/docs/commands.md#card-list) |
-| `asset` | Search inventory and inspect assets | Read | [Assets](https://github.com/knowttl/tenable-axi/blob/main/docs/commands.md#asset-list) |
+| `asset` | Search inventory, inspect assets and investigate their findings | Read | [Assets](https://github.com/knowttl/tenable-axi/blob/main/docs/behavior.md#inventory-reads) |
 | `finding` | Search findings and count severity/sensor totals | Read | [Findings](https://github.com/knowttl/tenable-axi/blob/main/docs/commands.md#finding-list) |
 | `software` | Search software and available properties | Read | [Software](https://github.com/knowttl/tenable-axi/blob/main/docs/commands.md#software-list) |
 | `attack-path`, `attack-technique` | Investigate attack evidence | Read | [Attack paths](https://github.com/knowttl/tenable-axi/blob/main/docs/commands.md#attack-path-list) |
