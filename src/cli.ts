@@ -42,8 +42,12 @@ export async function main(argv = process.argv.slice(2), options: { credentials?
           if (result.error) process.exitCode = 1;
           return store.redactor.payload(result) as Record<string, unknown>;
         }
-        if (argv[0] === "export") return store.redactor.payload(await (["attack-path", "attack-technique", "mitre-heatmap", "attack"].includes(argv[1] ?? "") ? attackExportCommand : inventoryExportCommand)(argv, store, options.transportFactory,
-          options.writeCoordinatorFactory ?? ((flags) => createWriteCoordinator(flags, options.credentials)))) as Record<string, unknown>;
+        if (argv[0] === "export") {
+          const result = await (["attack-path", "attack-technique", "mitre-heatmap", "attack"].includes(argv[1] ?? "") ? attackExportCommand : inventoryExportCommand)(argv, store, options.transportFactory,
+            options.writeCoordinatorFactory ?? ((flags) => createWriteCoordinator(flags, options.credentials)));
+          if (result.error) process.exitCode = 1;
+          return store.redactor.payload(result) as Record<string, unknown>;
+        }
         if (["attack-path", "attack-technique", "connector"].includes(argv[0] ?? "")) {
           const result = await attackCommand(argv, store, options.transportFactory);
           if (result.error) process.exitCode = 1;

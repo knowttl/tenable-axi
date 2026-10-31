@@ -96,6 +96,11 @@ export function constructWriteCoordinator(options: WriteCoordinatorOptions, depe
       },
     });
   }
+  const reader = { request: async (name: string, options?: RequestOptions) => {
+    const connection = sender();
+    if (connection.prepare(name, options).effect !== "read") fail("OPERATION_BLOCKED", "State readers cannot send writes", name);
+    return connection.request(name, options);
+  } };
   function fail(code: string, message: string, operation: string, help: readonly string[] = [], auditId?: string): never {
     throw new TransportError({ code, message, operation, ...(auditId ? { auditId } : {}) }, help);
   }
@@ -166,10 +171,6 @@ export function constructWriteCoordinator(options: WriteCoordinatorOptions, depe
     const { effect: _effect, ...identity } = plan;
     const confirmationTarget = "payload" in target ? { kind: target.kind, digest: digest(canonical(request)) } : target;
     const confirm = canonical([scope.profile, operation, confirmationTarget]);
-    const reader = { request: async (name: string, options?: RequestOptions) => {
-      if (connection.prepare(name, options).effect !== "read") fail("OPERATION_BLOCKED", "State readers cannot send writes", operation);
-      return connection.request(name, options);
-    } };
     const current = await definition!.current?.(reader, parsed.data);
     const state = canonical(current?.state ?? null);
     const preview = store.redactor.payload({ profile: scope.profile, operation, target, effect: definition!.effect,
@@ -207,5 +208,5 @@ export function constructWriteCoordinator(options: WriteCoordinatorOptions, depe
     append("outcome", "SUCCESS", response.status);
     return { kind: "success" as const, preview, auditId, status: response.status, response: store.redactor.payload(response.body) };
   }
-  return { scope, run };
+  return { scope, run, reader };
 }

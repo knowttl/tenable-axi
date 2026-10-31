@@ -3,6 +3,7 @@ import { closeSync, openSync, readSync } from "node:fs";
 import { z } from "zod";
 import { exportFields, exportInput, exportState, inventoryExportCatalogue } from "./inventory-export-catalogue.js";
 import { exportOutputPath, saveExport } from "./export-file.js";
+import { exportStatus } from "./export-wait.js";
 import type { credentialStore } from "./profiles.js";
 import { createTransport, TransportError } from "./transport.js";
 import type { TransportFactory } from "./exposure.js";
@@ -39,7 +40,7 @@ export async function inventoryExportCommand(argv: string[], store: ReturnType<t
   for (let index = 3; index < argv.length; index++) {
     const flag = argv[index]!;
     if (!flag.startsWith("--") || !Object.hasOwn(entry!.flags, flag.slice(2)) || flags.has(flag)) usage(`Unknown argument, flag, or duplicate flag: ${flag}`);
-    const value = ["--help", "--full", "--execute", "--dry-run"].includes(flag) ? "true" : argv[++index];
+    const value = ["--help", "--full", "--execute", "--dry-run", "--wait"].includes(flag) ? "true" : argv[++index];
     if (!value || value.startsWith("--")) usage(`Missing value for ${flag}`);
     flags.set(flag, value!);
   }
@@ -58,6 +59,14 @@ export async function inventoryExportCommand(argv: string[], store: ReturnType<t
     }
     return [field, row[field]];
   }));
+  const decodeStatus = (body: unknown, id: string) => {
+    const parsed = z.object({ export_id: z.literal(id), status: exportState }).safeParse(body);
+    if (!parsed.success) throw new TransportError({ code: "RESPONSE_INVALID", message: "Malformed or mismatched inventory export status", operation: "inventory-export-status" });
+    const value = body as Record<string, unknown>;
+    const row = { ...value, id, state: parsed.data.status, createdAt: value.submitted_at, availableChunks: value.chunks_available };
+    project(row);
+    return row;
+  };
   if (get("execute") && get("dry-run")) usage("--execute and --dry-run are mutually exclusive");
   if (verb === "start") {
     let body: unknown;
@@ -78,7 +87,8 @@ export async function inventoryExportCommand(argv: string[], store: ReturnType<t
     }));
     const input = exportInput.safeParse({ ...(body === undefined ? {} : { body }), query });
     if (!input.success) usage("Invalid export scope/options; body accepts only documented query and flat property filters");
-    const result = await writeFactory({ config: get("config"), profile: get("profile") }).run(operation, input.data,
+    const coordinator = writeFactory({ config: get("config"), profile: get("profile") });
+    const result = await coordinator.run(operation, input.data,
       { execute: get("execute") === "true", dryRun: get("dry-run") === "true", confirm: get("confirm"), intentId: get("intent-id") });
     if (result.kind !== "success") {
       let truncated = false;
@@ -95,6 +105,12 @@ export async function inventoryExportCommand(argv: string[], store: ReturnType<t
       return { ...output, ...(truncated ? { help: ["Repeat the same export command with --full to read the complete preview"] } : {}) };
     }
     const parsed = z.object({ export_id: z.string().uuid() }).parse(result.response);
+    if (get("wait")) {
+      const status = await exportStatus(coordinator.reader, "inventory-export-status", parsed.export_id,
+        (body) => decodeStatus(body, parsed.export_id), true, { id: parsed.export_id, state: "QUEUED" });
+      return { ...status, job: project(status.job), auditId: result.auditId,
+        help: [`Run tenable-axi export inventory status --id ${parsed.export_id}${selectors(result.preview.profile)}`] };
+    }
     return { job: project({ id: parsed.export_id, state: "QUEUED" }), auditId: result.auditId,
       help: [`Run tenable-axi export inventory status --id ${parsed.export_id}${selectors(result.preview.profile)}`] };
   }
@@ -113,20 +129,22 @@ export async function inventoryExportCommand(argv: string[], store: ReturnType<t
   store.readOnly();
   const profile = store.select(store.load(get("config")).config, get("profile"));
   const transport = factory({ keys: store.credentials(profile), origin: profile.origin });
+  if (verb === "status") {
+    const status = await exportStatus(transport, operation, get("id")!, (body) => decodeStatus(body, get("id")!), !!get("wait"));
+    return { ...status, job: project(status.job) };
+  }
   const response = await transport.request(operation, verb === "jobs" ? { query: { limit, ...(get("status") ? { status: get("status")! } : {}) } }
     : { pathParams: { export_id: get("id")!, ...(verb === "download" ? { chunk_id: get("chunk")! } : {}) } });
   if (verb === "download") return { file: project({ id: get("id"), chunk: Number(get("chunk")), ...saveExport(response.body, output!, store.redactor, operation) }) };
-  const decode = (row: unknown, status: boolean) => {
+  const decode = (row: unknown) => {
     const parsed = z.record(z.string(), z.unknown()).safeParse(row);
     if (!parsed.success) throw new TransportError({ code: "RESPONSE_INVALID", message: "Malformed inventory export job", operation });
     const value = parsed.data;
-    if (status && value.export_id !== get("id")) throw new TransportError({ code: "RESPONSE_INVALID", message: "Status returned another export ID", operation });
     return project({ ...value, id: value.export_id, state: value.status, createdAt: value.submitted_at, availableChunks: value.chunks_available });
   };
-  if (verb === "status") return { job: decode(response.body, true) };
   const rows = (response.body as { exports: unknown[] }).exports;
   if (rows.length > limit) throw new TransportError({ code: "RESPONSE_INVALID", message: "Job list exceeded the requested limit", operation });
-  return { jobs: rows.map((row) => decode(row, false)), count: rows.length, total: null, complete: false,
+  return { jobs: rows.map(decode), count: rows.length, total: null, complete: false,
     reason: "SERVER_HISTORY_LIMIT", ...(!rows.length ? { message: "0 export jobs matched the selected filters in the last three days" } : {}),
     help: ["Only jobs submitted in the last three days are available; the API has no continuation",
       `Run tenable-axi export inventory status --id <id>${selectors(profile.name)}`] };

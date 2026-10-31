@@ -71,8 +71,8 @@ test.each([
   const f = fixture();
   f.config({ example: { writes } });
   if (forced) f.env.TENABLE_AXI_READ_ONLY = forced;
-  const preview = await f.run(["asset", "start"]);
-  const execute = await f.run(["asset", "start", "--execute", "--confirm", "anything"]);
+  const preview = await f.run(["asset", "start", "--wait"]);
+  const execute = await f.run(["asset", "start", "--wait", "--execute", "--confirm", "anything"]);
   expect(preview.data.error.code).toBe(code);
   expect(execute.data.error.code).toBe(code);
   expect([...preview.requests, ...execute.requests]).toHaveLength(0);
@@ -118,7 +118,7 @@ test.each([
 ] as const)("export creation never replays an unsuccessful send: %j", async (reply, code) => {
   const f = fixture();
   const preview = await f.run(["finding", "start"]);
-  const result = await f.run(["finding", "start", "--execute", "--confirm", preview.data.preview.confirm], [reply]);
+  const result = await f.run(["finding", "start", "--wait", "--execute", "--confirm", preview.data.preview.confirm], [reply]);
   expect(result.code).toBe(1);
   expect(result.data.error).toMatchObject({ code, auditId: expect.any(String) });
   expect(result.requests).toHaveLength(1);
@@ -183,6 +183,86 @@ test("separate status reads show job progress with no implicit polling", async (
   const second = await f.run(["inventory", "status", "--id", id], [{ body: { ...job, status: "FINISHED" } }]);
   expect(second.data.job.state).toBe("FINISHED");
   expect(second.requests).toHaveLength(1);
+});
+
+test("inventory wait observes completion even when state is omitted from output fields", async () => {
+  vi.useFakeTimers();
+  const pending = fixture().run(["inventory", "status", "--id", id, "--wait", "--fields", "id,availableChunks"], [
+    { body: job }, { body: { ...job, status: "FINISHED", chunks_available: [1, 3, 4] } },
+  ]);
+  await vi.advanceTimersByTimeAsync(1000);
+  const result = await pending;
+  expect(result.code).toBe(0);
+  expect(result.data.job).toEqual({ id, availableChunks: [1, 3, 4] });
+  expect(result.data).not.toHaveProperty("complete");
+  expect(result.requests).toHaveLength(2);
+});
+
+test.each(["asset", "finding"])("%s start waits after confirmation without polling its preview", async (kind) => {
+  vi.useFakeTimers();
+  const f = fixture();
+  const preview = await f.run([kind, "start", "--wait"]);
+  expect(preview.requests).toHaveLength(0);
+  const pending = f.run([kind, "start", "--wait", "--execute", "--confirm", preview.data.preview.confirm], [
+    { body: { export_id: id } }, { body: job }, { body: { ...job, status: "FINISHED" } },
+  ]);
+  await vi.advanceTimersByTimeAsync(1000);
+  const result = await pending;
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ job: { id, state: "FINISHED" }, auditId: expect.any(String) });
+  expect(result.requests.map(({ init }) => init.method)).toEqual(["POST", "GET", "GET"]);
+  expect(result.requests[2]!.url).toBe(`https://cloud.tenable.com/api/v1/t1/inventory/export/${id}/status`);
+});
+
+test("inventory wait preserves the last observed job on a mismatched status response", async () => {
+  vi.useFakeTimers();
+  const pending = fixture().run(["inventory", "status", "--id", id, "--wait"], [
+    { body: job }, { body: { ...job, export_id: other, status: "FINISHED" } },
+  ]);
+  await vi.advanceTimersByTimeAsync(1000);
+  const result = await pending;
+  expect(result.code).toBe(1);
+  expect(result.data).toMatchObject({ job: { id, state: "PROCESSING", availableChunks: [1, 3] }, complete: false, error: { code: "RESPONSE_INVALID" } });
+  expect(result.requests).toHaveLength(2);
+});
+
+test("inventory start wait retains the created job if status access is denied", async () => {
+  const f = fixture();
+  const preview = await f.run(["asset", "start"]);
+  const result = await f.run(["asset", "start", "--wait", "--execute", "--confirm", preview.data.preview.confirm], [
+    { body: { export_id: id } }, { status: 403 },
+  ]);
+  expect(result.code).toBe(1);
+  expect(result.data).toMatchObject({ job: { id, state: "QUEUED" }, auditId: expect.any(String), complete: false, error: { code: "PERMISSION_DENIED" } });
+  expect(result.requests.map(({ init }) => init.method)).toEqual(["POST", "GET"]);
+});
+
+test("inventory start wait shares the creation deadline without a replacement job", async () => {
+  vi.useFakeTimers();
+  const f = fixture();
+  const preview = await f.run(["asset", "start"]);
+  const pending = f.run(["asset", "start", "--wait", "--execute", "--confirm", preview.data.preview.confirm], [
+    { body: { export_id: id } }, { body: job }, "hang",
+  ]);
+  await vi.advanceTimersByTimeAsync(20000);
+  const result = await pending;
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ job: { id, state: "PROCESSING" }, auditId: expect.any(String), complete: false, reason: "POLL_BUDGET_EXCEEDED" });
+  expect(result.requests.map(({ init }) => init.method)).toEqual(["POST", "GET", "GET"]);
+  expect(vi.getTimerCount()).toBe(0);
+});
+
+test("inventory wait returns pending state when retries exhaust its request budget", async () => {
+  vi.useFakeTimers();
+  const pending = fixture().run(["inventory", "status", "--id", id, "--wait"], [
+    { status: 503 }, { status: 503 }, ...Array.from({ length: 18 }, () => ({ body: job })),
+  ]);
+  await vi.advanceTimersByTimeAsync(20000);
+  const result = await pending;
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ job: { id, state: "PROCESSING", availableChunks: [1, 3] }, complete: false, reason: "POLL_BUDGET_EXCEEDED" });
+  expect(result.requests).toHaveLength(20);
+  expect(vi.getTimerCount()).toBe(0);
 });
 
 test.each([
