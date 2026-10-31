@@ -98,7 +98,7 @@ Investigate Tenable One exposure and run explicitly guarded writes.
 | `tenable-axi export finding jobs` | List recent inventory finding export jobs |
 | `tenable-axi export finding start` | Preview or create an inventory finding export job |
 | `tenable-axi export inventory download` | Download one inventory chunk to a new redacted file |
-| `tenable-axi export inventory status` | Read one inventory export status without polling |
+| `tenable-axi export inventory status` | Read one inventory export status; no polling by default |
 | `tenable-axi export mitre-heatmap start` | Preview or start one mitre-heatmap export; requires configured write scope and ATTACK_PATH.WRITE |
 | `tenable-axi finding list` | Search findings |
 | `tenable-axi finding properties` | Discover finding properties and supported operators |
@@ -571,10 +571,11 @@ Operation: `inventory-export-assets`.
 | `--dry-run` | Explicit preview; excludes --execute |
 | `--confirm` | Exact confirmation from preview |
 | `--intent-id` | Unique execution intent for replay protection |
+| `--wait` | After confirmed creation, poll within the shared 20-second/20-request budgets; never creates a replacement; default false |
 
 ```sh
 tenable-axi export asset start --body-file scope.json
-tenable-axi export asset start --body-file scope.json --execute --confirm <confirmation>
+tenable-axi export asset start --body-file scope.json --execute --confirm <confirmation> --wait
 ```
 
 ## export attack download
@@ -636,10 +637,11 @@ Operation: `apa-export-attack-path`.
 | `--execute` | Create the previewed job once; default false |
 | `--dry-run` | Preview only; excludes --execute |
 | `--confirm` | Exact confirmation string from preview; required with --execute |
+| `--wait` | After confirmed creation, poll within the shared 20-second/20-request budgets; never creates a replacement; default false |
 
 ```sh
 tenable-axi export attack-path start --body-file export.json
-tenable-axi export attack-path start --body-file export.json --execute --confirm '<preview-confirmation>'
+tenable-axi export attack-path start --body-file export.json --execute --confirm '<preview-confirmation>' --wait
 ```
 
 ## export attack-technique start
@@ -659,10 +661,11 @@ Operation: `apa-export-attack-technique`.
 | `--execute` | Create the previewed job once; default false |
 | `--dry-run` | Preview only; excludes --execute |
 | `--confirm` | Exact confirmation string from preview; required with --execute |
+| `--wait` | After confirmed creation, poll within the shared 20-second/20-request budgets; never creates a replacement; default false |
 
 ```sh
 tenable-axi export attack-technique start --body-file export.json
-tenable-axi export attack-technique start --body-file export.json --execute --confirm '<preview-confirmation>'
+tenable-axi export attack-technique start --body-file export.json --execute --confirm '<preview-confirmation>' --wait
 ```
 
 ## export finding jobs
@@ -710,10 +713,11 @@ Operation: `inventory-export-findings`.
 | `--dry-run` | Explicit preview; excludes --execute |
 | `--confirm` | Exact confirmation from preview |
 | `--intent-id` | Unique execution intent for replay protection |
+| `--wait` | After confirmed creation, poll within the shared 20-second/20-request budgets; never creates a replacement; default false |
 
 ```sh
 tenable-axi export finding start --body-file scope.json
-tenable-axi export finding start --body-file scope.json --execute --confirm <confirmation>
+tenable-axi export finding start --body-file scope.json --execute --confirm <confirmation> --wait
 ```
 
 ## export inventory download
@@ -740,7 +744,7 @@ tenable-axi export inventory download --id <id> --chunk 2 --output assets.csv.gz
 
 ## export inventory status
 
-Read one inventory export status without polling
+Read one inventory export status; no polling by default
 
 Operation: `inventory-export-status`.
 
@@ -752,10 +756,11 @@ Operation: `inventory-export-status`.
 | `--full` | Full output; default false |
 | `--help` | Show help |
 | `--id` | Required export UUID |
+| `--wait` | Poll once per second within 20-second/20-request budgets; default false |
 
 ```sh
 tenable-axi export inventory status --id <id>
-tenable-axi export inventory status --id <id> --fields id,state,createdAt
+tenable-axi export inventory status --id <id> --wait
 ```
 
 ## export mitre-heatmap start
@@ -775,10 +780,11 @@ Operation: `apa-export-mitre-heatmap`.
 | `--execute` | Create the previewed job once; default false |
 | `--dry-run` | Preview only; excludes --execute |
 | `--confirm` | Exact confirmation string from preview; required with --execute |
+| `--wait` | After confirmed creation, poll within the shared 20-second/20-request budgets; never creates a replacement; default false |
 
 ```sh
 tenable-axi export mitre-heatmap start --body-file export.json
-tenable-axi export mitre-heatmap start --body-file export.json --execute --confirm '<preview-confirmation>'
+tenable-axi export mitre-heatmap start --body-file export.json --execute --confirm '<preview-confirmation>' --wait
 ```
 
 ## finding list
