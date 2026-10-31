@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.6](https://github.com/knowttl/tenable-axi/compare/v0.1.5...v0.1.6) (2026-10-31)
+
+
+### Features
+
+* add bounded asset investigation with findings ([#38](https://github.com/knowttl/tenable-axi/issues/38)) ([2cfcc30](https://github.com/knowttl/tenable-axi/commit/2cfcc30cbcaaf6e9b00e0a2694573808de7bd08e))
+* add bounded waiting for export creation and inventory status ([#37](https://github.com/knowttl/tenable-axi/issues/37)) ([a4e6b1a](https://github.com/knowttl/tenable-axi/commit/a4e6b1a3dda74ae1947d0d716fefcb5fb94b2620))
+
+
+### Bug Fixes
+
+* restore home executable identity and clarify unknown flags ([#35](https://github.com/knowttl/tenable-axi/issues/35)) ([6389663](https://github.com/knowttl/tenable-axi/commit/6389663365139d29dedae0d5f742507bd7083eeb))
+
 ## [0.1.5](https://github.com/knowttl/tenable-axi/compare/v0.1.4...v0.1.5) (2026-10-30)
 
 
