@@ -7,9 +7,9 @@ agent_args_override:
     - model_reasoning_effort="medium"
 no_ci: true
 commands:
-  prepare: 'node scripts/isolated.mjs corepack pnpm install --frozen-lockfile --ignore-scripts --config.confirm-modules-purge=false'
+  prepare: 'node scripts/isolated.ts corepack pnpm install --frozen-lockfile --ignore-scripts --config.confirm-modules-purge=false'
   test: 'corepack pnpm test && corepack pnpm run spec:check && corepack pnpm run docs:check'
-  lint: 'node scripts/isolated.mjs corepack pnpm run lint'
+  lint: 'node scripts/isolated.ts corepack pnpm run lint'
 document:
   instructions: |
     README.md owns the product introduction and command-group overview; docs/behavior.md owns shipped behavior.
@@ -17,9 +17,9 @@ document:
     CONTRIBUTING.md and AGENTS.md own contribution, development, release and practical testing rules.
     docs/design.md owns architecture, security invariants, operation classifications and implementation slices.
     inventory/specs.json owns pinned source URLs and byte hashes; specs/ holds the unmodified snapshots.
-    scripts/specs.mjs generates declarations and inventory/capabilities.json from those snapshots and the design ledger.
+    scripts/specs.ts generates declarations and inventory/capabilities.json from those snapshots and the design ledger.
     src/catalogue.ts owns executable commands; inventory evidence never enables execution.
-    scripts/test-changes.mjs owns affected-test selection and the fixed safety baseline.
+    scripts/test-changes.ts owns affected-test selection and the fixed safety baseline.
 review:
   path_instructions:
     - path: "**"

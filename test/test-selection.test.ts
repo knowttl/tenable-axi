@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, beforeEach, expect, test } from "vitest";
 
-const script = resolve("scripts/test-changes.mjs");
+const script = resolve("scripts/test-changes.ts");
 let repo: string;
 function git(...args: string[]): string {
   const result = spawnSync("git", args, { cwd: repo, encoding: "utf8" });
@@ -49,7 +49,7 @@ test("runs affected tests for committed and working-tree changes since the merge
 
 test.each([
   "package.json", "pnpm-lock.yaml", "tsconfig.json", "tsconfig.test.json", "vitest.config.ts",
-  "test/support/upstream.ts", "test/fixtures/assets.json", "scripts/isolated.mjs", "specs/exposure-management.json",
+  "test/support/upstream.ts", "test/fixtures/assets.json", "scripts/isolated.ts", "specs/exposure-management.json",
   "inventory/specs.json", ".no-mistakes.yaml",
 ])("runs the full suite when shared validation input %s changes", (path) => {
   file(path);

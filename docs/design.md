@@ -401,7 +401,7 @@ T12 adds explicit `setup hooks` opt-in for Claude Code, Codex, and OpenCode.
 See [agent setup guidance](agent-integration.md) for executable selection, active configuration directories, scopes, and removal.
 Use SessionStart where supported and an equivalent managed plugin for OpenCode.
 Ordinary commands never install hooks.
-`scripts/generate-docs.mjs` owns the installable investigation guide template, using the catalogue's description and setup guidance with static `npx -y @knowttl/tenable-axi` examples and no live state.
+`scripts/generate-docs.ts` owns the installable investigation guide template, using the catalogue's description and setup guidance with static `npx -y @knowttl/tenable-axi` examples and no live state.
 Document hooks first and skill as complementary discovery; the [development checks](../CONTRIBUTING.md#development-and-testing) verify reference and skill freshness.
 See [release guidance](../CONTRIBUTING.md#releases) for release ownership, publication checks, and npm provenance.
 
