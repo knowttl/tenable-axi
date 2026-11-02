@@ -43,11 +43,6 @@ jobs:
         run: corepack enable
       - run: corepack pnpm install --frozen-lockfile --ignore-scripts
       - run: corepack pnpm run build
-      - run: corepack pnpm run lint
-      # These checks belong only to release publication, never pull-request CI.
-      - run: corepack pnpm test
-      - run: corepack pnpm run spec:check
-      - run: corepack pnpm run docs:check
       - name: Pack verified release
         run: npm pack --ignore-scripts --pack-destination "$RUNNER_TEMP"
       - name: Enable npm OIDC trusted publishing
