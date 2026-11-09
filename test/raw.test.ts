@@ -71,6 +71,7 @@ test.each([
   "/sensors/ot/linking-key",
   "/scanners/example/key",
   "/api-keys",
+  "/api/v3/initiatives/example/share/example",
 ])("raw get refuses %s before any request", async (path) => {
   const f = fixture();
   const result = await f.run(["get", "--path", path]);
@@ -89,6 +90,7 @@ test.each(["POST", "PUT", "PATCH", "DELETE"])("raw write refuses access groups w
 test.each([
   ["POST", "/sensors/ot/linking-key"], ["PUT", "/credentials/example"],
   ["PATCH", "/credentials/example"], ["DELETE", "/credentials/example"], ["POST", "/scanners/example/key"],
+  ["POST", "/api/v3/initiatives/example/share/example"], ["DELETE", "/api/v3/initiatives/example/share/example"],
 ])("raw write refuses %s %s before preview", async (method, path) => {
   const f = fixture(writable);
   const result = await f.run(["write", "--method", method, "--path", path, "--execute", "--confirm", "any"]);
@@ -314,6 +316,15 @@ test("raw write refuses access-control fields in the body before any request", a
   const result = await f.run(["write", ...patch(f)]);
   expect(result.data.error.code).toBe("VALIDATION_ERROR");
   expect(result.requests).toHaveLength(0);
+});
+
+test.each(["POST", "PUT", "PATCH", "DELETE"])("raw %s refuses nested ACLs before preview", async (method) => {
+  const f = fixture(writable);
+  writeFileSync(f.body, JSON.stringify({ nested: [{ acl: [{ permission: "read", type: "user", uuid: "example" }] }] }));
+  const result = await f.run(["write", "--method", method, "--path", "/shared-collections/example", "--body-file", f.body]);
+  expect(result.data.error.code).toBe("VALIDATION_ERROR");
+  expect(result.requests).toHaveLength(0);
+  expect(existsSync(f.journal)).toBe(false);
 });
 
 test("raw write rejects a confirmation that does not match the preview", async () => {

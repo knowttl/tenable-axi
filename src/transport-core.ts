@@ -24,7 +24,7 @@ export type RequestOptions = {
   authorization?: unknown;
   retry?: false;
   raw?: RawRoute;
-  rawOutput?: (contentType: string | null) => ((chunk: Uint8Array) => void | Promise<void>) | undefined | Promise<((chunk: Uint8Array) => void | Promise<void>) | undefined>;
+  rawOutput?: (contentType: string | null, signal: AbortSignal) => ((chunk: Uint8Array) => void | Promise<void>) | undefined | Promise<((chunk: Uint8Array) => void | Promise<void>) | undefined>;
 };
 export type Transport = {
   prepare(operation: string, options?: RequestOptions): PreparedRequest;
@@ -199,7 +199,7 @@ export function constructTransport(options: TransportOptions, dependencies: {
         }
         const chunks: Uint8Array[] = [];
         const output = input.raw && response.status >= 200 && response.status < 300
-          ? await waitForOutput(input.rawOutput?.(response.headers.get("content-type"))) : undefined;
+          ? await waitForOutput(input.rawOutput?.(response.headers.get("content-type"), controller.signal)) : undefined;
         streamed = output !== undefined;
         const reader = response.body?.getReader();
         const downloading = (record.responseMode === "file" || !!input.raw) && response.status >= 200 && response.status < 300;

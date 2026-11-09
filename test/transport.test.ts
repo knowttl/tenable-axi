@@ -342,16 +342,18 @@ test.each([
   const fake = fakeTransport([{ bytes: Buffer.from("payload") }], {}, { allowWrites: true });
   const controller = new AbortController();
   let reached!: () => void;
+  let outputSignal!: AbortSignal;
   const started = new Promise<void>((resolve) => { reached = resolve; });
   const stall = () => { reached(); return new Promise<never>(() => {}); };
   const result = expect(fake.transport.request("raw", {
     raw: { method, path: "/api/v1/example" }, signal: controller.signal,
-    rawOutput: phase === "initialization" ? stall : () => stall,
+    rawOutput: (_, signal) => { outputSignal = signal; return phase === "initialization" ? stall() : stall; },
   })).rejects.toMatchObject({ error: { code: method === "POST" ? "OUTCOME_UNKNOWN"
     : cause === "deadline" ? "DEADLINE_EXCEEDED" : "REQUEST_CANCELLED" } });
   await started;
   if (cause === "deadline") await vi.advanceTimersByTimeAsync(20_000);
   else controller.abort();
   await result;
+  expect(outputSignal.aborted).toBe(true);
   expect(vi.getTimerCount()).toBe(0);
 });

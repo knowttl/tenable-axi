@@ -166,7 +166,7 @@ export function constructWriteCoordinator(options: WriteCoordinatorOptions, depe
     const request = JSON.parse(canonical(prepared.request)) as RequestOptions;
     const target = JSON.parse(canonical(prepared.target)) as MutationTarget;
     const securityField = (value: unknown): boolean => !!value && typeof value === "object" && Object.entries(value).some(([key, child]) =>
-      /^(?:access_control|permissions|roles|credentials|api_keys)$/i.test(key) || securityField(child));
+      /^(?:acl|access_control|permissions?|roles|credentials|api_keys)$/i.test(key) || securityField(child));
     if (securityField(request.body)) fail("VALIDATION_ERROR", "Security administration payloads are blocked", operation);
     const uuid = z.string().uuid();
     if (!target.kind?.trim() || ("id" in target ? !uuid.safeParse(target.id).success

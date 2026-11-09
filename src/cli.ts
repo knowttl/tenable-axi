@@ -41,13 +41,17 @@ export async function main(argv = process.argv.slice(2), options: { credentials?
         if (argv[0] === "tag" && !["list", "properties"].includes(argv[1] ?? "")) return store.redactor.payload(await platformTagCommand(argv, store, options.transportFactory,
           options.writeCoordinatorFactory ?? ((flags) => createWriteCoordinator(flags, options.credentials)))) as Record<string, unknown>;
         if (argv[0] === "raw") return store.redactor.payload(await rawCommand(argv, store, options.transportFactory,
-          options.writeCoordinatorFactory ?? ((flags) => createWriteCoordinator(flags, options.credentials)), (chunk, contentType) => {
+          options.writeCoordinatorFactory ?? ((flags) => createWriteCoordinator(flags, options.credentials)), (chunk, contentType, signal) => {
             if (!rawStream) (options.stderr ?? process.stderr).write(`Content-Type: ${contentType ?? "application/octet-stream"}\n`);
             rawStream = true;
             return (options.rawOutput ?? ((bytes) => new Promise<void>((resolve, reject) => {
               const onError = (error: Error) => reject(error);
+              const onAbort = () => process.stdout.destroy();
               process.stdout.once("error", onError);
+              signal.addEventListener("abort", onAbort, { once: true });
+              if (signal.aborted) onAbort();
               process.stdout.write(bytes, (error) => {
+                signal.removeEventListener("abort", onAbort);
                 if (error) reject(error);
                 else { process.stdout.off("error", onError); resolve(); }
               });
