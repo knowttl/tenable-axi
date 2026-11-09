@@ -177,6 +177,16 @@ export function constructTransport(options: TransportOptions, dependencies: {
       let file: Buffer | undefined;
       let contents: Buffer;
       let streamed = false;
+      const waitForOutput = async <T>(value: T | Promise<T>): Promise<T> => {
+        let cancel!: () => void;
+        const aborted = new Promise<never>((_, reject) => {
+          cancel = () => reject(new Error("Request aborted"));
+          controller.signal.addEventListener("abort", cancel, { once: true });
+          if (controller.signal.aborted) cancel();
+        });
+        try { return await Promise.race([value, aborted]); }
+        finally { controller.signal.removeEventListener("abort", cancel); }
+      };
       try {
         response = await dependencies.fetch(url, {
           method: record.method, redirect: "error", signal: controller.signal,
@@ -187,11 +197,11 @@ export function constructTransport(options: TransportOptions, dependencies: {
           await response.body?.cancel();
           fail("DESTINATION_DENIED", "Tenable redirects are refused", operation, [], { status: response.status });
         }
-        const reader = response.body?.getReader();
         const chunks: Uint8Array[] = [];
         const output = input.raw && response.status >= 200 && response.status < 300
-          ? await input.rawOutput?.(response.headers.get("content-type")) : undefined;
+          ? await waitForOutput(input.rawOutput?.(response.headers.get("content-type"))) : undefined;
         streamed = output !== undefined;
+        const reader = response.body?.getReader();
         const downloading = (record.responseMode === "file" || !!input.raw) && response.status >= 200 && response.status < 300;
         const ceiling = downloading ? 128 * 1024 * 1024 : 20 * 1024 * 1024;
         if (downloading && Number(response.headers.get("content-length")) > ceiling) {
@@ -207,7 +217,7 @@ export function constructTransport(options: TransportOptions, dependencies: {
               controller.abort();
               fail("BYTE_BUDGET_EXCEEDED", "Invocation decoded response byte budget exceeded", operation);
             }
-            if (output) await output(chunk.value);
+            if (output) await waitForOutput(output(chunk.value));
             else chunks.push(chunk.value);
           }
         } finally { await reader?.cancel().catch(() => {}); }
