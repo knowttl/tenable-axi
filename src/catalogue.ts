@@ -26,7 +26,7 @@ export const catalogue = {
   ...responseCatalogue,
   "raw get": {
     description: "Read any Tenable API path on the exact origin with the selected profile keys",
-    flags: { config: "Config path; default platform path", profile: "Profile name; default credential precedence", path: "Required absolute API path such as /api/v1/t1/tags/properties", query: "URL query such as limit=10&offset=0", help: "Show help; default false" },
+    flags: { config: "Config path; default platform path", profile: "Profile name; default credential precedence", path: "Required absolute API path such as /api/v1/t1/tags/properties", query: "URL query such as limit=10&offset=0", out: "Save response bytes to a new file", help: "Show help; default false" },
     examples: ["tenable-axi raw get --path /api/v1/t1/tags/properties", "tenable-axi raw get --path /api/v1/t1/tags/search --query limit=5"],
   },
   "raw write": {

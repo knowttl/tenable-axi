@@ -15,16 +15,20 @@ function fixture(writes?: unknown) {
   local.config({ example: writes === undefined ? {} : { writes } });
   const credentials = { home: local.home, env: local.env };
   async function run(args: string[], replies: Reply[] = []) {
-    const upstream = fakeTransport(replies, {});
+    const upstream = fakeTransport(replies.map((reply) => reply.body !== undefined
+      ? { ...reply, headers: { "content-type": "application/json", ...reply.headers } } : reply), {});
     let stdout = "";
+    let stderr = "";
+    const chunks: Uint8Array[] = [];
     const previous = process.exitCode;
     process.exitCode = 0;
     try {
       await main(["raw", ...args, "--profile", "example"], { credentials, stdout: { write: (chunk) => { stdout += chunk; } },
+        stderr: { write: (chunk) => { stderr += chunk; } }, rawOutput: (chunk) => { chunks.push(chunk); },
         transportFactory: () => upstream.transport,
         writeCoordinatorFactory: (options) => constructWriteCoordinator(options, { credentials, operations: {}, bindings: {}, fetch: upstream.fetch }),
       });
-      return { code: process.exitCode, data: decode(stdout) as Record<string, any>, requests: upstream.requests };
+      return { code: process.exitCode, data: stdout ? decode(stdout) as Record<string, any> : {}, bytes: Buffer.concat(chunks), stderr, requests: upstream.requests };
     } finally { process.exitCode = previous; }
   }
   const journal = join(local.home, "state/tenable-axi/writes.log");
@@ -61,6 +65,11 @@ test.each([
   "/access-control/v1/roles",
   "/access-groups",
   "/v2/access-groups/example",
+  "/credentials",
+  "/filters/credentials",
+  "/sensors/ot/linking-key",
+  "/scanners/example/key",
+  "/api-keys",
 ])("raw get refuses %s before any request", async (path) => {
   const f = fixture();
   const result = await f.run(["get", "--path", path]);
@@ -74,6 +83,69 @@ test.each(["POST", "PUT", "PATCH", "DELETE"])("raw write refuses access groups w
   expect(result.data.error.code).toBe("VALIDATION_ERROR");
   expect(result.requests).toHaveLength(0);
   expect(existsSync(f.journal)).toBe(false);
+});
+
+test.each([
+  ["POST", "/sensors/ot/linking-key"], ["PUT", "/credentials/example"],
+  ["PATCH", "/credentials/example"], ["DELETE", "/credentials/example"], ["POST", "/scanners/example/key"],
+])("raw write refuses %s %s before preview", async (method, path) => {
+  const f = fixture(writable);
+  const result = await f.run(["write", "--method", method, "--path", path, "--execute", "--confirm", "any"]);
+  expect(result.data.error.code).toBe("VALIDATION_ERROR");
+  expect(result.requests).toHaveLength(0);
+  expect(existsSync(f.journal)).toBe(false);
+});
+
+test("raw get streams non-JSON bytes with their content type", async () => {
+  const f = fixture();
+  const bytes = Buffer.from([0x1f, 0x8b, 0xff, 0x00]);
+  const result = await f.run(["get", "--path", "/api/v1/export/example/download"],
+    [{ bytes, headers: { "content-type": "application/gzip" } }]);
+  expect(result.code).toBe(0);
+  expect(result.bytes).toEqual(bytes);
+  expect(result.stderr).toBe("Content-Type: application/gzip\n");
+});
+
+test("raw get saves downloaded bytes to a new output file", async () => {
+  const f = fixture();
+  const out = join(f.home, "chunk.gz");
+  const bytes = Buffer.from([0x1f, 0x8b, 0xff, 0x00]);
+  const result = await f.run(["get", "--path", "/api/v1/t1/inventory/export/example/download/1", "--out", out],
+    [{ bytes, headers: { "content-type": "application/gzip" } }]);
+  expect(result.code).toBe(0);
+  expect(result.data).toMatchObject({ status: 200, contentType: "application/gzip", output: out });
+  expect(readFileSync(out)).toEqual(bytes);
+});
+
+test("raw get refuses to overwrite an output file", async () => {
+  const f = fixture();
+  const out = join(f.home, "existing");
+  writeFileSync(out, "original");
+  const result = await f.run(["get", "--path", "/api/v1/export/example/download", "--out", out],
+    [{ bytes: Buffer.from("replacement"), headers: { "content-type": "text/csv" } }]);
+  expect(result.code).toBe(1);
+  expect(readFileSync(out, "utf8")).toBe("original");
+});
+
+test("raw get passes through non-JSON bytes labelled as JSON", async () => {
+  const f = fixture();
+  const bytes = Buffer.from([0xff, 0x00]);
+  const result = await f.run(["get", "--path", "/api/v1/example"], [{ bytes, headers: { "content-type": "application/json" } }]);
+  expect(result.code).toBe(0);
+  expect(result.bytes).toEqual(bytes);
+});
+
+test("raw write passes through a non-JSON response after journaling", async () => {
+  const f = fixture(writable);
+  const preview = await f.run(["write", ...patch(f)]);
+  const bytes = Buffer.from([0xff, 0x00]);
+  const result = await f.run(["write", ...patch(f), "--execute", "--confirm", preview.data.preview.confirm],
+    [{ bytes, headers: { "content-type": "application/octet-stream" } }]);
+  expect(result.code).toBe(0);
+  expect(result.bytes).toEqual(bytes);
+  expect(result.stderr).toBe("Content-Type: application/octet-stream\n");
+  const records = readFileSync(f.journal, "utf8").trim().split("\n").map((line) => JSON.parse(line) as Record<string, unknown>);
+  expect(records.map((record) => [record.kind, record.result ?? null])).toEqual([["intent", null], ["outcome", "SUCCESS"]]);
 });
 
 test("raw get reports an upstream permission denial as a permission error", async () => {

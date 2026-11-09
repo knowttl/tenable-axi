@@ -1079,6 +1079,7 @@ Read any Tenable API path on the exact origin with the selected profile keys
 | `--profile` | Profile name; default credential precedence |
 | `--path` | Required absolute API path such as /api/v1/t1/tags/properties |
 | `--query` | URL query such as limit=10&offset=0 |
+| `--out` | Save response bytes to a new file |
 | `--help` | Show help; default false |
 
 ```sh

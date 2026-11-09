@@ -204,7 +204,7 @@ export function constructWriteCoordinator(options: WriteCoordinatorOptions, depe
     } catch (error) { append("outcome", "NOT_SENT"); throw error; }
     const authorization = Object.freeze({});
     authorizations.set(authorization, canonical(identity));
-    let response: { status: number; body: unknown };
+    let response: { status: number; body: unknown; contentType?: string | null };
     try { response = await connection.request(operation, { ...request, raw, authorization }); }
     catch (error) {
       authorizations.delete(authorization);
@@ -216,7 +216,8 @@ export function constructWriteCoordinator(options: WriteCoordinatorOptions, depe
       throw new TransportError({ ...upstream!.error, auditId }, upstream!.help);
     }
     append("outcome", "SUCCESS", response.status);
-    return { kind: "success" as const, preview, auditId, status: response.status, response: store.redactor.payload(response.body) };
+    return { kind: "success" as const, preview, auditId, status: response.status,
+      response: Buffer.isBuffer(response.body) && raw ? response.body : store.redactor.payload(response.body), contentType: response.contentType };
   }
   return { scope, run, reader };
 }

@@ -24,10 +24,11 @@ export type RequestOptions = {
   authorization?: unknown;
   retry?: false;
   raw?: RawRoute;
+  rawOutput?: (contentType: string | null) => ((chunk: Uint8Array) => void) | undefined;
 };
 export type Transport = {
   prepare(operation: string, options?: RequestOptions): PreparedRequest;
-  request(operation: string, options?: RequestOptions): Promise<{ status: number; body: unknown }>;
+  request(operation: string, options?: RequestOptions): Promise<{ status: number; body: unknown; contentType?: string | null }>;
 };
 export type PreparedRequest = Readonly<{ operation: string; method: string; url: string; body?: string; effect: "read" | "write" }>;
 export type TransportOptions = { keys: ApiKeys; origin?: string };
@@ -145,7 +146,7 @@ export function constructTransport(options: TransportOptions, dependencies: {
     return Object.freeze({ operation, method: binding.method, url, body, effect: binding.effect });
   }
 
-  async function request(operation: string, input: RequestOptions = {}): Promise<{ status: number; body: unknown }> {
+  async function request(operation: string, input: RequestOptions = {}): Promise<{ status: number; body: unknown; contentType?: string | null }> {
     const { url, body } = prepare(operation, input);
     const record = resolve(operation, input);
     const canonical = new URL(url);
@@ -174,10 +175,12 @@ export function constructTransport(options: TransportOptions, dependencies: {
       let response: Response;
       let text: string;
       let file: Buffer | undefined;
+      let contents: Buffer;
+      let streamed = false;
       try {
         response = await dependencies.fetch(url, {
           method: record.method, redirect: "error", signal: controller.signal,
-          headers: { "X-ApiKeys": header, Accept: record.responseMode === "file" ? "application/octet-stream" : "application/json", ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
+          headers: { "X-ApiKeys": header, Accept: input.raw ? "*/*" : record.responseMode === "file" ? "application/octet-stream" : "application/json", ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
           ...(body === undefined ? {} : { body }),
         });
         if (response.status >= 300 && response.status < 400) {
@@ -186,7 +189,10 @@ export function constructTransport(options: TransportOptions, dependencies: {
         }
         const reader = response.body?.getReader();
         const chunks: Uint8Array[] = [];
-        const downloading = record.responseMode === "file" && response.status >= 200 && response.status < 300;
+        const output = input.raw && response.status >= 200 && response.status < 300
+          ? input.rawOutput?.(response.headers.get("content-type")) : undefined;
+        streamed = output !== undefined;
+        const downloading = (record.responseMode === "file" || streamed) && response.status >= 200 && response.status < 300;
         const ceiling = downloading ? 128 * 1024 * 1024 : 20 * 1024 * 1024;
         if (downloading && Number(response.headers.get("content-length")) > ceiling) {
           await reader?.cancel();
@@ -201,12 +207,13 @@ export function constructTransport(options: TransportOptions, dependencies: {
               controller.abort();
               fail("BYTE_BUDGET_EXCEEDED", "Invocation decoded response byte budget exceeded", operation);
             }
-            chunks.push(chunk.value);
+            if (output) output(chunk.value);
+            else chunks.push(chunk.value);
           }
         } finally { await reader?.cancel().catch(() => {}); }
-        const contents = Buffer.concat(chunks);
-        if (downloading) file = contents;
-        text = downloading ? "" : contents.toString("utf8");
+        contents = Buffer.concat(chunks);
+        if (record.responseMode === "file" && downloading) file = contents;
+        text = record.responseMode === "file" && downloading ? "" : contents.toString("utf8");
       } catch (error) {
         if (error instanceof TransportError) throw error;
         const code = record.effect === "write" ? "OUTCOME_UNKNOWN"
@@ -222,6 +229,11 @@ export function constructTransport(options: TransportOptions, dependencies: {
       if (now() >= deadline) fail(record.effect === "write" ? "OUTCOME_UNKNOWN" : "DEADLINE_EXCEEDED",
         "Invocation deadline exceeded", operation);
       if (response!.status >= 200 && response!.status < 300) {
+        const contentType = response!.headers.get("content-type");
+        if (input.raw && streamed) return { status: response!.status, body: undefined, contentType };
+        if (input.raw && contentType && !/(?:^|\/)json(?:\s*;|$)|\+json(?:\s*;|$)/i.test(contentType)) {
+          return { status: response!.status, body: contents!, contentType };
+        }
         if (record.responseMode === "file") {
           if (response!.status === 204) fail("EXPORT_NOT_READY", "Export chunk is not ready; check status before downloading", operation);
           return { status: response!.status, body: file! };
@@ -230,6 +242,7 @@ export function constructTransport(options: TransportOptions, dependencies: {
         const diagnostics = new ResponseDiagnostics({ text: redact }, ["RESPONSE_INVALID"]);
         try { decoded = text! ? JSON.parse(text!) : undefined; }
         catch {
+          if (input.raw) return { status: response!.status, body: contents!, contentType };
           diagnostics.record(response!.status, response!.headers, text!);
           fail("RESPONSE_INVALID", "Tenable response is not valid JSON", operation, [], diagnostics.forError({ code: "RESPONSE_INVALID" }));
         }

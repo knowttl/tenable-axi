@@ -41,5 +41,7 @@ See the [complete permission ledger](design.md#complete-operation-ledger) and [c
 Credentials use environment/file SecretRefs and private file checks; see [configuration](configuration.md).
 Credential minting, users, roles and access-control administration stay blocked, including nested security fields in allowed payloads.
 Raw API paths are validated and stay on the exact origin; alternate origin and TLS bypass are not exposed.
+Non-JSON raw responses are passed through without redaction, with their content type reported on stderr.
+`raw get --out` saves response bytes without redaction to a new file.
 Downloads validate, redact and atomically publish to a new output path without overwrite.
 See [behavior](behavior.md) for operation-specific payload, continuation and download limits.
