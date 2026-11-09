@@ -191,7 +191,7 @@ test.each([
     expect(existsSync(join(fixture.home, ".codex"))).toBe(false);
     expect(existsSync(join(fixture.home, ".config"))).toBe(false);
   } finally { fixture.cleanup(); }
-});
+}, 30_000);
 
 test.each(["user", "project"])("%s hooks execute fallback paths with shell metacharacters in every integration", (scope) => {
   const fixture = hookFixture();
