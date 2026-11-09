@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.7](https://github.com/knowttl/tenable-axi/compare/v0.1.6...v0.1.7) (2026-11-09)
+
+
+### Features
+
+* add guarded raw Tenable API commands ([#43](https://github.com/knowttl/tenable-axi/issues/43)) ([781d5d2](https://github.com/knowttl/tenable-axi/commit/781d5d2ea07b7314a311592de72c37b0497b995a))
+
 ## [0.1.6](https://github.com/knowttl/tenable-axi/compare/v0.1.5...v0.1.6) (2026-10-31)
 
 
