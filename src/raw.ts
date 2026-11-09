@@ -7,7 +7,7 @@ import type { credentialStore } from "./profiles.js";
 import { createTransport } from "./transport.js";
 import { createWriteCoordinator } from "./writes.js";
 
-const accessControlRoute = /(?:^|\/)(?:users?|groups?|roles?|permissions?|access-control|api-?keys?)(?:\/|$)/i;
+const accessControlRoute = /(?:^|\/)(?:users?|(?:access-)?groups?|roles?|permissions?|access-control|api-?keys?)(?:\/|$)/i;
 const apiPath = z.string()
   .regex(/^\/[A-Za-z0-9._~/-]+$/)
   .refine((path) => !/(?:^|\/)\.{1,2}(?:\/|$)|\/\//.test(path))

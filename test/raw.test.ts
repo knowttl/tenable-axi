@@ -59,11 +59,21 @@ test.each([
   "/users",
   "/api/v3/access-control/permissions",
   "/access-control/v1/roles",
+  "/access-groups",
+  "/v2/access-groups/example",
 ])("raw get refuses %s before any request", async (path) => {
   const f = fixture();
   const result = await f.run(["get", "--path", path]);
   expect(result.data.error.code).toBe("VALIDATION_ERROR");
   expect(result.requests).toHaveLength(0);
+});
+
+test.each(["POST", "PUT", "PATCH", "DELETE"])("raw write refuses access groups with %s before preview", async (method) => {
+  const f = fixture(writable);
+  const result = await f.run(["write", "--method", method, "--path", "/v2/access-groups/example", "--execute", "--confirm", "any"]);
+  expect(result.data.error.code).toBe("VALIDATION_ERROR");
+  expect(result.requests).toHaveLength(0);
+  expect(existsSync(f.journal)).toBe(false);
 });
 
 test("raw get reports an upstream permission denial as a permission error", async () => {
