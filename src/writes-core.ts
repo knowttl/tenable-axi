@@ -30,6 +30,16 @@ export type WriteCoordinatorOptions = {
   approval?: (preview: MutationPreview) => boolean | Promise<boolean>;
 };
 export type MutationOptions = { execute?: boolean; dryRun?: boolean; confirm?: string; intentId?: string };
+export type RawWriteRoute = Readonly<{ method: "POST" | "PUT" | "PATCH" | "DELETE"; path: string }>;
+
+function rawWriteDefinition(route: RawWriteRoute): MutationOperation {
+  return {
+    input: z.strictObject({ query: z.record(z.string(), z.union([z.string(), z.array(z.string())])).optional(), body: z.unknown().optional() }),
+    prepare: (input) => ({ target: { kind: `${route.method} ${route.path}`, payload: true }, request: input as Pick<RequestOptions, "query" | "body"> }),
+    effect: `Send ${route.method} ${route.path}`,
+    readBackHelp: ["Read the target through its owning Tenable API before any new intent; never replay this intent"],
+  };
+}
 
 function canonical(value: unknown): string {
   const normalize = (value: unknown): unknown => {
@@ -146,10 +156,10 @@ export function constructWriteCoordinator(options: WriteCoordinatorOptions, depe
     }
   }
 
-  async function run(operation: string, input: unknown, flags: MutationOptions = {}) {
+  async function run(operation: string, input: unknown, flags: MutationOptions = {}, raw?: RawWriteRoute) {
     flags = { ...flags };
-    const definition = Object.hasOwn(definitions, operation) ? definitions[operation] : undefined;
-    if (!definition || bindings[operation]?.effect !== "write") fail("OPERATION_BLOCKED", "Operation has no reviewed write binding", operation);
+    const definition = raw ? rawWriteDefinition(raw) : Object.hasOwn(definitions, operation) ? definitions[operation] : undefined;
+    if (!definition || (!raw && bindings[operation]?.effect !== "write")) fail("OPERATION_BLOCKED", "Operation has no reviewed write binding", operation);
     const parsed = definition!.input.safeParse(input);
     if (!parsed.success) fail("VALIDATION_ERROR", "Invalid mutation input; check the named operation's schema", operation);
     const prepared = definition!.prepare(JSON.parse(canonical(parsed.data)) as unknown);
@@ -167,7 +177,7 @@ export function constructWriteCoordinator(options: WriteCoordinatorOptions, depe
     if (forced || store.readOnly() || !scope.allowWrites) fail("WRITES_DISABLED", "Writes are disabled for the selected profile", operation);
     if (!scope.operations.includes(operation)) fail("OPERATION_NOT_WRITABLE", "Operation is outside the configured write scope", operation);
     const connection = sender();
-    const plan = connection.prepare(operation, request);
+    const plan = connection.prepare(operation, { ...request, raw });
     const { effect: _effect, ...identity } = plan;
     const confirmationTarget = "payload" in target ? { kind: target.kind, digest: digest(canonical(request)) } : target;
     const confirm = canonical([scope.profile, operation, confirmationTarget]);
@@ -195,7 +205,7 @@ export function constructWriteCoordinator(options: WriteCoordinatorOptions, depe
     const authorization = Object.freeze({});
     authorizations.set(authorization, canonical(identity));
     let response: { status: number; body: unknown };
-    try { response = await connection.request(operation, { ...request, authorization }); }
+    try { response = await connection.request(operation, { ...request, raw, authorization }); }
     catch (error) {
       authorizations.delete(authorization);
       const upstream = error instanceof TransportError ? error : undefined;

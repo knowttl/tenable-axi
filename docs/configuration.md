@@ -54,5 +54,5 @@ Config files must be owned regular files without group/other write access; use `
 SecretRefs also accept `{"file":"/absolute/path"}` to a protected secret file with no group/other permission bits.
 Windows uses protected DACLs; secret file references refuse UNC and device paths.
 No secrets belong in arguments, chat or configuration JSON.
-Only the exact commercial origin is supported; there is no login, credential minting, arbitrary HTTP or TLS bypass.
+Only the exact commercial origin is supported; there is no login, credential minting or TLS bypass, and raw HTTP stays on that origin.
 See [safety](safety.md) before configuring writes.

@@ -9,6 +9,7 @@ import { TransportError } from "./transport.js";
 import { attackCommand } from "./attack.js";
 import { attackExportCommand } from "./attack-export.js";
 import { inventoryExportCommand, type WriteCoordinatorFactory } from "./inventory-export.js";
+import { rawCommand } from "./raw.js";
 import { createWriteCoordinator } from "./writes.js";
 import { platformTagCommand } from "./platform-tag.js";
 import { responseCommand } from "./response.js";
@@ -35,6 +36,8 @@ export async function main(argv = process.argv.slice(2), options: { credentials?
       scaffold: async () => {
         if (argv[0] === "setup") return setupHooks(argv);
         if (argv[0] === "tag" && !["list", "properties"].includes(argv[1] ?? "")) return store.redactor.payload(await platformTagCommand(argv, store, options.transportFactory,
+          options.writeCoordinatorFactory ?? ((flags) => createWriteCoordinator(flags, options.credentials)))) as Record<string, unknown>;
+        if (argv[0] === "raw") return store.redactor.payload(await rawCommand(argv, store, options.transportFactory,
           options.writeCoordinatorFactory ?? ((flags) => createWriteCoordinator(flags, options.credentials)))) as Record<string, unknown>;
         if (["initiative", "combination"].includes(argv[0] ?? "")) {
           const result = await responseCommand(argv, store, options.transportFactory,

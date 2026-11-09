@@ -11,7 +11,7 @@ import { createWriteCoordinator, type WriteCoordinatorOptions } from "./writes.j
 
 export type WriteCoordinatorFactory = (options: WriteCoordinatorOptions) => ReturnType<typeof createWriteCoordinator>;
 
-function bodyFile(path: string): unknown {
+export function bodyFile(path: string): unknown {
   const fd = path === "-" ? 0 : openSync(path, "r");
   try {
     const chunks: Buffer[] = [];

@@ -47,6 +47,8 @@ Investigate Tenable One exposure and run explicitly guarded writes.
 - [initiative show](#initiative-show)
 - [initiative update](#initiative-update)
 - [profile list](#profile-list)
+- [raw get](#raw-get)
+- [raw write](#raw-write)
 - [setup hooks](#setup-hooks)
 - [software list](#software-list)
 - [software properties](#software-properties)
@@ -114,6 +116,8 @@ Investigate Tenable One exposure and run explicitly guarded writes.
 | `tenable-axi initiative show` | show initiative |
 | `tenable-axi initiative update` | Preview or update initiative |
 | `tenable-axi profile list` | List configured profiles without resolving secrets or contacting Tenable |
+| `tenable-axi raw get` | Read any Tenable API path on the exact origin with the selected profile keys |
+| `tenable-axi raw write` | Send one raw write when the profile allows writes and the operation list includes raw-write |
 | `tenable-axi setup hooks` | Explicitly install or repair local agent session integrations |
 | `tenable-axi software list` | Search software; the pinned API exposes no stable software ID |
 | `tenable-axi software properties` | Discover software properties and supported operators |
@@ -1063,6 +1067,46 @@ List configured profiles without resolving secrets or contacting Tenable
 ```sh
 tenable-axi profile list
 tenable-axi profile list --config /example/config.json
+```
+
+## raw get
+
+Read any Tenable API path on the exact origin with the selected profile keys
+
+| Flag | Meaning |
+|---|---|
+| `--config` | Config path; default platform path |
+| `--profile` | Profile name; default credential precedence |
+| `--path` | Required absolute API path such as /api/v1/t1/tags/properties |
+| `--query` | URL query such as limit=10&offset=0 |
+| `--help` | Show help; default false |
+
+```sh
+tenable-axi raw get --path /api/v1/t1/tags/properties
+tenable-axi raw get --path /api/v1/t1/tags/search --query limit=5
+```
+
+## raw write
+
+Send one raw write when the profile allows writes and the operation list includes raw-write
+
+| Flag | Meaning |
+|---|---|
+| `--config` | Config path; default platform path |
+| `--profile` | Profile name; default credential precedence |
+| `--method` | Required POST, PUT, PATCH or DELETE |
+| `--path` | Required absolute API path such as /api/v1/... |
+| `--query` | URL query such as key=value |
+| `--body-file` | JSON body file or - for stdin |
+| `--execute` | Send after exact confirmation; default preview only |
+| `--dry-run` | Preview only; incompatible with --execute |
+| `--confirm` | Exact preview confirmation |
+| `--intent-id` | Optional durable intent identifier |
+| `--help` | Show help; default false |
+
+```sh
+tenable-axi raw write --method PATCH --path /api/v1/example --body-file body.json
+tenable-axi raw write --method PATCH --path /api/v1/example --body-file body.json --execute --confirm <preview confirm>
 ```
 
 ## setup hooks

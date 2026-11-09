@@ -28,7 +28,8 @@ Support only `https://cloud.tenable.com` in v1.
 Upstream permissions and licences remain prerequisites; command availability never implies permission to run it.
 Credential issuance, users, roles, and access-control management stay blocked, including inside otherwise approved payloads.
 Other Platform and Vulnerability Management domains remain outside this Tenable One scope.
-No arbitrary REST, raw request, or generic write command is exposed.
+Raw API reads and guarded raw writes are approved by the captain on 2026-11-09; see [accepted decisions](#accepted-decisions).
+No other generic REST or write command is exposed.
 No design research or automated test uses a live tenant or credential.
 
 ## Accepted decisions
@@ -42,6 +43,7 @@ No design research or automated test uses a live tenant or credential.
 | Export jobs | All five creation operations are writes; status, lists, and downloads are reads. |
 | Region | Exact commercial origin only; no alternate-origin flag or redirect. |
 | Hosted use | Shipped strict credential schema and importable catalogue for later artium-axi integration. |
+| Raw API | Captain-approved 2026-11-09: `raw get` reads any validated absolute path on the exact origin; `raw write` sends one confirmed method and path only when `writes.operations` includes `raw-write`, with preview, exact confirmation and the durable journal. Access-control, user, group, role and permission routes stay blocked. |
 
 The [pyTenable library](https://github.com/tenable/pytenable) remains research reference material rather than a runtime dependency.
 The investigation of [pyTenable at b3ed887](https://github.com/tenable/pytenable/tree/b3ed887) found 21 exact matches to the 24 Exposure Management operations, two undocumented endpoints, and a different top-attack-paths route.
@@ -114,7 +116,8 @@ Strict command/profile/request validation is separate from tolerant response dec
 ### Transport contract
 
 There is one network sink and no domain-level `fetch` call.
-Build paths from reviewed templates and escaped identifiers, never caller URLs.
+Build catalogue paths from reviewed templates and escaped identifiers.
+Raw routes accept only validated absolute paths on the exact origin, never caller URLs.
 Require canonical origin `https://cloud.tenable.com`, without userinfo, path, query, fragment, alternate port, or alternate origin.
 Keep TLS verification enabled and set `redirect: error`.
 Validate continuation and download destinations before any send and refuse traversal or unregistered routes.

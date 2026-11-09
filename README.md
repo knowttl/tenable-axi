@@ -83,7 +83,7 @@ Preview first, then pass `--execute --confirm '<exact preview confirmation>'` to
 There is no `TENABLE_AXI_ALLOW_*` environment gate; configured operation allowlists control scope.
 A durable redacted journal records intent before sending; reconcile unknown outcomes before retrying.
 Credentials use environment/file SecretRefs, never inline secrets or arguments.
-Credential minting, users, roles, access-control administration and arbitrary HTTP stay blocked.
+Credential minting, users, roles and access-control administration stay blocked; raw HTTP is limited to validated paths on the exact origin.
 See [write safety](https://github.com/knowttl/tenable-axi/blob/main/docs/safety.md) and the [permission ledger](https://github.com/knowttl/tenable-axi/blob/main/docs/design.md#complete-operation-ledger).
 
 ## Configuration

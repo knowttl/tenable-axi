@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import { z } from "zod";
 import { ResponseDiagnostics } from "./response-diagnostics.js";
 
 export const TENABLE_ORIGIN = "https://cloud.tenable.com";
@@ -14,6 +14,7 @@ export type OperationBinding = Readonly<{
   permissionHelp: string;
   validationHelp: string;
 }>;
+export type RawRoute = Readonly<{ method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; path: string }>;
 export type RequestOptions = {
   pathParams?: Readonly<Record<string, string>>;
   query?: Readonly<Record<string, string | number | boolean | readonly string[]>>;
@@ -22,6 +23,7 @@ export type RequestOptions = {
   signal?: AbortSignal;
   authorization?: unknown;
   retry?: false;
+  raw?: RawRoute;
 };
 export type Transport = {
   prepare(operation: string, options?: RequestOptions): PreparedRequest;
@@ -125,17 +127,27 @@ export function constructTransport(options: TransportOptions, dependencies: {
     return url;
   }
 
-  function prepare(operation: string, input: RequestOptions = {}): PreparedRequest {
+  function resolve(operation: string, input: RequestOptions): OperationBinding {
+    if (input.raw) {
+      return { method: input.raw.method, path: input.raw.path, effect: input.raw.method === "GET" ? "read" : "write",
+        query: Object.keys(input.query ?? {}), decoder: z.unknown(), permissionHelp: "Check that the key has the permission for this route",
+        validationHelp: "Check the path, query and body against the Tenable API reference" };
+    }
     const binding = Object.hasOwn(bindings, operation) ? bindings[operation] : undefined;
     if (!binding) fail("OPERATION_BLOCKED", "Operation has no executable catalogue binding");
-    const url = destination(operation, binding!, input).href;
+    return binding!;
+  }
+
+  function prepare(operation: string, input: RequestOptions = {}): PreparedRequest {
+    const binding = resolve(operation, input);
+    const url = destination(operation, binding, input).href;
     const body = input.body === undefined ? undefined : JSON.stringify(input.body);
-    return Object.freeze({ operation, method: binding!.method, url, body, effect: binding!.effect });
+    return Object.freeze({ operation, method: binding.method, url, body, effect: binding.effect });
   }
 
   async function request(operation: string, input: RequestOptions = {}): Promise<{ status: number; body: unknown }> {
     const { url, body } = prepare(operation, input);
-    const record = bindings[operation]!;
+    const record = resolve(operation, input);
     const canonical = new URL(url);
     canonical.searchParams.sort();
     const identity = JSON.stringify([operation, canonical.href, body]);
