@@ -18,13 +18,15 @@ import { setupHooks } from "./setup.js";
 export async function main(argv = process.argv.slice(2), options: { credentials?: CredentialContext; stdout?: { write: (chunk: string) => unknown }; rawOutput?: (chunk: Uint8Array) => void; stderr?: { write: (chunk: string) => unknown }; transportFactory?: TransportFactory; writeCoordinatorFactory?: WriteCoordinatorFactory } = {}): Promise<void> {
   const store = credentialStore(options.credentials);
   let rawStream = false;
+  let rawStreamError = false;
   await runAxiCli({
     description: DESCRIPTION,
     argv: ["scaffold"],
     topLevelHelp: "",
     home: async () => store.redactor.payload(await exposureCommand([], store, options.transportFactory)) as Record<string, unknown>,
-    stdout: { write: (chunk) => rawStream ? undefined : (options.stdout ?? process.stdout).write(store.redactor.text(chunk)) },
-    formatError: (error) => (rawStream = false, {
+    stdout: { write: (chunk) => rawStreamError ? (options.stderr ?? process.stderr).write(store.redactor.text(chunk))
+      : rawStream ? undefined : (options.stdout ?? process.stdout).write(store.redactor.text(chunk)) },
+    formatError: (error) => (rawStreamError = rawStream, {
       output: `${encode(store.redactor.value({
         ...((!argv.length || argv[0] === "home" || argv[0]?.startsWith("--") && argv[0] !== "--help")
           && !(error instanceof AxiError && error.code === "VALIDATION_ERROR") ? homeIdentity() : {}),

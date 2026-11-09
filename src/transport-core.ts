@@ -192,7 +192,7 @@ export function constructTransport(options: TransportOptions, dependencies: {
         const output = input.raw && response.status >= 200 && response.status < 300
           ? input.rawOutput?.(response.headers.get("content-type")) : undefined;
         streamed = output !== undefined;
-        const downloading = (record.responseMode === "file" || streamed) && response.status >= 200 && response.status < 300;
+        const downloading = (record.responseMode === "file" || !!input.raw) && response.status >= 200 && response.status < 300;
         const ceiling = downloading ? 128 * 1024 * 1024 : 20 * 1024 * 1024;
         if (downloading && Number(response.headers.get("content-length")) > ceiling) {
           await reader?.cancel();

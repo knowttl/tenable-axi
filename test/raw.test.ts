@@ -106,6 +106,47 @@ test("raw get streams non-JSON bytes with their content type", async () => {
   expect(result.stderr).toBe("Content-Type: application/gzip\n");
 });
 
+test("raw get sends errors to stderr after a stream disconnects", async () => {
+  const f = fixture();
+  const bytes = Buffer.from([0x1f, 0x8b, 0xff, 0x00]);
+  const result = await f.run(["get", "--path", "/api/v1/export/example/download"],
+    [{ disconnectAfter: bytes, headers: { "content-type": "application/gzip" } }]);
+  expect(result.code).toBe(1);
+  expect(result.bytes).toEqual(bytes);
+  expect(result.data).toEqual({});
+  expect(result.stderr.startsWith("Content-Type: application/gzip\n")).toBe(true);
+  expect(decode(result.stderr.slice("Content-Type: application/gzip\n".length))).toMatchObject({ error: { code: "TRANSPORT_FAILED" } });
+});
+
+test("raw get removes a partial output file after a stream disconnects", async () => {
+  const f = fixture();
+  const out = join(f.home, "partial.gz");
+  const result = await f.run(["get", "--path", "/api/v1/export/example/download", "--out", out],
+    [{ disconnectAfter: Buffer.from([1, 2, 3]), headers: { "content-type": "application/gzip" } }]);
+  expect(result.code).toBe(1);
+  expect(result.data.error.code).toBe("TRANSPORT_FAILED");
+  expect(existsSync(out)).toBe(false);
+});
+
+test.each([undefined, "application/json"])("raw get returns a large binary response with content type %s", async (contentType) => {
+  const f = fixture();
+  const bytes = Buffer.alloc(21 * 1024 * 1024, 0xff);
+  const result = await f.run(["get", "--path", "/api/v1/export/example/download"],
+    [{ bytes, ...(contentType ? { headers: { "content-type": contentType } } : {}) }]);
+  expect(result.code).toBe(0);
+  expect(result.bytes.equals(bytes)).toBe(true);
+});
+
+test.each([undefined, "application/json"])("raw write returns a large binary response with content type %s", async (contentType) => {
+  const f = fixture(writable);
+  const preview = await f.run(["write", ...patch(f)]);
+  const bytes = Buffer.alloc(21 * 1024 * 1024, 0xff);
+  const result = await f.run(["write", ...patch(f), "--execute", "--confirm", preview.data.preview.confirm],
+    [{ bytes, ...(contentType ? { headers: { "content-type": contentType } } : {}) }]);
+  expect(result.code).toBe(0);
+  expect(result.bytes.equals(bytes)).toBe(true);
+});
+
 test("raw get saves downloaded bytes to a new output file", async () => {
   const f = fixture();
   const out = join(f.home, "chunk.gz");
