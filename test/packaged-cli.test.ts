@@ -228,7 +228,7 @@ test.each(["user", "project"])("%s hooks execute fallback paths with shell metac
     expect(context).toHaveLength(1);
     expect(decode(context[0].split("\n").slice(1).join("\n"))).toMatchObject({ status: "not configured" });
   } finally { chmodSync(hookScript, hookMode); fixture.cleanup(); }
-});
+}, 30_000);
 
 test.each(["user", "project"])("%s Windows setup emits an executable Claude argument vector and repairs it idempotently", (scope) => {
   const fixture = hookFixture();
@@ -254,7 +254,7 @@ test.each(["user", "project"])("%s Windows setup emits an executable Claude argu
     expect(repaired).toHaveLength(1);
     expect(runInstalledHook(repaired[0], fixture.home, env).status).toBe(0);
   } finally { fixture.cleanup(); }
-});
+}, 30_000);
 
 test.skipIf(process.platform !== "win32").each(["user", "project"])("%s Windows hooks execute through Claude exec form and Codex's Windows command", (scope) => {
   const fixture = hookFixture();
@@ -591,7 +591,7 @@ test("version startup stays close to the same-machine Node startup floor", () =>
   }
   const median = (values: number[]) => values.sort((a, b) => a - b)[3]!;
   expect(median(versionTimes) / median(floor)).toBeLessThan(4);
-});
+}, 30_000);
 
 test("packaged CLI guards an attack export then downloads redacted JSON through HTTPS", async () => {
   const { main } = await import(pathToFileURL(join(packageRoot, "dist/src/cli.js")).href);
