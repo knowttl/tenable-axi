@@ -24,7 +24,7 @@ State re-reads narrow races but do not provide atomic comparison where the API h
 | Attack exports | `apa-export-attack-path`, `apa-export-attack-technique`, `apa-export-mitre-heatmap` | [Attack exports](behavior.md#attack-exports) |
 | Exposure Response | `initiatives-create/update/delete`, `combinations-create/update/delete` (one exact ID per verb) | [Exposure Response](behavior.md#exposure-response) |
 | Platform tags | Exact operation ID from the ledger for each category, value or assignment mutation | [Platform tags](behavior.md#platform-tags) |
-| Raw API | `raw-write`, which permits one confirmed method and path per send | [Command reference](commands.md#raw-write) |
+| Raw API | `raw-write`, which permits one confirmed method and path per send | [Raw API](behavior.md#raw-api) |
 
 ## Upstream permissions
 
@@ -41,7 +41,6 @@ See the [complete permission ledger](design.md#complete-operation-ledger) and [c
 Credentials use environment/file SecretRefs and private file checks; see [configuration](configuration.md).
 Credential minting, users, roles and access-control administration stay blocked, including nested security fields in allowed payloads.
 Raw API paths are validated and stay on the exact origin; alternate origin and TLS bypass are not exposed.
-Raw responses, including JSON, are passed through without redaction, with their content type reported on stderr.
-`raw get --out` saves response bytes without redaction to a new file.
-Downloads validate, redact and atomically publish to a new output path without overwrite.
+Raw responses are unredacted; see [raw API behavior](behavior.md#raw-api) before saving or sharing them.
+Export downloads validate, redact and atomically publish to a new output path without overwrite.
 See [behavior](behavior.md) for operation-specific payload, continuation and download limits.

@@ -71,6 +71,7 @@ The [generated command reference](https://github.com/knowttl/tenable-axi/blob/ma
 | `tag category/value/assignment/exclusion/asset-filter` | Inspect and manage platform tags | Read/write | [Platform tags](https://github.com/knowttl/tenable-axi/blob/main/docs/behavior.md#platform-tags) |
 | `initiative`, `combination` | Manage Exposure Response workflows | Read/write | [Exposure Response](https://github.com/knowttl/tenable-axi/blob/main/docs/behavior.md#exposure-response) |
 | `export` | Create jobs, check status and download results | Read/write | [Exports](https://github.com/knowttl/tenable-axi/blob/main/docs/behavior.md#inventory-exports) |
+| `raw` | Read API paths and send guarded writes | Read/write | [Raw API](https://github.com/knowttl/tenable-axi/blob/main/docs/behavior.md#raw-api) |
 | `auth`, `profile`, `config`, `doctor` | Inspect setup and module access | Local/read | [Doctor](https://github.com/knowttl/tenable-axi/blob/main/docs/commands.md#doctor) |
 | `setup hooks`, `hook` | Install integrations and read local context | Local | [Integration](https://github.com/knowttl/tenable-axi/blob/main/docs/agent-integration.md) |
 
@@ -111,7 +112,7 @@ See [configuration](https://github.com/knowttl/tenable-axi/blob/main/docs/config
 
 ## Output and exit codes
 
-Stdout uses compact TOON; bare `--version`, `-v` and `-V` print the package version.
+Stdout uses compact TOON except for successful raw responses; bare `--version`, `-v` and `-V` print the package version.
 `--fields` selects properties and `--full` removes text truncation without expanding row or transport bounds.
 Ordinary lists default to 100 rows; `--all` remains bounded at 10,000.
 Resume a returned `--cursor` with the same profile, filters, fields and sort.
