@@ -14,7 +14,7 @@ function fixture(writes?: unknown) {
   Object.assign(local.env, { TENABLE_AXI_ACCESS_KEY: syntheticKeys.accessKey, TENABLE_AXI_SECRET_KEY: syntheticKeys.secretKey });
   local.config({ example: writes === undefined ? {} : { writes } });
   const credentials = { home: local.home, env: local.env };
-  async function run(args: string[], replies: Reply[] = []) {
+  async function run(args: string[], replies: Reply[] = [], onChunk?: (chunk: Uint8Array) => void) {
     const upstream = fakeTransport(replies.map((reply) => reply.body !== undefined
       ? { ...reply, headers: { "content-type": "application/json", ...reply.headers } } : reply), {});
     let stdout = "";
@@ -24,7 +24,7 @@ function fixture(writes?: unknown) {
     process.exitCode = 0;
     try {
       await main(["raw", ...args, "--profile", "example"], { credentials, stdout: { write: (chunk) => { stdout += chunk; } },
-        stderr: { write: (chunk) => { stderr += chunk; } }, rawOutput: (chunk) => { chunks.push(chunk); },
+        stderr: { write: (chunk) => { stderr += chunk; } }, rawOutput: (chunk) => { chunks.push(chunk); onChunk?.(chunk); },
         transportFactory: () => upstream.transport,
         writeCoordinatorFactory: (options) => constructWriteCoordinator(options, { credentials, operations: {}, bindings: {}, fetch: upstream.fetch }),
       });
@@ -46,7 +46,8 @@ test("raw get returns the upstream body for an arbitrary read route with its que
   const result = await f.run(["get", "--path", "/api/v1/t1/tags/properties", "--query", "limit=5&tag=a&tag=b"],
     [{ body: { items: [{ id: "a" }] } }]);
   expect(result.code).toBe(0);
-  expect(result.data).toMatchObject({ status: 200, body: { items: [{ id: "a" }] } });
+  expect(result.bytes.toString()).toBe('{"items":[{"id":"a"}]}');
+  expect(result.stderr).toBe("Content-Type: application/json\n");
   const url = new URL(result.requests[0]!.url);
   expect(url.pathname).toBe("/api/v1/t1/tags/properties");
   expect(url.searchParams.getAll("tag")).toEqual(["a", "b"]);
@@ -104,6 +105,28 @@ test("raw get streams non-JSON bytes with their content type", async () => {
   expect(result.code).toBe(0);
   expect(result.bytes).toEqual(bytes);
   expect(result.stderr).toBe("Content-Type: application/gzip\n");
+});
+
+test.each([
+  ["get", undefined], ["get", "application/json"], ["write", undefined], ["write", "application/json"],
+])("raw %s streams ambiguous bytes before completion with content type %s", async (command, contentType) => {
+  const f = fixture(writable);
+  const preview = command === "write" ? await f.run(["write", ...patch(f)]) : undefined;
+  const args = command === "write" ? ["write", ...patch(f), "--execute", "--confirm", preview!.data.preview.confirm]
+    : ["get", "--path", "/api/v1/export/example/download"];
+  let controller!: ReadableStreamDefaultController<Uint8Array>;
+  const stream = new ReadableStream<Uint8Array>({ start(value) { controller = value; } });
+  let observed!: (chunk: Uint8Array) => void;
+  const firstChunk = new Promise<Uint8Array>((resolve) => { observed = resolve; });
+  const pending = f.run(args, [{ stream, ...(contentType ? { headers: { "content-type": contentType } } : {}) }],
+    (chunk) => { if (chunk.length) observed(chunk); });
+  controller.enqueue(Buffer.from("123\n"));
+  expect(Buffer.from(await firstChunk).toString()).toBe("123\n");
+  controller.enqueue(Buffer.from("456\n"));
+  controller.close();
+  const result = await pending;
+  expect(result.code).toBe(0);
+  expect(result.bytes.toString()).toBe("123\n456\n");
 });
 
 test("raw get sends errors to stderr after a stream disconnects", async () => {
@@ -176,7 +199,7 @@ test("raw get passes through non-JSON bytes labelled as JSON", async () => {
   expect(result.bytes).toEqual(bytes);
 });
 
-test("raw write passes through a non-JSON response after journaling", async () => {
+test("raw write passes through a non-JSON response and journals the outcome", async () => {
   const f = fixture(writable);
   const preview = await f.run(["write", ...patch(f)]);
   const bytes = Buffer.from([0xff, 0x00]);
@@ -187,6 +210,20 @@ test("raw write passes through a non-JSON response after journaling", async () =
   expect(result.stderr).toBe("Content-Type: application/octet-stream\n");
   const records = readFileSync(f.journal, "utf8").trim().split("\n").map((line) => JSON.parse(line) as Record<string, unknown>);
   expect(records.map((record) => [record.kind, record.result ?? null])).toEqual([["intent", null], ["outcome", "SUCCESS"]]);
+});
+
+test("raw write journals an unknown outcome when the response stream disconnects", async () => {
+  const f = fixture(writable);
+  const preview = await f.run(["write", ...patch(f)]);
+  const bytes = Buffer.from("partial");
+  const result = await f.run(["write", ...patch(f), "--execute", "--confirm", preview.data.preview.confirm],
+    [{ disconnectAfter: bytes, headers: { "content-type": "application/json" } }]);
+  expect(result.code).toBe(1);
+  expect(result.bytes).toEqual(bytes);
+  expect(result.data).toEqual({});
+  expect(decode(result.stderr.slice("Content-Type: application/json\n".length))).toMatchObject({ error: { code: "OUTCOME_UNKNOWN" } });
+  const records = readFileSync(f.journal, "utf8").trim().split("\n").map((line) => JSON.parse(line) as Record<string, unknown>);
+  expect(records.map((record) => [record.kind, record.result ?? null])).toEqual([["intent", null], ["outcome", "OUTCOME_UNKNOWN"]]);
 });
 
 test("raw get reports an upstream permission denial as a permission error", async () => {
@@ -201,7 +238,7 @@ test("raw get still answers when forced read-only blocks writes", async () => {
   f.env.TENABLE_AXI_READ_ONLY = "true";
   const result = await f.run(["get", "--path", "/api/v1/t1/tags/properties"], [{ body: { items: [] } }]);
   expect(result.code).toBe(0);
-  expect(result.data).toMatchObject({ status: 200 });
+  expect(result.bytes.toString()).toBe('{"items":[]}');
 });
 
 test("raw write is refused before any request when the profile does not enable writes", async () => {
@@ -258,7 +295,7 @@ test("raw write sends the confirmed method, path and body once and journals the 
   const created = await f.run(["write", ...patch(f), "--execute", "--confirm", preview.data.preview.confirm, "--intent-id", "synthetic-raw"],
     [{ status: 200, body: { id: "example" } }]);
   expect(created.code).toBe(0);
-  expect(created.data).toMatchObject({ status: 200, auditId: expect.any(String), response: { id: "example" } });
+  expect(created.bytes.toString()).toBe('{"id":"example"}');
   expect(created.requests).toHaveLength(1);
   const sent = created.requests[0]!;
   expect(sent.init.method).toBe("PATCH");

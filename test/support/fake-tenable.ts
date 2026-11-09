@@ -6,7 +6,7 @@ import { allowFakeServer } from "./deny-network.js";
 import { cert, key } from "./test-tls.js";
 
 export const syntheticKeys: ApiKeys = { accessKey: "synthetic-access-sentinel", secretKey: "synthetic-secret-sentinel" };
-export type Reply = { status?: number; body?: unknown; text?: string; headers?: Record<string, string>; bytes?: Buffer; disconnectAfter?: Buffer };
+export type Reply = { status?: number; body?: unknown; text?: string; headers?: Record<string, string>; bytes?: Buffer; disconnectAfter?: Buffer; stream?: ReadableStream<Uint8Array> };
 export type RecordedRequest = { method: string; url: string; headers: Record<string, string | string[] | undefined>; body: string };
 
 // Fast domain fixture: scripted upstream responses, with abort-aware hanging sends.
@@ -28,7 +28,7 @@ export function fakeTransport(replies: (Reply | "disconnect" | "hang")[], bindin
         else { sent = true; controller.enqueue(reply.disconnectAfter!); }
       },
     });
-    return new Response(stream ?? reply.bytes ?? reply.text ?? JSON.stringify(reply.body), { status: reply.status ?? 200, headers: reply.headers });
+    return new Response(reply.stream ?? stream ?? reply.bytes ?? reply.text ?? JSON.stringify(reply.body), { status: reply.status ?? 200, headers: reply.headers });
   };
   return { requests, fetch, transport: constructTransport({ keys: options.keys ?? syntheticKeys }, {
     bindings, fetch, ...(options.allowWrites ? { consumeWriteAuthorization: () => true } : {}),

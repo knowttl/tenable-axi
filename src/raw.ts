@@ -42,26 +42,15 @@ export async function rawCommand(argv: string[], store: ReturnType<typeof creden
     const transport = factory({ keys: store.credentials(profile), origin: profile.origin });
     const out = get("out");
     let fd: number | undefined;
-    let streamed = false;
     let completed = false;
     try {
       const response = await transport.request("raw-get", { raw: { method: "GET", path }, query, rawOutput: (contentType) => {
-        if (!out && (!contentType || /(?:^|\/)json(?:\s*;|$)|\+json(?:\s*;|$)/i.test(contentType))) return undefined;
         if (out) fd = openSync(out, "wx", 0o600);
-        streamed = true;
         if (!out) output(new Uint8Array(), contentType);
         return (chunk) => { if (fd !== undefined) writeFileSync(fd, chunk); else output(chunk, contentType); };
       } });
-      if (Buffer.isBuffer(response.body)) {
-        if (out) {
-          fd = openSync(out, "wx", 0o600);
-          writeFileSync(fd, response.body);
-        } else output(response.body, response.contentType ?? null);
-        streamed = true;
-      }
       completed = true;
-      if (streamed) return out ? { status: response.status, contentType: response.contentType, output: out } : {};
-      return { status: response.status, body: response.body };
+      return out ? { status: response.status, contentType: response.contentType, output: out } : {};
     } finally {
       if (fd !== undefined) { closeSync(fd); if (!completed) unlinkSync(out!); }
     }
@@ -73,8 +62,10 @@ export async function rawCommand(argv: string[], store: ReturnType<typeof creden
   }
   const result = await writeFactory({ config: get("config"), profile: get("profile") }).run("raw-write", { query, body },
     { execute: get("execute") === "true", dryRun: get("dry-run") === "true", confirm: get("confirm"), intentId: get("intent-id") },
-    { method, path });
+    { method, path }, (contentType) => {
+      output(new Uint8Array(), contentType);
+      return (chunk) => output(chunk, contentType);
+    });
   if (result.kind !== "success") return result;
-  if (Buffer.isBuffer(result.response)) { output(result.response, result.contentType ?? null); return {}; }
-  return { status: result.status, auditId: result.auditId, response: result.response };
+  return {};
 }

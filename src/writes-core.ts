@@ -156,7 +156,7 @@ export function constructWriteCoordinator(options: WriteCoordinatorOptions, depe
     }
   }
 
-  async function run(operation: string, input: unknown, flags: MutationOptions = {}, raw?: RawWriteRoute) {
+  async function run(operation: string, input: unknown, flags: MutationOptions = {}, raw?: RawWriteRoute, rawOutput?: RequestOptions["rawOutput"]) {
     flags = { ...flags };
     const definition = raw ? rawWriteDefinition(raw) : Object.hasOwn(definitions, operation) ? definitions[operation] : undefined;
     if (!definition || (!raw && bindings[operation]?.effect !== "write")) fail("OPERATION_BLOCKED", "Operation has no reviewed write binding", operation);
@@ -205,7 +205,7 @@ export function constructWriteCoordinator(options: WriteCoordinatorOptions, depe
     const authorization = Object.freeze({});
     authorizations.set(authorization, canonical(identity));
     let response: { status: number; body: unknown; contentType?: string | null };
-    try { response = await connection.request(operation, { ...request, raw, authorization }); }
+    try { response = await connection.request(operation, { ...request, raw, rawOutput, authorization }); }
     catch (error) {
       authorizations.delete(authorization);
       const upstream = error instanceof TransportError ? error : undefined;

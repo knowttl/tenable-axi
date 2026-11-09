@@ -230,10 +230,7 @@ export function constructTransport(options: TransportOptions, dependencies: {
         "Invocation deadline exceeded", operation);
       if (response!.status >= 200 && response!.status < 300) {
         const contentType = response!.headers.get("content-type");
-        if (input.raw && streamed) return { status: response!.status, body: undefined, contentType };
-        if (input.raw && contentType && !/(?:^|\/)json(?:\s*;|$)|\+json(?:\s*;|$)/i.test(contentType)) {
-          return { status: response!.status, body: contents!, contentType };
-        }
+        if (input.raw) return { status: response!.status, body: streamed ? undefined : contents!, contentType };
         if (record.responseMode === "file") {
           if (response!.status === 204) fail("EXPORT_NOT_READY", "Export chunk is not ready; check status before downloading", operation);
           return { status: response!.status, body: file! };
@@ -242,7 +239,6 @@ export function constructTransport(options: TransportOptions, dependencies: {
         const diagnostics = new ResponseDiagnostics({ text: redact }, ["RESPONSE_INVALID"]);
         try { decoded = text! ? JSON.parse(text!) : undefined; }
         catch {
-          if (input.raw) return { status: response!.status, body: contents!, contentType };
           diagnostics.record(response!.status, response!.headers, text!);
           fail("RESPONSE_INVALID", "Tenable response is not valid JSON", operation, [], diagnostics.forError({ code: "RESPONSE_INVALID" }));
         }
