@@ -12,7 +12,7 @@ Keep JSON internally and decode untrusted responses with zod at the boundary.
 Validate selected response fields according to the [output contract](docs/design.md#architecture-and-module-depth), tolerate extra upstream fields, and keep command input schemas strict.
 Use precise names, caller-shaped domain functions, and one authoritative command catalogue.
 Prefer functions that hide a complete responsibility over wrappers that merely forward calls.
-Do not add arbitrary HTTP execution or bypasses for credentials, origins, or write policy.
+Raw HTTP exists only through `raw get` and `raw write`; do not widen it or add bypasses for credentials, origins, or write policy.
 Match existing style and avoid adjacent refactors.
 Do not edit generated files or changelogs by hand.
 

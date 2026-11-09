@@ -27,8 +27,9 @@ Publish [knowttl/tenable-axi](https://github.com/knowttl/tenable-axi) and npm pa
 Support only `https://cloud.tenable.com` in v1.
 Upstream permissions and licences remain prerequisites; command availability never implies permission to run it.
 Credential issuance, users, roles, and access-control management stay blocked, including inside otherwise approved payloads.
-Other Platform and Vulnerability Management domains remain outside this Tenable One scope.
-No arbitrary REST, raw request, or generic write command is exposed.
+Other Platform and Vulnerability Management domains remain outside the named Tenable One command scope.
+Raw API reads and guarded raw writes are approved by the captain on 2026-11-09; see [accepted decisions](#accepted-decisions).
+No other generic REST or write command is exposed.
 No design research or automated test uses a live tenant or credential.
 
 ## Accepted decisions
@@ -42,6 +43,7 @@ No design research or automated test uses a live tenant or credential.
 | Export jobs | All five creation operations are writes; status, lists, and downloads are reads. |
 | Region | Exact commercial origin only; no alternate-origin flag or redirect. |
 | Hosted use | Shipped strict credential schema and importable catalogue for later artium-axi integration. |
+| Raw API | Captain-approved 2026-11-09: `raw get` reads any validated absolute path on the exact origin; `raw write` sends one confirmed method and path only when `writes.operations` includes `raw-write`, with preview, exact confirmation and the durable journal. Access-control, user, group, role and permission routes stay blocked. |
 
 The [pyTenable library](https://github.com/tenable/pytenable) remains research reference material rather than a runtime dependency.
 The investigation of [pyTenable at b3ed887](https://github.com/tenable/pytenable/tree/b3ed887) found 21 exact matches to the 24 Exposure Management operations, two undocumented endpoints, and a different top-attack-paths route.
@@ -114,15 +116,16 @@ Strict command/profile/request validation is separate from tolerant response dec
 ### Transport contract
 
 There is one network sink and no domain-level `fetch` call.
-Build paths from reviewed templates and escaped identifiers, never caller URLs.
+Build catalogue paths from reviewed templates and escaped identifiers.
+Raw routes accept only validated absolute paths on the exact origin, never caller URLs.
 Require canonical origin `https://cloud.tenable.com`, without userinfo, path, query, fragment, alternate port, or alternate origin.
 Keep TLS verification enabled and set `redirect: error`.
-Validate continuation and download destinations before any send and refuse traversal or unregistered routes.
+Validate continuation and download destinations before any send and refuse traversal or unregistered catalogue routes.
 Only the sink composes `X-ApiKeys: accessKey=<accessKey>; secretKey=<secretKey>`.
 Reject key values containing header delimiters or control characters.
 
 Default invocation budgets are 20 seconds, 20 requests, and 20 MiB of decoded responses, including retries and pages.
-File downloads use the separate byte ceilings in [Collections, jobs, and bounded reads](#collections-jobs-and-bounded-reads), retaining the same deadline and request ceiling.
+File downloads use the separate byte ceilings in [Collections, jobs, and bounded reads](#collections-jobs-and-bounded-reads), retaining the same deadline and request ceiling; raw responses use the bound described in [shipped behavior](behavior.md#raw-api).
 Each request is cancellable with only the remaining deadline.
 Reads, including reviewed search POSTs, may retry 429 and reviewed transient 502/503/504 responses at most twice within those budgets.
 Honor valid `retry-after` seconds or HTTP dates first; return `RATE_LIMITED` immediately with `retryAfter` if the delay exceeds the remaining budget.
@@ -136,7 +139,7 @@ Transport parse/schema failures add the bounded response diagnostics described i
 Handle `{statusCode,error,message}`, `{message,status}`, `{error,message}`, connector `{detail:...}`, Exposure View `{status,message,error:[]}`, and selected Platform/VM variants.
 Handle empty bodies, malformed JSON, schema-less responses, and HTML 429 without emitting raw HTML, dependency output, or stack traces.
 Map 401 to authentication failure, 403 to permission denial with operation-specific advice, 404 to missing resource, and invalid input to actionable validation guidance.
-Malformed successful responses produce `RESPONSE_INVALID`, never plausible empty data, except for the narrowly scoped [tag value deletion behavior](behavior.md).
+Malformed successful responses produce `RESPONSE_INVALID`, never plausible empty data, except for raw responses and the narrowly scoped [tag value deletion behavior](behavior.md).
 Category/value create/update, category delete and assignment add/remove retain strict response validation, including mutation identity checks where applicable.
 Redact bounded error text before any channel renders it.
 
@@ -187,8 +190,8 @@ Windows DACL verification belongs in `auth status` and `doctor`, with injectable
 Use stable credential errors `AUTH_REQUIRED`, `CONFIG_INVALID`, `CONFIG_INSECURE`, `PROFILE_REQUIRED`, `PROFILE_AMBIGUOUS`, and `PROFILE_NOT_FOUND`, reserving `CONFIG_MOVED` for any explicitly supported future migration.
 
 Register exact access/secret values and the complete composed header, including its actual spacing, in raw, JSON-escaped, and URL-encoded forms.
-Redact stdout, stderr, errors, previews, downloaded content where applicable, and journal records.
-Also apply key-name and secret-pattern redaction to upstream JSON; never show request headers.
+Redact stdout, stderr, errors, previews, downloaded content where applicable, and journal records, except for successful raw response bytes as described in [shipped behavior](behavior.md#raw-api).
+Also apply key-name and secret-pattern redaction to other upstream JSON; never show request headers.
 Use a dedicated least-privilege Tenable user per integration with only the modules and explicit writes needed.
 Inventory reads need `EXPOSURE_MANAGEMENT.INVENTORY.INVENTORY.READ`; exports need its `EXPORT` privilege.
 Tags, exposure view, and attack paths require their corresponding `EXPOSURE_MANAGEMENT.*.READ` privileges.
@@ -263,8 +266,8 @@ Attack searches require wire limits of at least 100 even for smaller output wind
 Card wire pages cap at 25; home requests five.
 Job lists without paging cannot promise complete history beyond the server's maximum; output marks that limitation explicitly.
 
-Keep JSON internally and encode [TOON](https://toonformat.dev/reference/spec) at stdout.
-Structured data, errors, and relevant `help[]` use stdout; diagnostics and progress use stderr.
+Keep JSON internally and encode [TOON](https://toonformat.dev/reference/spec) at stdout, subject to the [raw API output contract](behavior.md#raw-api).
+Structured data, errors, and relevant `help[]` use stdout; diagnostics and progress use stderr, with streaming errors handled as described in the raw API contract.
 Exit 0 means success/no-op, 1 runtime failure, and 2 usage failure.
 Detail text previews 1,000 characters with original length and a `--full` hint only when truncated.
 `--full` never disables byte, time, request, or row bounds.
@@ -424,6 +427,7 @@ Hosted callers share one service user's rate budget, so structured throttling mu
 Each row is identified by source, operation ID, and method/path.
 `v1-read` includes search POSTs and export status/downloads; `v1-write` always uses the coordinator.
 Reasons below are normative; planned commands do not claim current implementation.
+The ledger classifies named operations; validated raw routes follow the separate [raw API contract](behavior.md#raw-api).
 
 ### exposure-management.json
 

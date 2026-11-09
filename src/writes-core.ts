@@ -30,6 +30,16 @@ export type WriteCoordinatorOptions = {
   approval?: (preview: MutationPreview) => boolean | Promise<boolean>;
 };
 export type MutationOptions = { execute?: boolean; dryRun?: boolean; confirm?: string; intentId?: string };
+export type RawWriteRoute = Readonly<{ method: "POST" | "PUT" | "PATCH" | "DELETE"; path: string }>;
+
+function rawWriteDefinition(route: RawWriteRoute): MutationOperation {
+  return {
+    input: z.strictObject({ query: z.record(z.string(), z.union([z.string(), z.array(z.string())])).optional(), body: z.unknown().optional() }),
+    prepare: (input) => ({ target: { kind: `${route.method} ${route.path}`, payload: true }, request: input as Pick<RequestOptions, "query" | "body"> }),
+    effect: `Send ${route.method} ${route.path}`,
+    readBackHelp: ["Read the target through its owning Tenable API before any new intent; never replay this intent"],
+  };
+}
 
 function canonical(value: unknown): string {
   const normalize = (value: unknown): unknown => {
@@ -146,17 +156,17 @@ export function constructWriteCoordinator(options: WriteCoordinatorOptions, depe
     }
   }
 
-  async function run(operation: string, input: unknown, flags: MutationOptions = {}) {
+  async function run(operation: string, input: unknown, flags: MutationOptions = {}, raw?: RawWriteRoute, rawOutput?: RequestOptions["rawOutput"]) {
     flags = { ...flags };
-    const definition = Object.hasOwn(definitions, operation) ? definitions[operation] : undefined;
-    if (!definition || bindings[operation]?.effect !== "write") fail("OPERATION_BLOCKED", "Operation has no reviewed write binding", operation);
+    const definition = raw ? rawWriteDefinition(raw) : Object.hasOwn(definitions, operation) ? definitions[operation] : undefined;
+    if (!definition || (!raw && bindings[operation]?.effect !== "write")) fail("OPERATION_BLOCKED", "Operation has no reviewed write binding", operation);
     const parsed = definition!.input.safeParse(input);
     if (!parsed.success) fail("VALIDATION_ERROR", "Invalid mutation input; check the named operation's schema", operation);
     const prepared = definition!.prepare(JSON.parse(canonical(parsed.data)) as unknown);
     const request = JSON.parse(canonical(prepared.request)) as RequestOptions;
     const target = JSON.parse(canonical(prepared.target)) as MutationTarget;
     const securityField = (value: unknown): boolean => !!value && typeof value === "object" && Object.entries(value).some(([key, child]) =>
-      /^(?:access_control|permissions|roles|credentials|api_keys)$/i.test(key) || securityField(child));
+      /^(?:acl|access_control|permissions?|roles|credentials|api_keys)$/i.test(key) || securityField(child));
     if (securityField(request.body)) fail("VALIDATION_ERROR", "Security administration payloads are blocked", operation);
     const uuid = z.string().uuid();
     if (!target.kind?.trim() || ("id" in target ? !uuid.safeParse(target.id).success
@@ -167,7 +177,7 @@ export function constructWriteCoordinator(options: WriteCoordinatorOptions, depe
     if (forced || store.readOnly() || !scope.allowWrites) fail("WRITES_DISABLED", "Writes are disabled for the selected profile", operation);
     if (!scope.operations.includes(operation)) fail("OPERATION_NOT_WRITABLE", "Operation is outside the configured write scope", operation);
     const connection = sender();
-    const plan = connection.prepare(operation, request);
+    const plan = connection.prepare(operation, { ...request, raw });
     const { effect: _effect, ...identity } = plan;
     const confirmationTarget = "payload" in target ? { kind: target.kind, digest: digest(canonical(request)) } : target;
     const confirm = canonical([scope.profile, operation, confirmationTarget]);
@@ -194,8 +204,8 @@ export function constructWriteCoordinator(options: WriteCoordinatorOptions, depe
     } catch (error) { append("outcome", "NOT_SENT"); throw error; }
     const authorization = Object.freeze({});
     authorizations.set(authorization, canonical(identity));
-    let response: { status: number; body: unknown };
-    try { response = await connection.request(operation, { ...request, authorization }); }
+    let response: { status: number; body: unknown; contentType?: string | null };
+    try { response = await connection.request(operation, { ...request, raw, rawOutput, authorization }); }
     catch (error) {
       authorizations.delete(authorization);
       const upstream = error instanceof TransportError ? error : undefined;
@@ -206,7 +216,8 @@ export function constructWriteCoordinator(options: WriteCoordinatorOptions, depe
       throw new TransportError({ ...upstream!.error, auditId }, upstream!.help);
     }
     append("outcome", "SUCCESS", response.status);
-    return { kind: "success" as const, preview, auditId, status: response.status, response: store.redactor.payload(response.body) };
+    return { kind: "success" as const, preview, auditId, status: response.status,
+      response: Buffer.isBuffer(response.body) && raw ? response.body : store.redactor.payload(response.body), contentType: response.contentType };
   }
   return { scope, run, reader };
 }

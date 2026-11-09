@@ -9,20 +9,25 @@ import { TransportError } from "./transport.js";
 import { attackCommand } from "./attack.js";
 import { attackExportCommand } from "./attack-export.js";
 import { inventoryExportCommand, type WriteCoordinatorFactory } from "./inventory-export.js";
+import { rawCommand } from "./raw.js";
 import { createWriteCoordinator } from "./writes.js";
 import { platformTagCommand } from "./platform-tag.js";
 import { responseCommand } from "./response.js";
 import { setupHooks } from "./setup.js";
 
-export async function main(argv = process.argv.slice(2), options: { credentials?: CredentialContext; stdout?: { write: (chunk: string) => unknown }; transportFactory?: TransportFactory; writeCoordinatorFactory?: WriteCoordinatorFactory } = {}): Promise<void> {
+export async function main(argv = process.argv.slice(2), options: { credentials?: CredentialContext; stdout?: { write: (chunk: string) => unknown }; rawOutput?: (chunk: Uint8Array) => void | Promise<void>; stderr?: { write: (chunk: string) => unknown }; transportFactory?: TransportFactory; writeCoordinatorFactory?: WriteCoordinatorFactory } = {}): Promise<void> {
   const store = credentialStore(options.credentials);
+  let rawStream = false;
+  let rawStreamError = false;
+  let abortedStdout = false;
   await runAxiCli({
     description: DESCRIPTION,
     argv: ["scaffold"],
     topLevelHelp: "",
     home: async () => store.redactor.payload(await exposureCommand([], store, options.transportFactory)) as Record<string, unknown>,
-    stdout: { write: (chunk) => (options.stdout ?? process.stdout).write(store.redactor.text(chunk)) },
-    formatError: (error) => ({
+    stdout: { write: (chunk) => rawStreamError ? (options.stderr ?? process.stderr).write(store.redactor.text(chunk))
+      : rawStream ? undefined : (options.stdout ?? process.stdout).write(store.redactor.text(chunk)) },
+    formatError: (error) => (rawStreamError = rawStream, {
       output: `${encode(store.redactor.value({
         ...((!argv.length || argv[0] === "home" || argv[0]?.startsWith("--") && argv[0] !== "--help")
           && !(error instanceof AxiError && error.code === "VALIDATION_ERROR") ? homeIdentity() : {}),
@@ -36,6 +41,23 @@ export async function main(argv = process.argv.slice(2), options: { credentials?
         if (argv[0] === "setup") return setupHooks(argv);
         if (argv[0] === "tag" && !["list", "properties"].includes(argv[1] ?? "")) return store.redactor.payload(await platformTagCommand(argv, store, options.transportFactory,
           options.writeCoordinatorFactory ?? ((flags) => createWriteCoordinator(flags, options.credentials)))) as Record<string, unknown>;
+        if (argv[0] === "raw") return store.redactor.payload(await rawCommand(argv, store, options.transportFactory,
+          options.writeCoordinatorFactory ?? ((flags) => createWriteCoordinator(flags, options.credentials)), (chunk, contentType, signal) => {
+            if (!rawStream) (options.stderr ?? process.stderr).write(`Content-Type: ${contentType ?? "application/octet-stream"}\n`);
+            rawStream = true;
+            return (options.rawOutput ?? ((bytes) => new Promise<void>((resolve, reject) => {
+              const onError = (error: Error) => reject(error);
+              const onAbort = () => { abortedStdout = true; process.stdout.destroy(); };
+              process.stdout.once("error", onError);
+              signal.addEventListener("abort", onAbort, { once: true });
+              if (signal.aborted) onAbort();
+              process.stdout.write(bytes, (error) => {
+                signal.removeEventListener("abort", onAbort);
+                if (error) reject(error);
+                else { process.stdout.off("error", onError); resolve(); }
+              });
+            })))(chunk);
+          })) as Record<string, unknown>;
         if (["initiative", "combination"].includes(argv[0] ?? "")) {
           const result = await responseCommand(argv, store, options.transportFactory,
             options.writeCoordinatorFactory ?? ((flags) => createWriteCoordinator(flags, options.credentials)));
@@ -63,4 +85,5 @@ export async function main(argv = process.argv.slice(2), options: { credentials?
       },
     },
   });
+  if (abortedStdout) process.stderr.write("", () => process.exit(process.exitCode));
 }

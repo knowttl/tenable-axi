@@ -10,6 +10,7 @@ import { responseBindings, responseCatalogue, responseMutations } from "./respon
 
 export const DESCRIPTION = "Investigate Tenable One exposure and run explicitly guarded writes";
 export const SETUP_GUIDANCE = "Run tenable-axi config path; configure a profile with accessKey and secretKey SecretRefs";
+export const capabilities = { rawWrites: true } as const;
 
 // Endpoint slices add reviewed executable bindings alongside their commands.
 export const transportBindings: Readonly<Record<string, OperationBinding>> = Object.freeze({ ...inventoryBindings, ...exposureBindings, ...attackBindings, ...inventoryExportBindings, ...attackExportBindings, ...platformTagBindings, ...responseBindings });
@@ -23,6 +24,16 @@ export const catalogue = {
   ...attackExportCatalogue,
   ...platformTagCatalogue,
   ...responseCatalogue,
+  "raw get": {
+    description: "Read any Tenable API path on the exact origin with the selected profile keys",
+    flags: { config: "Config path; default platform path", profile: "Profile name; default credential precedence", path: "Required absolute API path such as /api/v1/t1/tags/properties", query: "URL query such as limit=10&offset=0", out: "Save response bytes to a new file", help: "Show help; default false" },
+    examples: ["tenable-axi raw get --path /api/v1/t1/tags/properties", "tenable-axi raw get --path /api/v1/t1/tags/search --query limit=5"],
+  },
+  "raw write": {
+    description: "Send one raw write when the profile allows writes and the operation list includes raw-write",
+    flags: { config: "Config path; default platform path", profile: "Profile name; default credential precedence", method: "Required POST, PUT, PATCH or DELETE", path: "Required absolute API path such as /api/v1/...", query: "URL query such as key=value", "body-file": "JSON body file or - for stdin", execute: "Send after exact confirmation; default preview only", "dry-run": "Preview only; incompatible with --execute", confirm: "Exact preview confirmation", "intent-id": "Optional durable intent identifier", help: "Show help; default false" },
+    examples: ["tenable-axi raw write --method PATCH --path /api/v1/example --body-file body.json", "tenable-axi raw write --method PATCH --path /api/v1/example --body-file body.json --execute --confirm <preview confirm>"],
+  },
   "setup hooks": {
     description: "Explicitly install or repair local agent session integrations",
     flags: { scope: "user or project; default user; project targets the current directory", help: "Show help; default false" },
@@ -68,6 +79,7 @@ export function help(): Record<string, unknown> {
   return {
     description: DESCRIPTION,
     commands: Object.fromEntries(Object.entries(catalogue).map(([name, entry]) => [name, entry.description])),
+    capabilities,
     flags: Object.fromEntries(Object.entries(catalogue.home.flags).map(([name, description]) => [`--${name}`, description])),
     version: "-v, -V, --version: print the bare version",
     examples: catalogue.home.examples,

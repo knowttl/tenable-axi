@@ -331,3 +331,29 @@ test("body streaming is covered by the request deadline", async () => {
   await result;
   expect(vi.getTimerCount()).toBe(0);
 });
+
+test.each([
+  ["GET", "initialization", "deadline"], ["GET", "chunk", "deadline"],
+  ["POST", "initialization", "deadline"], ["POST", "chunk", "deadline"],
+  ["GET", "initialization", "cancellation"], ["GET", "chunk", "cancellation"],
+  ["POST", "initialization", "cancellation"], ["POST", "chunk", "cancellation"],
+] as const)("raw %s interrupts stalled output %s on %s", async (method, phase, cause) => {
+  vi.useFakeTimers();
+  const fake = fakeTransport([{ bytes: Buffer.from("payload") }], {}, { allowWrites: true });
+  const controller = new AbortController();
+  let reached!: () => void;
+  let outputSignal!: AbortSignal;
+  const started = new Promise<void>((resolve) => { reached = resolve; });
+  const stall = () => { reached(); return new Promise<never>(() => {}); };
+  const result = expect(fake.transport.request("raw", {
+    raw: { method, path: "/api/v1/example" }, signal: controller.signal,
+    rawOutput: (_, signal) => { outputSignal = signal; return phase === "initialization" ? stall() : stall; },
+  })).rejects.toMatchObject({ error: { code: method === "POST" ? "OUTCOME_UNKNOWN"
+    : cause === "deadline" ? "DEADLINE_EXCEEDED" : "REQUEST_CANCELLED" } });
+  await started;
+  if (cause === "deadline") await vi.advanceTimersByTimeAsync(20_000);
+  else controller.abort();
+  await result;
+  expect(outputSignal.aborted).toBe(true);
+  expect(vi.getTimerCount()).toBe(0);
+});

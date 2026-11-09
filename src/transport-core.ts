@@ -1,4 +1,4 @@
-import type { z } from "zod";
+import { z } from "zod";
 import { ResponseDiagnostics } from "./response-diagnostics.js";
 
 export const TENABLE_ORIGIN = "https://cloud.tenable.com";
@@ -14,6 +14,7 @@ export type OperationBinding = Readonly<{
   permissionHelp: string;
   validationHelp: string;
 }>;
+export type RawRoute = Readonly<{ method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE"; path: string }>;
 export type RequestOptions = {
   pathParams?: Readonly<Record<string, string>>;
   query?: Readonly<Record<string, string | number | boolean | readonly string[]>>;
@@ -22,10 +23,12 @@ export type RequestOptions = {
   signal?: AbortSignal;
   authorization?: unknown;
   retry?: false;
+  raw?: RawRoute;
+  rawOutput?: (contentType: string | null, signal: AbortSignal) => ((chunk: Uint8Array) => void | Promise<void>) | undefined | Promise<((chunk: Uint8Array) => void | Promise<void>) | undefined>;
 };
 export type Transport = {
   prepare(operation: string, options?: RequestOptions): PreparedRequest;
-  request(operation: string, options?: RequestOptions): Promise<{ status: number; body: unknown }>;
+  request(operation: string, options?: RequestOptions): Promise<{ status: number; body: unknown; contentType?: string | null }>;
 };
 export type PreparedRequest = Readonly<{ operation: string; method: string; url: string; body?: string; effect: "read" | "write" }>;
 export type TransportOptions = { keys: ApiKeys; origin?: string };
@@ -125,17 +128,27 @@ export function constructTransport(options: TransportOptions, dependencies: {
     return url;
   }
 
-  function prepare(operation: string, input: RequestOptions = {}): PreparedRequest {
+  function resolve(operation: string, input: RequestOptions): OperationBinding {
+    if (input.raw) {
+      return { method: input.raw.method, path: input.raw.path, effect: input.raw.method === "GET" ? "read" : "write",
+        query: Object.keys(input.query ?? {}), decoder: z.unknown(), permissionHelp: "Check that the key has the permission for this route",
+        validationHelp: "Check the path, query and body against the Tenable API reference" };
+    }
     const binding = Object.hasOwn(bindings, operation) ? bindings[operation] : undefined;
     if (!binding) fail("OPERATION_BLOCKED", "Operation has no executable catalogue binding");
-    const url = destination(operation, binding!, input).href;
-    const body = input.body === undefined ? undefined : JSON.stringify(input.body);
-    return Object.freeze({ operation, method: binding!.method, url, body, effect: binding!.effect });
+    return binding!;
   }
 
-  async function request(operation: string, input: RequestOptions = {}): Promise<{ status: number; body: unknown }> {
+  function prepare(operation: string, input: RequestOptions = {}): PreparedRequest {
+    const binding = resolve(operation, input);
+    const url = destination(operation, binding, input).href;
+    const body = input.body === undefined ? undefined : JSON.stringify(input.body);
+    return Object.freeze({ operation, method: binding.method, url, body, effect: binding.effect });
+  }
+
+  async function request(operation: string, input: RequestOptions = {}): Promise<{ status: number; body: unknown; contentType?: string | null }> {
     const { url, body } = prepare(operation, input);
-    const record = bindings[operation]!;
+    const record = resolve(operation, input);
     const canonical = new URL(url);
     canonical.searchParams.sort();
     const identity = JSON.stringify([operation, canonical.href, body]);
@@ -162,19 +175,34 @@ export function constructTransport(options: TransportOptions, dependencies: {
       let response: Response;
       let text: string;
       let file: Buffer | undefined;
+      let contents: Buffer;
+      let streamed = false;
+      const waitForOutput = async <T>(value: T | Promise<T>): Promise<T> => {
+        let cancel!: () => void;
+        const aborted = new Promise<never>((_, reject) => {
+          cancel = () => reject(new Error("Request aborted"));
+          controller.signal.addEventListener("abort", cancel, { once: true });
+          if (controller.signal.aborted) cancel();
+        });
+        try { return await Promise.race([value, aborted]); }
+        finally { controller.signal.removeEventListener("abort", cancel); }
+      };
       try {
         response = await dependencies.fetch(url, {
           method: record.method, redirect: "error", signal: controller.signal,
-          headers: { "X-ApiKeys": header, Accept: record.responseMode === "file" ? "application/octet-stream" : "application/json", ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
+          headers: { "X-ApiKeys": header, Accept: input.raw ? "*/*" : record.responseMode === "file" ? "application/octet-stream" : "application/json", ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
           ...(body === undefined ? {} : { body }),
         });
         if (response.status >= 300 && response.status < 400) {
           await response.body?.cancel();
           fail("DESTINATION_DENIED", "Tenable redirects are refused", operation, [], { status: response.status });
         }
-        const reader = response.body?.getReader();
         const chunks: Uint8Array[] = [];
-        const downloading = record.responseMode === "file" && response.status >= 200 && response.status < 300;
+        const output = input.raw && response.status >= 200 && response.status < 300
+          ? await waitForOutput(input.rawOutput?.(response.headers.get("content-type"), controller.signal)) : undefined;
+        streamed = output !== undefined;
+        const reader = response.body?.getReader();
+        const downloading = (record.responseMode === "file" || !!input.raw) && response.status >= 200 && response.status < 300;
         const ceiling = downloading ? 128 * 1024 * 1024 : 20 * 1024 * 1024;
         if (downloading && Number(response.headers.get("content-length")) > ceiling) {
           await reader?.cancel();
@@ -189,12 +217,13 @@ export function constructTransport(options: TransportOptions, dependencies: {
               controller.abort();
               fail("BYTE_BUDGET_EXCEEDED", "Invocation decoded response byte budget exceeded", operation);
             }
-            chunks.push(chunk.value);
+            if (output) await waitForOutput(output(chunk.value));
+            else chunks.push(chunk.value);
           }
         } finally { await reader?.cancel().catch(() => {}); }
-        const contents = Buffer.concat(chunks);
-        if (downloading) file = contents;
-        text = downloading ? "" : contents.toString("utf8");
+        contents = Buffer.concat(chunks);
+        if (record.responseMode === "file" && downloading) file = contents;
+        text = record.responseMode === "file" && downloading ? "" : contents.toString("utf8");
       } catch (error) {
         if (error instanceof TransportError) throw error;
         const code = record.effect === "write" ? "OUTCOME_UNKNOWN"
@@ -210,6 +239,8 @@ export function constructTransport(options: TransportOptions, dependencies: {
       if (now() >= deadline) fail(record.effect === "write" ? "OUTCOME_UNKNOWN" : "DEADLINE_EXCEEDED",
         "Invocation deadline exceeded", operation);
       if (response!.status >= 200 && response!.status < 300) {
+        const contentType = response!.headers.get("content-type");
+        if (input.raw) return { status: response!.status, body: streamed ? undefined : contents!, contentType };
         if (record.responseMode === "file") {
           if (response!.status === 204) fail("EXPORT_NOT_READY", "Export chunk is not ready; check status before downloading", operation);
           return { status: response!.status, body: file! };

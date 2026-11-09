@@ -1,6 +1,7 @@
 # Behavior reference
 
 - [Credentials and transport](#credentials-and-transport)
+- [Raw API](#raw-api)
 - [Exposure Response](#exposure-response)
 - [Inventory exports](#inventory-exports)
 - [Inventory reads](#inventory-reads)
@@ -30,7 +31,7 @@ Run `tenable-axi auth status` to check sources and file security locally without
 Home and auth status omit environment variable names and private configuration/secret paths from output and guidance; auth status no longer exposes a `config` field, including through `--fields`.
 The package ships [axi-credential.schema.json](../axi-credential.schema.json) for hosts.
 
-The internal transport enforces the exact commercial origin, reviewed catalogue bindings, escaped paths, scoped continuations, and redirect refusal.
+The internal transport enforces the exact commercial origin, reviewed catalogue bindings or validated raw paths, escaped paths, scoped continuations, and redirect refusal.
 One transport instance represents one invocation, sharing the [transport budgets](design.md#transport-contract) across pages and retries.
 Read operations may retry 429/502/503/504 twice; writes require coordinator authorization and never replay automatically.
 Transport errors carry a stable code, operation, optional HTTP status and `retryAfter` in milliseconds, plus bounded redacted guidance.
@@ -49,6 +50,19 @@ It enforces immutable configured scope, redacted previews, exact confirmation, o
 Unknown outcomes include an audit ID and read-back guidance and are never replayed.
 Named write commands register strict mutation definitions alongside transport bindings in the catalogue and call `createWriteCoordinator().run(operationId, input, options)`.
 State readers establish no-ops and include concurrency fields in the compared state; operation definitions own documented payload validation and read-back guidance.
+
+## Raw API
+
+Use `raw get --path <path>` to read a validated absolute path, optionally with `--query`; requests stay on the exact commercial origin.
+Paths allow letters, digits, dots, dashes, underscores, tildes and slashes, but reject dot segments, repeated slashes and security administration route segments, including users, access groups, roles, permissions, credentials, keys and `share`.
+Use `raw write --method POST|PUT|PATCH|DELETE --path <path>` for a guarded mutation, optionally with `--query` and a JSON `--body-file` (or `-` for stdin, at most 1 MiB).
+Security administration fields in write bodies are rejected.
+The file profile must enable `writes.allowWrites` and include `raw-write` in `writes.operations`, including for preview; the read-only override, exact confirmation and durable journal apply.
+Preview first, then pass `--execute --confirm '<exact preview confirmation>'` to send once.
+Raw writes do not read the target state or detect no-ops; reconcile unknown outcomes before retrying.
+Successful raw responses stream bytes unchanged to stdout, including JSON, without redaction; the content type is reported on stderr, defaulting to `application/octet-stream` when absent.
+`raw get --out <new-file>` instead saves the unredacted bytes to a new file and returns metadata; an incomplete file is removed.
+Responses are bounded at 128 MiB and share the transport deadline and request budget; errors after streaming starts go to stderr, so stdout can contain a partial response.
 
 ## Exposure Response
 
