@@ -14,7 +14,7 @@ function fixture(writes?: unknown) {
   Object.assign(local.env, { TENABLE_AXI_ACCESS_KEY: syntheticKeys.accessKey, TENABLE_AXI_SECRET_KEY: syntheticKeys.secretKey });
   local.config({ example: writes === undefined ? {} : { writes } });
   const credentials = { home: local.home, env: local.env };
-  async function run(args: string[], replies: Reply[] = [], onChunk?: (chunk: Uint8Array) => void) {
+  async function run(args: string[], replies: Reply[] = [], onChunk?: (chunk: Uint8Array) => void | Promise<void>) {
     const upstream = fakeTransport(replies.map((reply) => reply.body !== undefined
       ? { ...reply, headers: { "content-type": "application/json", ...reply.headers } } : reply), {});
     let stdout = "";
@@ -24,7 +24,7 @@ function fixture(writes?: unknown) {
     process.exitCode = 0;
     try {
       await main(["raw", ...args, "--profile", "example"], { credentials, stdout: { write: (chunk) => { stdout += chunk; } },
-        stderr: { write: (chunk) => { stderr += chunk; } }, rawOutput: (chunk) => { chunks.push(chunk); onChunk?.(chunk); },
+        stderr: { write: (chunk) => { stderr += chunk; } }, rawOutput: (chunk) => { chunks.push(chunk); return onChunk?.(chunk); },
         transportFactory: () => upstream.transport,
         writeCoordinatorFactory: (options) => constructWriteCoordinator(options, { credentials, operations: {}, bindings: {}, fetch: upstream.fetch }),
       });
@@ -139,6 +139,41 @@ test("raw get sends errors to stderr after a stream disconnects", async () => {
   expect(result.data).toEqual({});
   expect(result.stderr.startsWith("Content-Type: application/gzip\n")).toBe(true);
   expect(decode(result.stderr.slice("Content-Type: application/gzip\n".length))).toMatchObject({ error: { code: "TRANSPORT_FAILED" } });
+});
+
+test.each(["get", "write"])("raw %s waits for the output sink and reports its failure", async (command) => {
+  const f = fixture(writable);
+  const preview = command === "write" ? await f.run(["write", ...patch(f)]) : undefined;
+  const args = command === "write" ? ["write", ...patch(f), "--execute", "--confirm", preview!.data.preview.confirm]
+    : ["get", "--path", "/api/v1/example"];
+  let release!: () => void;
+  let received!: () => void;
+  const blocked = new Promise<void>((resolve) => { release = resolve; });
+  const first = new Promise<void>((resolve) => { received = resolve; });
+  const stream = new ReadableStream<Uint8Array>({ start(controller) {
+    controller.enqueue(Buffer.from("first"));
+    controller.enqueue(Buffer.from("second"));
+    controller.close();
+  } });
+  const seen: string[] = [];
+  const pending = f.run(args, [{ stream }], async (chunk) => {
+    if (!chunk.length) return;
+    seen.push(Buffer.from(chunk).toString());
+    received();
+    await blocked;
+    throw new Error("output failed");
+  });
+  await first;
+  expect(seen).toEqual(["first"]);
+  release();
+  const result = await pending;
+  expect(seen).toEqual(["first"]);
+  expect(result.bytes.toString()).toBe("first");
+  expect(result.data).toEqual({});
+  expect(result.code).toBe(1);
+  expect(decode(result.stderr.slice("Content-Type: application/octet-stream\n".length))).toMatchObject({
+    error: { code: command === "write" ? "OUTCOME_UNKNOWN" : "TRANSPORT_FAILED" },
+  });
 });
 
 test("raw get removes a partial output file after a stream disconnects", async () => {

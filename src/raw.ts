@@ -17,7 +17,7 @@ const writeMethod = z.enum(["POST", "PUT", "PATCH", "DELETE"]);
 
 export async function rawCommand(argv: string[], store: ReturnType<typeof credentialStore>,
   factory: TransportFactory = createTransport, writeFactory: WriteCoordinatorFactory = createWriteCoordinator,
-  output: (chunk: Uint8Array, contentType: string | null) => void = () => {}): Promise<Record<string, unknown>> {
+  output: (chunk: Uint8Array, contentType: string | null) => void | Promise<void> = () => {}): Promise<Record<string, unknown>> {
   const name = argv.slice(0, 2).join(" ");
   const entry = catalogue[name as keyof typeof catalogue];
   const usage = (message: string): never => { throw new AxiError(message, "VALIDATION_ERROR", [entry
@@ -44,10 +44,10 @@ export async function rawCommand(argv: string[], store: ReturnType<typeof creden
     let fd: number | undefined;
     let completed = false;
     try {
-      const response = await transport.request("raw-get", { raw: { method: "GET", path }, query, rawOutput: (contentType) => {
+      const response = await transport.request("raw-get", { raw: { method: "GET", path }, query, rawOutput: async (contentType) => {
         if (out) fd = openSync(out, "wx", 0o600);
-        if (!out) output(new Uint8Array(), contentType);
-        return (chunk) => { if (fd !== undefined) writeFileSync(fd, chunk); else output(chunk, contentType); };
+        if (!out) await output(new Uint8Array(), contentType);
+        return (chunk) => { if (fd !== undefined) writeFileSync(fd, chunk); else return output(chunk, contentType); };
       } });
       completed = true;
       return out ? { status: response.status, contentType: response.contentType, output: out } : {};
@@ -62,8 +62,8 @@ export async function rawCommand(argv: string[], store: ReturnType<typeof creden
   }
   const result = await writeFactory({ config: get("config"), profile: get("profile") }).run("raw-write", { query, body },
     { execute: get("execute") === "true", dryRun: get("dry-run") === "true", confirm: get("confirm"), intentId: get("intent-id") },
-    { method, path }, (contentType) => {
-      output(new Uint8Array(), contentType);
+    { method, path }, async (contentType) => {
+      await output(new Uint8Array(), contentType);
       return (chunk) => output(chunk, contentType);
     });
   if (result.kind !== "success") return result;

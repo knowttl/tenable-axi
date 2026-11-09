@@ -15,7 +15,7 @@ import { platformTagCommand } from "./platform-tag.js";
 import { responseCommand } from "./response.js";
 import { setupHooks } from "./setup.js";
 
-export async function main(argv = process.argv.slice(2), options: { credentials?: CredentialContext; stdout?: { write: (chunk: string) => unknown }; rawOutput?: (chunk: Uint8Array) => void; stderr?: { write: (chunk: string) => unknown }; transportFactory?: TransportFactory; writeCoordinatorFactory?: WriteCoordinatorFactory } = {}): Promise<void> {
+export async function main(argv = process.argv.slice(2), options: { credentials?: CredentialContext; stdout?: { write: (chunk: string) => unknown }; rawOutput?: (chunk: Uint8Array) => void | Promise<void>; stderr?: { write: (chunk: string) => unknown }; transportFactory?: TransportFactory; writeCoordinatorFactory?: WriteCoordinatorFactory } = {}): Promise<void> {
   const store = credentialStore(options.credentials);
   let rawStream = false;
   let rawStreamError = false;
@@ -44,7 +44,14 @@ export async function main(argv = process.argv.slice(2), options: { credentials?
           options.writeCoordinatorFactory ?? ((flags) => createWriteCoordinator(flags, options.credentials)), (chunk, contentType) => {
             if (!rawStream) (options.stderr ?? process.stderr).write(`Content-Type: ${contentType ?? "application/octet-stream"}\n`);
             rawStream = true;
-            (options.rawOutput ?? ((bytes) => { process.stdout.write(bytes); }))(chunk);
+            return (options.rawOutput ?? ((bytes) => new Promise<void>((resolve, reject) => {
+              const onError = (error: Error) => reject(error);
+              process.stdout.once("error", onError);
+              process.stdout.write(bytes, (error) => {
+                if (error) reject(error);
+                else { process.stdout.off("error", onError); resolve(); }
+              });
+            })))(chunk);
           })) as Record<string, unknown>;
         if (["initiative", "combination"].includes(argv[0] ?? "")) {
           const result = await responseCommand(argv, store, options.transportFactory,

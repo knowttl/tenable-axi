@@ -24,7 +24,7 @@ export type RequestOptions = {
   authorization?: unknown;
   retry?: false;
   raw?: RawRoute;
-  rawOutput?: (contentType: string | null) => ((chunk: Uint8Array) => void) | undefined;
+  rawOutput?: (contentType: string | null) => ((chunk: Uint8Array) => void | Promise<void>) | undefined | Promise<((chunk: Uint8Array) => void | Promise<void>) | undefined>;
 };
 export type Transport = {
   prepare(operation: string, options?: RequestOptions): PreparedRequest;
@@ -190,7 +190,7 @@ export function constructTransport(options: TransportOptions, dependencies: {
         const reader = response.body?.getReader();
         const chunks: Uint8Array[] = [];
         const output = input.raw && response.status >= 200 && response.status < 300
-          ? input.rawOutput?.(response.headers.get("content-type")) : undefined;
+          ? await input.rawOutput?.(response.headers.get("content-type")) : undefined;
         streamed = output !== undefined;
         const downloading = (record.responseMode === "file" || !!input.raw) && response.status >= 200 && response.status < 300;
         const ceiling = downloading ? 128 * 1024 * 1024 : 20 * 1024 * 1024;
@@ -207,7 +207,7 @@ export function constructTransport(options: TransportOptions, dependencies: {
               controller.abort();
               fail("BYTE_BUDGET_EXCEEDED", "Invocation decoded response byte budget exceeded", operation);
             }
-            if (output) output(chunk.value);
+            if (output) await output(chunk.value);
             else chunks.push(chunk.value);
           }
         } finally { await reader?.cancel().catch(() => {}); }
