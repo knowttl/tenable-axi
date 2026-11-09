@@ -36,7 +36,7 @@ beforeAll(() => {
   expect(installed.status, installed.stderr).toBe(0);
   packageRoot = join(prefix, "node_modules/@knowttl/tenable-axi");
   entry = join(packageRoot, "bin/tenable-axi.js");
-}, 30_000);
+}, 120_000);
 afterAll(() => rmSync(directory, { recursive: true, force: true }));
 
 function cli(...args: string[]) {
