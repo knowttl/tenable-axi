@@ -86,11 +86,11 @@ Other remote reads: `home`, `card show`, `tag properties`, platform `tag categor
 Local reads: `auth status`, `profile list`, `config path`, `hook`, help and version.
 Configured home reads up to five live cards; the optional hook reads local posture only.
 
-Exclude all `create/update/delete/bulk-delete`, `tag assignment add/remove` and `export * start` commands from read allowlists.
+Exclude all `create/update/delete/bulk-delete`, `tag assignment add/remove`, `export * start` and `raw write` commands from read allowlists. <!-- Manual sync: source is scripts/generate-docs.ts. -->
 Writes require a file profile's `allowWrites` and exact operation allowlist even for previews, followed by `--execute` and the exact preview `--confirm` string.
 `TENABLE_AXI_READ_ONLY=true` forces read-only.
 Export downloads read remotely but create a local file at an explicit new output path; `setup hooks` changes local integration files and needs explicit installation intent.
-Users, roles, access control, credential minting and arbitrary HTTP are unavailable.
+Users, roles, access control and credential minting are unavailable; raw HTTP is available through `raw get` and guarded `raw write` on validated paths. <!-- Manual sync: source is scripts/generate-docs.ts. -->
 
 ## Help and failures
 
@@ -100,7 +100,7 @@ Leaf `--help` returns that command's flags, defaults, required selectors and exa
 Group-only help such as `asset --help` is unsupported and returns a usage error with valid commands.
 The [command reference](https://github.com/knowttl/tenable-axi/blob/main/docs/commands.md) lists the full surface.
 
-Stdout is structured TOON, including errors and actionable help.
+Stdout is structured TOON, including errors and actionable help, except that successful raw responses stream bytes with the content type reported on stderr; see [raw API behavior](https://github.com/knowttl/tenable-axi/blob/main/docs/behavior.md#raw-api) for streaming errors. <!-- Manual sync: source is scripts/generate-docs.ts. -->
 Exit 0 means success (still inspect completeness), 1 means operation/configuration failure, and 2 means CLI usage validation failure.
 
 | Code | Adjustment |

@@ -266,8 +266,8 @@ Attack searches require wire limits of at least 100 even for smaller output wind
 Card wire pages cap at 25; home requests five.
 Job lists without paging cannot promise complete history beyond the server's maximum; output marks that limitation explicitly.
 
-Keep JSON internally and encode [TOON](https://toonformat.dev/reference/spec) at stdout.
-Structured data, errors, and relevant `help[]` use stdout; diagnostics and progress use stderr.
+Keep JSON internally and encode [TOON](https://toonformat.dev/reference/spec) at stdout, subject to the [raw API output contract](behavior.md#raw-api).
+Structured data, errors, and relevant `help[]` use stdout; diagnostics and progress use stderr, with streaming errors handled as described in the raw API contract.
 Exit 0 means success/no-op, 1 runtime failure, and 2 usage failure.
 Detail text previews 1,000 characters with original length and a `--full` hint only when truncated.
 `--full` never disables byte, time, request, or row bounds.
