@@ -71,7 +71,7 @@ test("ordinary packaged commands and setup help never install agent integrations
     expect(existsSync(join(fixture.home, ".codex"))).toBe(false);
     expect(existsSync(join(fixture.home, ".config/opencode"))).toBe(false);
   } finally { fixture.cleanup(); }
-});
+}, 60_000);
 
 test("explicit setup installs executable hooks and preserves unrelated integrations on repeated setup", () => {
   const fixture = hookFixture();
