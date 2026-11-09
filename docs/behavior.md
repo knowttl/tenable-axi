@@ -54,7 +54,7 @@ State readers establish no-ops and include concurrency fields in the compared st
 ## Raw API
 
 Use `raw get --path <path>` to read a validated absolute path, optionally with `--query`; requests stay on the exact commercial origin.
-Paths allow letters, digits, dots, dashes, underscores, tildes and slashes, but reject dot segments, repeated slashes and security administration route segments, including users, access groups, roles, permissions, credentials and keys.
+Paths allow letters, digits, dots, dashes, underscores, tildes and slashes, but reject dot segments, repeated slashes and security administration route segments, including users, access groups, roles, permissions, credentials, keys and `share`.
 Use `raw write --method POST|PUT|PATCH|DELETE --path <path>` for a guarded mutation, optionally with `--query` and a JSON `--body-file` (or `-` for stdin, at most 1 MiB).
 Security administration fields in write bodies are rejected.
 The file profile must enable `writes.allowWrites` and include `raw-write` in `writes.operations`, including for preview; the read-only override, exact confirmation and durable journal apply.
