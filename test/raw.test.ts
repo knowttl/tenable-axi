@@ -1,4 +1,5 @@
 import { decode } from "@toon-format/toon";
+import { spawn } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, expect, test } from "vitest";
@@ -40,6 +41,41 @@ afterEach(() => { for (const local of fixtures.splice(0)) local.cleanup(); });
 
 const writable = { allowWrites: true, operations: ["raw-write"] };
 const patch = (f: ReturnType<typeof fixture>) => ["--method", "PATCH", "--path", "/api/v1/example", "--body-file", f.body];
+
+test("raw get exits after its deadline when stdout is stalled", async () => {
+  const f = fixture();
+  const script = `
+    import { registerHooks } from "node:module";
+    registerHooks({ resolve(specifier, context, next) {
+      try { return next(specifier, context); }
+      catch (error) {
+        if (specifier.endsWith(".js")) return next(specifier.slice(0, -3) + ".ts", context);
+        throw error;
+      }
+    } });
+    const { main } = await import("./src/cli.ts");
+    const { constructTransport } = await import("./src/transport-core.ts");
+    let calls = 0;
+    const transport = constructTransport({ keys: { accessKey: "synthetic-access", secretKey: "synthetic-secret" } }, {
+      bindings: {}, now: () => Date.now() + (calls++ ? 19500 : 0),
+      fetch: async () => new Response(new ReadableStream({ pull(controller) { controller.enqueue(new Uint8Array(1024 * 1024)); } })),
+    });
+    await main(["raw", "get", "--path", "/example", "--profile", "example"], {
+      credentials: { home: ${JSON.stringify(f.home)}, env: ${JSON.stringify(f.env)} }, transportFactory: () => transport,
+    });
+  `;
+  const child = spawn(process.execPath, ["--experimental-transform-types", "--disable-warning=ExperimentalWarning", "--input-type=module", "-e", script], { stdio: ["ignore", "pipe", "pipe"] });
+  let stderr = "";
+  child.stderr.setEncoding("utf8");
+  child.stderr.on("data", (chunk: string) => { stderr += chunk; });
+  const timeout = setTimeout(() => child.kill("SIGKILL"), 4000);
+  const [code, signal] = await new Promise<[number | null, NodeJS.Signals | null]>((resolve) => child.on("exit", (code, signal) => resolve([code, signal])));
+  clearTimeout(timeout);
+  child.stdout.destroy();
+  expect(stderr).toContain("DEADLINE_EXCEEDED");
+  expect(signal).toBeNull();
+  expect(code).toBe(1);
+}, 6000);
 
 test("raw get returns the upstream body for an arbitrary read route with its query", async () => {
   const f = fixture();

@@ -19,6 +19,7 @@ export async function main(argv = process.argv.slice(2), options: { credentials?
   const store = credentialStore(options.credentials);
   let rawStream = false;
   let rawStreamError = false;
+  let abortedStdout = false;
   await runAxiCli({
     description: DESCRIPTION,
     argv: ["scaffold"],
@@ -46,7 +47,7 @@ export async function main(argv = process.argv.slice(2), options: { credentials?
             rawStream = true;
             return (options.rawOutput ?? ((bytes) => new Promise<void>((resolve, reject) => {
               const onError = (error: Error) => reject(error);
-              const onAbort = () => process.stdout.destroy();
+              const onAbort = () => { abortedStdout = true; process.stdout.destroy(); };
               process.stdout.once("error", onError);
               signal.addEventListener("abort", onAbort, { once: true });
               if (signal.aborted) onAbort();
@@ -84,4 +85,5 @@ export async function main(argv = process.argv.slice(2), options: { credentials?
       },
     },
   });
+  if (abortedStdout) process.stderr.write("", () => process.exit(process.exitCode));
 }
