@@ -1,4 +1,4 @@
-agent: codex
+agent: claude
 no_ci: true
 commands:
   prepare: 'node scripts/isolated.ts corepack pnpm install --frozen-lockfile --ignore-scripts --config.confirm-modules-purge=false'
