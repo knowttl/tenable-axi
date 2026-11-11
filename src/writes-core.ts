@@ -24,6 +24,7 @@ export type MutationOperation = Readonly<{
 export type MutationPreview = Readonly<{
   profile: string; operation: string; target: MutationTarget; effect: string;
   current: unknown; proposed: unknown; confirm: string; noop: boolean;
+  credential?: Readonly<{ id: string; revision: number }>;
 }>;
 export type WriteCoordinatorOptions = {
   config?: string; profile?: string; readOnly?: boolean;
@@ -77,6 +78,7 @@ export function constructWriteCoordinator(options: WriteCoordinatorOptions, depe
   const store = credentialStore(dependencies.credentials);
   const profile = store.select(store.load(options.config).config, options.profile);
   const forced = store.readOnly() || options.readOnly === true;
+  const credential = store.credentialBinding();
   const scope = Object.freeze({ profile: profile.name, origin: profile.origin,
     allowWrites: profile.source !== "env-profile" && profile.writes.allowWrites,
     operations: Object.freeze([...profile.writes.operations]) });
@@ -180,15 +182,21 @@ export function constructWriteCoordinator(options: WriteCoordinatorOptions, depe
     const plan = connection.prepare(operation, { ...request, raw });
     const { effect: _effect, ...identity } = plan;
     const confirmationTarget = "payload" in target ? { kind: target.kind, digest: digest(canonical(request)) } : target;
-    const confirm = canonical([scope.profile, operation, confirmationTarget]);
+    const unbound = canonical([scope.profile, operation, confirmationTarget]);
+    const confirm = credential ? canonical([scope.profile, operation, confirmationTarget, credential]) : unbound;
     const current = await definition!.current?.(reader, parsed.data);
     const state = canonical(current?.state ?? null);
     const preview = store.redactor.payload({ profile: scope.profile, operation, target, effect: definition!.effect,
-      current: current?.state ?? null, proposed: request, confirm, noop: current?.noop === true }) as MutationPreview;
+      current: current?.state ?? null, proposed: request, confirm, noop: current?.noop === true,
+      ...(credential ? { credential } : {}) }) as MutationPreview;
     if (!flags.execute) return { kind: "dry-run" as const, preview };
     if (preview.noop) return { kind: "noop" as const, preview };
     // Redaction must never turn an exact-target check into a different approval.
     if (preview.confirm !== confirm) fail("CONFIRM_UNSAFE", "Target contains credential material; choose a safe target", operation);
+    if (flags.confirm !== confirm && (flags.confirm === unbound || flags.confirm?.startsWith(`${unbound.slice(0, -1)},`))) {
+      fail("CREDENTIAL_CHANGED", "Credential binding differs from the previewed confirmation; preview again", operation,
+        ["Run the command without --execute to obtain a confirmation for the current credential"]);
+    }
     if (flags.confirm !== confirm) fail(flags.confirm === undefined ? "CONFIRM_REQUIRED" : "CONFIRM_MISMATCH", "Pass --confirm equal to the exact preview confirmation", operation);
     if (options.approval && !await options.approval(structuredClone(preview))) fail("APPROVAL_DENIED", "Host approval was denied", operation);
     if (flags.intentId !== undefined && !flags.intentId.trim()) fail("VALIDATION_ERROR", "Intent ID must not be blank", operation);

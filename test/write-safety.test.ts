@@ -114,6 +114,35 @@ test.each([undefined, "1", JSON.stringify(["other-profile", "change", { id, kind
   },
 );
 
+const bound = (credential: unknown) => JSON.stringify(["example", "change", { id, kind: "resource" }, credential]);
+
+test("a host credential binding appears in the preview and its confirmation sends once", async () => {
+  fixture.env.TENABLE_AXI_CREDENTIAL_REVISION = "credential-1:3";
+  const preview = await coordinator([{ body: state }]).run("change", input);
+  expect(preview).toMatchObject({ kind: "dry-run", preview: { credential: { id: "credential-1", revision: 3 },
+    confirm: bound({ id: "credential-1", revision: 3 }) } });
+  const client = coordinator([{ body: state }, { body: state }, { body: changed }]);
+  expect(await client.run("change", input, { ...execute, confirm: bound({ id: "credential-1", revision: 3 }) })).toMatchObject({ kind: "success" });
+});
+
+test.each([
+  ["a rotated revision", "credential-1:4", bound({ id: "credential-1", revision: 3 })],
+  ["a different credential", "credential-2:3", bound({ id: "credential-1", revision: 3 })],
+  ["an unbound confirmation", "credential-1:3", confirm],
+  ["a confirmation bound to a credential the host no longer supplies", undefined, bound({ id: "credential-1", revision: 3 })],
+])("%s reports CREDENTIAL_CHANGED without reserving or sending", async (_name, current, confirmation) => {
+  if (current !== undefined) fixture.env.TENABLE_AXI_CREDENTIAL_REVISION = current;
+  const client = coordinator([{ body: state }]);
+  await expect(client.run("change", input, { execute: true, confirm: confirmation })).rejects.toMatchObject({ error: { code: "CREDENTIAL_CHANGED" } });
+  expect(client.requests.map(({ init }) => init.method)).toEqual(["GET"]);
+  expect(existsSync(journal)).toBe(false);
+});
+
+test.each(["credential-1", "credential-1:0", "credential-1:x", ":3", "a b:3", ""])("malformed credential revision %j fails closed", (value) => {
+  fixture.env.TENABLE_AXI_CREDENTIAL_REVISION = value;
+  expect(() => coordinator()).toThrowError(expect.objectContaining({ code: "CONFIG_INVALID" }));
+});
+
 test("verified desired state returns a no-op without confirmation, journal or mutation", async () => {
   const client = coordinator([{ body: changed }]);
   expect(await client.run("change", input, { execute: true })).toMatchObject({ kind: "noop" });

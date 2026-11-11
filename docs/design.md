@@ -177,6 +177,9 @@ File-selected profiles ignore env profile fields, and partial env profiles fail 
 `TENABLE_AXI_ORIGIN` may select only the allowed origin; absence defaults to it.
 Env profiles cannot enable writes and command flags cannot widen the configured write policy.
 `TENABLE_AXI_READ_ONLY` accepts `1`/`true`, `0`/`false`, or unset, case-insensitively; other values fail closed with `CONFIG_INVALID`.
+`TENABLE_AXI_CREDENTIAL_REVISION` carries the host's `<credential-id>:<revision>` binding, using the same environment convention as the other hosted AXI tools.
+When set, the write preview reports it as `credential: {id, revision}` and the exact confirmation includes it, so a rotated or substituted credential invalidates earlier confirmations with `CREDENTIAL_CHANGED`.
+Unset leaves previews and confirmations unchanged; a malformed value fails closed with `CONFIG_INVALID`.
 
 Linux/macOS config uses absolute `$XDG_CONFIG_HOME/tenable-axi/config.json`, otherwise `~/.config/tenable-axi/config.json`.
 State uses absolute `$XDG_STATE_HOME/tenable-axi`, otherwise `~/.local/state/tenable-axi`.
