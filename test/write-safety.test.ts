@@ -114,6 +114,45 @@ test.each([undefined, "1", JSON.stringify(["other-profile", "change", { id, kind
   },
 );
 
+const boundTo = (digest: string) => JSON.stringify(["example", "change", { id, kind: "resource" }, `credential:${digest}`]);
+const sha256OfCredential1Revision3 = "d59bfcce0c97e10a06679267f9587fa87dc4cacdc4fa808166697cd9fe1f8a8f";
+
+test("a host credential binding is reported in the preview, hashed into the confirmation and sends once", async () => {
+  fixture.env.TENABLE_AXI_CREDENTIAL_REVISION = "credential-1:3";
+  const preview = await coordinator([{ body: state }]).run("change", input);
+  expect(preview).toMatchObject({ kind: "dry-run", preview: { credential: { id: "credential-1", revision: 3 },
+    confirm: boundTo(sha256OfCredential1Revision3) } });
+  expect((preview.preview as { confirm: string }).confirm).not.toContain("credential-1");
+  const client = coordinator([{ body: state }, { body: state }, { body: changed }]);
+  expect(await client.run("change", input, { ...execute, confirm: boundTo(sha256OfCredential1Revision3) })).toMatchObject({ kind: "success" });
+  expect(client.requests.map(({ init }) => init.method)).toEqual(["GET", "GET", "PUT"]);
+});
+
+test.each([
+  ["a rotated revision", "credential-1:4", boundTo(sha256OfCredential1Revision3)],
+  ["a different credential", "credential-2:3", boundTo(sha256OfCredential1Revision3)],
+  ["a confirmation that carries no binding", "credential-1:3", confirm],
+  ["a confirmation bound to a credential the host no longer supplies", undefined, boundTo(sha256OfCredential1Revision3)],
+])("%s reports CREDENTIAL_CHANGED without any request or journal record", async (_name, current, confirmation) => {
+  if (current !== undefined) fixture.env.TENABLE_AXI_CREDENTIAL_REVISION = current;
+  const client = coordinator();
+  await expect(client.run("change", input, { execute: true, confirm: confirmation })).rejects.toMatchObject({ error: { code: "CREDENTIAL_CHANGED" } });
+  expect(client.requests).toHaveLength(0);
+  expect(existsSync(journal)).toBe(false);
+});
+
+test("a tampered confirmation under a host credential binding still reports CONFIRM_MISMATCH", async () => {
+  fixture.env.TENABLE_AXI_CREDENTIAL_REVISION = "credential-1:4";
+  const client = coordinator([{ body: state }]);
+  await expect(client.run("change", input, { execute: true, confirm: "tampered" })).rejects.toMatchObject({ error: { code: "CONFIRM_MISMATCH" } });
+  expect(existsSync(journal)).toBe(false);
+});
+
+test.each(["credential-1", "credential-1:0", "credential-1:x", ":3", "a b:3", ""])("malformed credential revision %j fails closed", (value) => {
+  fixture.env.TENABLE_AXI_CREDENTIAL_REVISION = value;
+  expect(() => coordinator()).toThrowError(expect.objectContaining({ code: "CONFIG_INVALID" }));
+});
+
 test("verified desired state returns a no-op without confirmation, journal or mutation", async () => {
   const client = coordinator([{ body: changed }]);
   expect(await client.run("change", input, { execute: true })).toMatchObject({ kind: "noop" });

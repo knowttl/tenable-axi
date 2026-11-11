@@ -12,6 +12,8 @@ For example, allow only `inventory-export-assets` to preview or create asset exp
 Run a write without `--execute` to inspect its redacted preview.
 After reviewing the target and effect, repeat with `--execute --confirm '<exact preview confirmation>'`.
 `--dry-run` is explicit preview and excludes `--execute`.
+When a host supplies `TENABLE_AXI_CREDENTIAL_REVISION`, the confirmation is bound to a SHA-256 of that credential ID and revision.
+A confirmation from a different credential or revision is refused with `CREDENTIAL_CHANGED` before any upstream request or journal intent; preview again to obtain a new confirmation.
 `TENABLE_AXI_READ_ONLY=1` or `true` blocks every mutation regardless of configured policy.
 The durable private journal records redacted intent before a single send.
 Unknown outcomes include audit IDs and read-back guidance; reconcile them before retrying.

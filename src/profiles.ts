@@ -49,6 +49,13 @@ export function credentialStore(options: CredentialContext = {}, redactor = new 
     if (value === "1" || value === "true") return true;
     return invalid("Read-only override must be 1, true, 0 or false");
   }
+  function credentialBinding(): { id: string; revision: number } | undefined {
+    const value = env.TENABLE_AXI_CREDENTIAL_REVISION;
+    if (value === undefined) return undefined;
+    const match = /^([^:\s]{1,128}):([1-9][0-9]{0,14})$/.exec(value);
+    if (!match) return invalid("Credential revision must be <credential-id>:<revision> with a positive integer revision");
+    return { id: match[1]!, revision: Number(match[2]) };
+  }
   function load(explicit?: string, verifyAcl = false) {
     const path = configPath(explicit);
     let raw: unknown;
@@ -126,5 +133,5 @@ export function credentialStore(options: CredentialContext = {}, redactor = new 
     return { profiles: Object.entries(loaded.config.profiles).map(([name, profile]) => ({ name, origin: profile.origin, default: name === loaded.config.defaultProfile })),
       count: Object.keys(loaded.config.profiles).length, config: loaded.path };
   }
-  return { configPath, statePath: () => toolDirectory("state", env, platform, home), readOnly, load, select, credentials, status, list, redactor };
+  return { configPath, statePath: () => toolDirectory("state", env, platform, home), readOnly, credentialBinding, load, select, credentials, status, list, redactor };
 }

@@ -101,6 +101,7 @@ See [write safety](https://github.com/knowttl/tenable-axi/blob/main/docs/safety.
 | `TENABLE_AXI_ORIGIN` | Environment profile origin; only the exact commercial origin is valid | `https://cloud.tenable.com` |
 | `TENABLE_AXI_READ_ONLY` | Force read-only with `1` or `true` | Unset; profile policy applies |
 | `TENABLE_AXI_WRITE_LOG` | Private journal path | State directory's `writes.log` |
+| `TENABLE_AXI_CREDENTIAL_REVISION` | Host credential binding as `<credential-id>:<revision>`; bound into write confirmations | Unset; confirmations carry no credential binding |
 | `XDG_CONFIG_HOME`, `XDG_STATE_HOME` | Absolute Unix config/state bases | `~/.config`, `~/.local/state` |
 | `APPDATA`, `LOCALAPPDATA` | Absolute Windows config/state bases | `~/AppData/Roaming`, `~/AppData/Local` |
 | `CLAUDE_CONFIG_DIR`, `CODEX_HOME` | Hook configuration directories | `~/.claude`, `~/.codex` |
