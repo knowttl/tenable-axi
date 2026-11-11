@@ -47,6 +47,8 @@ The [README environment table](../README.md#configuration) lists all tool-read e
 `TENABLE_AXI_READ_ONLY` accepts case-insensitive `1`/`true` to force read-only, or `0`/`false`/unset to retain configured policy.
 Other values fail closed.
 `TENABLE_AXI_WRITE_LOG` selects a private journal instead of the default state-directory `writes.log`.
+`TENABLE_AXI_CREDENTIAL_REVISION` is set by a host such as artium-axi to `<credential-id>:<revision>`, where the revision is a positive integer; other values fail closed with `CONFIG_INVALID`.
+Write previews then report `credential: {id, revision}` and the exact confirmation covers its SHA-256 instead of the raw ID.
 
 ## File security
 
