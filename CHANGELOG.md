@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/knowttl/tenable-axi/compare/v0.1.7...v0.1.8) (2026-11-13)
+
+
+### Features
+
+* bind write confirmations to the host credential id and revision ([#46](https://github.com/knowttl/tenable-axi/issues/46)) ([79f6b2a](https://github.com/knowttl/tenable-axi/commit/79f6b2a0797b80abf4bf838630e2f2404d668bec))
+
 ## [0.1.7](https://github.com/knowttl/tenable-axi/compare/v0.1.6...v0.1.7) (2026-11-09)
 
 
